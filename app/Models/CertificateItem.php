@@ -8,18 +8,29 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Строка состава сертификата со снимком названия и цены на дату продажи.
+ * Себестоимость, поставщик и признаки исполнения тоже фиксируются на дату продажи.
  * От текущего каталога и прайса не зависит. Менять можно только в черновике.
  */
 class CertificateItem extends Model
 {
     protected $fillable = [
-        'certificate_id', 'service_id', 'price_version_id', 'service_name_snapshot', 'unit_snapshot',
-        'quantity', 'unit_price', 'line_total', 'position',
+        'certificate_id', 'service_id', 'provider_id', 'price_version_id', 'service_name_snapshot', 'unit_snapshot',
+        'quantity', 'unit_price', 'line_total', 'unit_cost', 'line_cost', 'position',
+        'requires_fulfillment', 'requires_scheduling', 'requires_confirmation',
     ];
 
     protected function casts(): array
     {
-        return ['quantity' => 'integer', 'unit_price' => 'decimal:2', 'line_total' => 'decimal:2'];
+        return [
+            'quantity' => 'integer',
+            'unit_price' => 'decimal:2',
+            'line_total' => 'decimal:2',
+            'unit_cost' => 'decimal:2',
+            'line_cost' => 'decimal:2',
+            'requires_fulfillment' => 'boolean',
+            'requires_scheduling' => 'boolean',
+            'requires_confirmation' => 'boolean',
+        ];
     }
 
     protected static function booted(): void
@@ -41,6 +52,11 @@ class CertificateItem extends Model
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);
+    }
+
+    public function provider(): BelongsTo
+    {
+        return $this->belongsTo(Provider::class);
     }
 
     public function priceVersion(): BelongsTo

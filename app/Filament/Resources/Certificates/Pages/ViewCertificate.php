@@ -33,9 +33,18 @@ class ViewCertificate extends ViewRecord
         return [
             EditAction::make()->label('Реквизиты')->visible(fn (Certificate $record) => $record->isDraft()),
 
+            Action::make('approveComplimentary')->label('Согласовать бесплатный')->icon('heroicon-o-hand-thumb-up')->color('success')
+                ->authorize(Permission::ApproveComplimentary)
+                ->visible(fn (Certificate $record) => $record->isDraft() && $record->isComplimentary() && ! $record->isComplimentaryApproved())
+                ->modalDescription(fn (Certificate $record) => 'Маркетинговый расход по себестоимости: '.Money::format($record->total_cost)
+                    .($record->hasUnknownCost() ? ' (у части услуг себестоимость не указана)' : '').'. После согласования состав фиксируется.')
+                ->schema([Textarea::make('comment')->label('Комментарий')])
+                ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
+                    fn () => $this->manager()->approveComplimentary($record, $data['comment'] ?? null), 'Бесплатный сертификат согласован')),
+
             Action::make('issue')->label('Выпустить')->icon('heroicon-o-check-badge')->color('success')
                 ->authorize(Permission::IssueCertificates)
-                ->visible(fn (Certificate $record) => $record->isDraft())
+                ->visible(fn (Certificate $record) => $record->isDraft() && (! $record->isComplimentary() || $record->isComplimentaryApproved()))
                 ->requiresConfirmation()
                 ->modalDescription('После выпуска состав и цены фиксируются окончательно.')
                 ->action(fn (Certificate $record, Action $action) => $this->run($action, fn () => $this->manager()->issue($record), 'Сертификат выпущен')),

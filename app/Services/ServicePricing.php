@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Версии цен услуг: поиск цены на дату и добавление новой версии без пересечений.
+ * Версии цен услуг (цена + себестоимость): поиск версии на дату и добавление новой без пересечений.
  */
 class ServicePricing
 {
@@ -28,16 +28,19 @@ class ServicePricing
      * Добавляет версию цены. Если у предыдущей открытой версии нет даты окончания,
      * она закрывается днём раньше начала новой.
      */
-    public function addPrice(Service $service, string $price, Carbon $validFrom, ?Carbon $validUntil = null): ServicePrice
+    public function addPrice(Service $service, string $price, Carbon $validFrom, ?Carbon $validUntil = null, ?string $cost = null): ServicePrice
     {
         if ((float) $price <= 0) {
             throw new DomainRuleViolation('Цена должна быть больше нуля.');
+        }
+        if ($cost !== null && $cost !== '' && (float) $cost < 0) {
+            throw new DomainRuleViolation('Себестоимость не может быть отрицательной.');
         }
         if ($validUntil && $validUntil->lt($validFrom)) {
             throw new DomainRuleViolation('Дата окончания раньше даты начала.');
         }
 
-        return DB::transaction(function () use ($service, $price, $validFrom, $validUntil) {
+        return DB::transaction(function () use ($service, $price, $validFrom, $validUntil, $cost) {
             $open = $service->prices()->getQuery()->reorder()->whereNull('valid_until')
                 ->whereDate('valid_from', '<', $validFrom->toDateString())->lockForUpdate()->first();
             if ($open && ! $this->overlapsOthers($service, $validFrom, $validUntil, $open->id)) {
@@ -50,6 +53,7 @@ class ServicePricing
 
             return $service->prices()->create([
                 'price' => $price,
+                'cost' => $cost === '' ? null : $cost,
                 'currency' => config('gifter.currency'),
                 'valid_from' => $validFrom,
                 'valid_until' => $validUntil,

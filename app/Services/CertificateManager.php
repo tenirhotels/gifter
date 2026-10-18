@@ -80,6 +80,7 @@ class CertificateManager
             $kindChanged = isset($data['kind']) && CertificateKind::from($data['kind'] instanceof CertificateKind ? $data['kind']->value : $data['kind']) !== $certificate->kind;
             if ($soldAtChanged || $kindChanged) {
                 $this->assertNoActivePayments($certificate);
+                $this->assertNotApproved($certificate);
             }
 
             $before = $this->snapshot($certificate);
@@ -147,6 +148,31 @@ class CertificateManager
         });
     }
 
+    /**
+     * Согласование бесплатного сертификата директором по продажам.
+     * После согласования состав и дата продажи фиксируются.
+     */
+    public function approveComplimentary(Certificate $certificate, ?string $comment = null): Certificate
+    {
+        return $this->locked($certificate, function (Certificate $certificate) use ($comment) {
+            $this->assertDraft($certificate);
+            if (! $certificate->isComplimentary()) {
+                throw new DomainRuleViolation('Согласование нужно только для бесплатного сертификата.');
+            }
+            if ($certificate->isComplimentaryApproved()) {
+                throw new DomainRuleViolation('Сертификат уже согласован.');
+            }
+            if (! $certificate->items()->exists()) {
+                throw new DomainRuleViolation('Нечего согласовывать: в сертификате нет услуг.');
+            }
+            $certificate->update(['complimentary_approved_by' => auth()->id(), 'complimentary_approved_at' => now(), 'updated_by' => auth()->id()]);
+            $this->history->record($certificate, HistoryEvent::ComplimentaryApproved,
+                trim('Расход по себестоимости '.Money::format($certificate->total_cost).'. '.($comment ?? '')));
+
+            return $certificate;
+        });
+    }
+
     /** Выпуск: черновик с составом, полностью оплаченный, становится активным. */
     public function issue(Certificate $certificate): Certificate
     {
@@ -154,6 +180,9 @@ class CertificateManager
             $this->assertDraft($certificate);
             if (! $certificate->items()->exists()) {
                 throw new DomainRuleViolation('Нельзя выпустить сертификат без услуг.');
+            }
+            if ($certificate->isComplimentary() && ! $certificate->isComplimentaryApproved()) {
+                throw new DomainRuleViolation('Бесплатный сертификат выпускается после согласования директором по продажам.');
             }
             if (! $certificate->isComplimentary() && ! $certificate->isFullyPaid()) {
                 throw new DomainRuleViolation('Сертификат оплачен не полностью: получено '
@@ -275,6 +304,8 @@ class CertificateManager
                 'price_version_id' => $price->id,
                 'unit_price' => $price->price,
                 'line_total' => Money::multiply($price->price, $item->quantity),
+                'unit_cost' => $price->cost,
+                'line_cost' => $price->cost === null ? null : Money::multiply($price->cost, $item->quantity),
             ]);
         }
         $this->recalculateTotal($certificate);
@@ -296,20 +327,30 @@ class CertificateManager
 
         return $certificate->items()->create([
             'service_id' => $service->id,
+            'provider_id' => $service->provider_id,
             'price_version_id' => $price->id,
             'service_name_snapshot' => $service->name,
             'unit_snapshot' => $service->unit,
             'quantity' => $quantity,
             'unit_price' => $price->price,
             'line_total' => Money::multiply($price->price, $quantity),
+            'unit_cost' => $price->cost,
+            'line_cost' => $price->cost === null ? null : Money::multiply($price->cost, $quantity),
+            'requires_fulfillment' => $service->requires_fulfillment,
+            'requires_scheduling' => $service->requires_scheduling,
+            'requires_confirmation' => $service->requires_confirmation,
             'position' => (int) $certificate->items()->max('position') + 1,
         ]);
     }
 
     private function recalculateTotal(Certificate $certificate): void
     {
-        $total = $certificate->items()->get()->sum(fn (CertificateItem $item) => Money::toMinor($item->line_total));
-        $certificate->update(['total_amount' => Money::fromMinor($total), 'updated_by' => auth()->id()]);
+        $items = $certificate->items()->get();
+        $certificate->update([
+            'total_amount' => Money::fromMinor($items->sum(fn (CertificateItem $item) => Money::toMinor($item->line_total))),
+            'total_cost' => Money::fromMinor($items->sum(fn (CertificateItem $item) => Money::toMinor($item->line_cost))),
+            'updated_by' => auth()->id(),
+        ]);
     }
 
     /**
@@ -357,6 +398,14 @@ class CertificateManager
     {
         $this->assertDraft($certificate);
         $this->assertNoActivePayments($certificate);
+        $this->assertNotApproved($certificate);
+    }
+
+    private function assertNotApproved(Certificate $certificate): void
+    {
+        if ($certificate->isComplimentaryApproved()) {
+            throw new DomainRuleViolation('Бесплатный сертификат уже согласован директором — состав и дата продажи зафиксированы.');
+        }
     }
 
     private function assertNoActivePayments(Certificate $certificate): void
@@ -402,6 +451,7 @@ class CertificateManager
             'quantity' => $item->quantity,
             'unit_price' => (string) $item->unit_price,
             'line_total' => (string) $item->line_total,
+            'line_cost' => $item->line_cost === null ? null : (string) $item->line_cost,
             'price_version_id' => $item->price_version_id,
         ];
     }

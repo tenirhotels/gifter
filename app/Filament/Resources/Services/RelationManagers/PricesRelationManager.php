@@ -28,6 +28,9 @@ class PricesRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('valid_from')->label('С')->date('d.m.Y'),
                 TextColumn::make('valid_until')->label('По')->date('d.m.Y')->placeholder('бессрочно'),
+                TextColumn::make('cost')->label('Себестоимость')->placeholder('не указана')
+                    ->formatStateUsing(fn ($state) => Money::format($state))
+                    ->visible(fn () => auth()->user()?->can(Permission::ViewCosts)),
                 TextColumn::make('price')->label('Цена')->formatStateUsing(fn ($state) => Money::format($state)),
                 TextColumn::make('creator.name')->label('Добавил')->placeholder('—'),
                 TextColumn::make('created_at')->label('Добавлено')->dateTime('d.m.Y H:i'),
@@ -37,7 +40,9 @@ class PricesRelationManager extends RelationManager
                 Action::make('addPrice')->label('Новая цена')->icon('heroicon-o-plus')
                     ->authorize(Permission::ManagePrices)
                     ->schema([
-                        TextInput::make('price')->label('Цена, ₸')->numeric()->minValue(1)->required(),
+                        TextInput::make('price')->label('Цена продажи, ₸')->numeric()->minValue(1)->required(),
+                        TextInput::make('cost')->label('Себестоимость, ₸')->numeric()->minValue(0)
+                            ->helperText('Во что услуга обходится отелю (билеты, продукты, оплата поставщику). Нужна для маржи и маркетинговых расходов.'),
                         DatePicker::make('valid_from')->label('Действует с')->required()->default(today()),
                         DatePicker::make('valid_until')->label('Действует по')->helperText('Пусто — бессрочно. Открытая предыдущая цена закроется автоматически.'),
                     ])
@@ -49,6 +54,7 @@ class PricesRelationManager extends RelationManager
                             (string) $data['price'],
                             Carbon::parse($data['valid_from']),
                             filled($data['valid_until'] ?? null) ? Carbon::parse($data['valid_until']) : null,
+                            filled($data['cost'] ?? null) ? (string) $data['cost'] : null,
                         ), 'Цена добавлена');
                     }),
             ]);

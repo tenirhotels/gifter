@@ -25,8 +25,8 @@ class Certificate extends Model
     protected $attributes = ['kind' => 'sale'];
 
     protected $fillable = [
-        'number', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'sold_at', 'valid_from',
-        'valid_until', 'total_amount', 'currency', 'issued_at', 'cancelled_at', 'cancellation_reason',
+        'number', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'complimentary_approved_by', 'complimentary_approved_at', 'sold_at', 'valid_from',
+        'valid_until', 'total_amount', 'total_cost', 'currency', 'issued_at', 'cancelled_at', 'cancellation_reason',
         'notes', 'created_by', 'updated_by',
     ];
 
@@ -39,6 +39,8 @@ class Certificate extends Model
             'valid_from' => 'date',
             'valid_until' => 'date',
             'total_amount' => 'decimal:2',
+            'total_cost' => 'decimal:2',
+            'complimentary_approved_at' => 'datetime',
             'issued_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
@@ -87,6 +89,22 @@ class Certificate extends Model
     public function refunds(): HasMany
     {
         return $this->hasMany(Refund::class)->orderByDesc('id');
+    }
+
+    public function complimentaryApprover(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'complimentary_approved_by');
+    }
+
+    public function isComplimentaryApproved(): bool
+    {
+        return $this->complimentary_approved_at !== null;
+    }
+
+    /** У части строк себестоимость не указана — итог себестоимости неполный. */
+    public function hasUnknownCost(): bool
+    {
+        return $this->items()->whereNull('unit_cost')->exists();
     }
 
     public function isComplimentary(): bool

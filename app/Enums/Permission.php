@@ -18,6 +18,7 @@ enum Permission: string
     case ViewAllCertificates = 'certificates.view_all';
     case CreateCertificates = 'certificates.create';
     case CreateComplimentary = 'certificates.create_complimentary';
+    case ApproveComplimentary = 'certificates.approve_complimentary';
     case EditDrafts = 'certificates.edit_draft';
     case ComposeDrafts = 'certificates.compose_draft';
     case IssueCertificates = 'certificates.issue';
@@ -40,6 +41,8 @@ enum Permission: string
     case ViewCatalog = 'catalog.view';
     case ManageCatalog = 'catalog.manage';
     case ManagePrices = 'catalog.prices';
+    /** Себестоимость услуг и сертификатов, маржа. */
+    case ViewCosts = 'catalog.costs';
 
     // Администрирование
     case ManageUsers = 'users.manage';
@@ -62,7 +65,8 @@ enum Permission: string
             self::ReceiveBankTransfers, self::ReconcilePayments, self::ApproveRefunds => [Role::Finance],
             self::ViewPaymentRegister => [Role::SalesManager, Role::SalesDirector, Role::Finance],
             self::ViewCatalog => [...$sales, Role::SalesDirector],
-            self::ManageCatalog, self::ManagePrices => [Role::SalesDirector],
+            self::ManageCatalog, self::ManagePrices, self::ApproveComplimentary => [Role::SalesDirector],
+            self::ViewCosts => [Role::SalesManager, Role::SalesDirector, Role::Finance],
             self::ManageUsers, self::ViewAuditLog => [],
         };
     }

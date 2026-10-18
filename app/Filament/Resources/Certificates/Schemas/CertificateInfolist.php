@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Certificates\Schemas;
 
+use App\Enums\Permission;
 use App\Models\Certificate;
 use App\Support\Money;
 use Filament\Infolists\Components\TextEntry;
@@ -18,6 +19,12 @@ class CertificateInfolist
                 TextEntry::make('status')->label('Статус')->badge(),
                 TextEntry::make('kind')->label('Тип')->badge(),
                 TextEntry::make('complimentary_reason')->label('Основание')->visible(fn (Certificate $record) => $record->isComplimentary()),
+                TextEntry::make('complimentary_approval')->label('Согласование директора')
+                    ->visible(fn (Certificate $record) => $record->isComplimentary())
+                    ->state(fn (Certificate $record) => $record->isComplimentaryApproved()
+                        ? $record->complimentaryApprover?->name.', '.$record->complimentary_approved_at->format('d.m.Y H:i')
+                        : 'ждёт согласования')
+                    ->color(fn (Certificate $record) => $record->isComplimentaryApproved() ? 'success' : 'warning'),
                 TextEntry::make('pending_refund')->label('Внимание')->color('danger')->columnSpanFull()
                     ->state('Запрос на возврат ждёт решения Финансов — действия с сертификатом заблокированы.')
                     ->visible(fn (Certificate $record) => $record->hasPendingRefund()),
@@ -33,7 +40,15 @@ class CertificateInfolist
                 TextEntry::make('cancellation_reason')->label('Причина аннулирования')->visible(fn (Certificate $record) => filled($record->cancellation_reason))->color('danger'),
             ]),
             Section::make('Деньги')->columnSpan(1)->schema([
-                TextEntry::make('total_amount')->label(fn (Certificate $record) => $record->isComplimentary() ? 'Стоимость по прайсу (маркетинговый расход)' : 'Стоимость')->state(fn (Certificate $record) => Money::format($record->total_amount))->size('lg')->weight('bold'),
+                TextEntry::make('total_amount')->label(fn (Certificate $record) => $record->isComplimentary() ? 'Стоимость по прайсу' : 'Стоимость')->state(fn (Certificate $record) => Money::format($record->total_amount))->size('lg')->weight('bold'),
+                TextEntry::make('total_cost')->label(fn (Certificate $record) => $record->isComplimentary() ? 'Маркетинговый расход (себестоимость)' : 'Себестоимость')
+                    ->state(fn (Certificate $record) => Money::format($record->total_cost))
+                    ->helperText(fn (Certificate $record) => $record->hasUnknownCost() ? 'У части услуг себестоимость не указана — сумма неполная.' : null)
+                    ->color(fn (Certificate $record) => $record->hasUnknownCost() ? 'warning' : null)
+                    ->visible(fn () => auth()->user()?->can(Permission::ViewCosts)),
+                TextEntry::make('margin')->label('Маржа')
+                    ->state(fn (Certificate $record) => Money::format(Money::fromMinor(Money::toMinor($record->total_amount) - Money::toMinor($record->total_cost))))
+                    ->visible(fn (Certificate $record) => ! $record->isComplimentary() && auth()->user()?->can(Permission::ViewCosts)),
                 TextEntry::make('paid')->label('Оплачено')->hidden(fn (Certificate $record) => $record->isComplimentary())->state(fn (Certificate $record) => Money::format($record->paidAmount()))
                     ->color(fn (Certificate $record) => $record->isFullyPaid() && $record->total_amount > 0 ? 'success' : 'warning'),
                 TextEntry::make('invoiced')->label('Выставлено счетов')->hidden(fn (Certificate $record) => $record->isComplimentary())->state(fn (Certificate $record) => Money::format($record->invoicedAmount())),

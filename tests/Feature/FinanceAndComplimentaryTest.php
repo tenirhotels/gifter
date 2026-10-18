@@ -77,6 +77,7 @@ class FinanceAndComplimentaryTest extends TestCase
     {
         $certificate = $this->draft(['kind' => CertificateKind::Complimentary, 'complimentary_reason' => 'Блогер, коллаборация', 'customer_id' => null]);
 
+        app(CertificateManager::class)->approveComplimentary($certificate);
         app(CertificateManager::class)->issue($certificate);
 
         $this->assertSame(CertificateStatus::Active, $certificate->status);

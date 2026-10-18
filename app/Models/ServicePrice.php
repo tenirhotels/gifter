@@ -17,18 +17,18 @@ class ServicePrice extends Model
 {
     use Auditable, HasFactory, PreventsDeletion;
 
-    protected $fillable = ['service_id', 'price', 'currency', 'valid_from', 'valid_until', 'created_by'];
+    protected $fillable = ['service_id', 'price', 'cost', 'currency', 'valid_from', 'valid_until', 'created_by'];
 
     protected function casts(): array
     {
-        return ['price' => 'decimal:2', 'valid_from' => 'date', 'valid_until' => 'date'];
+        return ['price' => 'decimal:2', 'cost' => 'decimal:2', 'valid_from' => 'date', 'valid_until' => 'date'];
     }
 
     protected static function booted(): void
     {
         // Цена, уже попавшая в сертификаты, не переписывается: нужна новая версия.
         static::updating(function (self $price) {
-            if ($price->isDirty(['price', 'valid_from', 'service_id']) && $price->certificateItems()->exists()) {
+            if ($price->isDirty(['price', 'cost', 'valid_from', 'service_id']) && $price->certificateItems()->exists()) {
                 throw new DomainRuleViolation('Цена уже использована в сертификатах — добавьте новую версию цены.');
             }
         });

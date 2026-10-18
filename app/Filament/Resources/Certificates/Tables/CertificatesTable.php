@@ -7,8 +7,10 @@ use App\Enums\CertificateStatus;
 use App\Support\Money;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class CertificatesTable
 {
@@ -28,6 +30,9 @@ class CertificatesTable
             ->filters([
                 SelectFilter::make('status')->label('Статус')->options(CertificateStatus::class)->multiple(),
                 SelectFilter::make('kind')->label('Тип')->options(CertificateKind::class),
+                Filter::make('awaiting_approval')->label('Бесплатные: ждут согласования директора')
+                    ->query(fn (Builder $query) => $query->where('status', CertificateStatus::Draft)
+                        ->where('kind', CertificateKind::Complimentary)->whereNull('complimentary_approved_at')),
             ])
             ->recordActions([ViewAction::make()])
             ->defaultSort('id', 'desc');

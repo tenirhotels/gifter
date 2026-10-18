@@ -27,7 +27,7 @@ class ItemsRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
-        $editable = fn (): bool => $this->certificate()->isDraft();
+        $editable = fn (): bool => $this->certificate()->isDraft() && ! $this->certificate()->isComplimentaryApproved();
 
         return $table
             ->description('Сертификат погашается только целиком: услуги по отдельности не гасятся и не обмениваются на деньги.')
@@ -37,6 +37,13 @@ class ItemsRelationManager extends RelationManager
                 TextColumn::make('unit_snapshot')->label('Единица'),
                 TextColumn::make('unit_price')->label('Цена')->formatStateUsing(fn ($state) => Money::format($state)),
                 TextColumn::make('line_total')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state)),
+                TextColumn::make('line_cost')->label('Себестоимость')->placeholder('не указана')
+                    ->formatStateUsing(fn ($state) => Money::format($state))
+                    ->visible(fn () => auth()->user()?->can(Permission::ViewCosts)),
+                TextColumn::make('provider.name')->label('Поставщик')->placeholder('—')->toggleable(),
+                TextColumn::make('fulfillment')->label('Исполнение')->state(fn (CertificateItem $record) => $record->requires_fulfillment
+                    ? collect(['подготовка', $record->requires_scheduling ? 'время' : null, $record->requires_confirmation ? 'подтверждение' : null])->filter()->implode(', ')
+                    : 'не требуется')->color(fn (CertificateItem $record) => $record->requires_fulfillment ? 'warning' : 'gray')->toggleable(),
                 TextColumn::make('priceVersion.valid_from')->label('Тариф с')->date('d.m.Y')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->paginated(false)
