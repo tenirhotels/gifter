@@ -32,8 +32,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 
 /**
- * Мастер продажи: пакет и количество → покупатель и получатель → доп. услуги и итог → счёт.
- * Количество > 1 — покупка или бесплатная выдача (CertificateBatchManager): общий состав, один счёт, выпуск вместе.
+ * Мастер продажи: пакет и количество → заказчик и получатель → доп. услуги и итог → счёт.
+ * Количество > 1 — группа сертификатов (CertificateBatchManager): общий состав, один счёт, выпуск вместе.
  * Всё создаётся одной транзакцией: при ошибке не остаётся «полу-черновика».
  */
 class CreateCertificate extends CreateRecord
@@ -42,7 +42,7 @@ class CreateCertificate extends CreateRecord
 
     protected static string $resource = CertificateResource::class;
 
-    protected static ?string $title = 'Продажа сертификата';
+    protected static ?string $title = 'Оформление сертификата';
 
     public function getSteps(): array
     {
@@ -59,7 +59,7 @@ class CreateCertificate extends CreateRecord
                     ValidityFields::make(),
                 ]),
             ]),
-            Step::make('Покупатель и получатель')->icon('heroicon-o-user')->columns(2)
+            Step::make('Заказчик и получатель')->icon('heroicon-o-user')->columns(2)
                 ->schema([
                     CertificateForm::customerField(),
                     CertificateForm::recipientField()->hidden(fn (Get $get) => self::count($get) > 1),
@@ -81,13 +81,13 @@ class CreateCertificate extends CreateRecord
                 ->visible(fn (Get $get) => ! CertificateForm::isComplimentary($get))
                 ->schema([
                     Toggle::make('create_invoice')->live()->default(true)
-                        ->label(fn (Get $get) => self::count($get) > 1 ? 'Сразу выставить один счёт на всю покупку' : 'Сразу выставить счёт на всю сумму'),
+                        ->label(fn (Get $get) => self::count($get) > 1 ? 'Сразу выставить один счёт на всю группу' : 'Сразу выставить счёт на всю сумму'),
                     Grid::make(2)->visible(fn (Get $get) => (bool) $get('create_invoice'))->schema([
                         Select::make('payment_method')->label('Способ')->options(PaymentMethod::class)->default(PaymentMethod::KaspiInvoice->value)->required(),
                         TextInput::make('invoice_number')->label('№ счёта в банке')->maxLength(255),
                     ]),
                     Placeholder::make('invoice_hint')->hiddenLabel()
-                        ->content('Оплату отметите на странице сертификата (или покупки), когда деньги поступят; перечисление на р/с подтверждают Финансы. После оплаты — «Выпустить».'),
+                        ->content('Оплату отметите на странице сертификата (или группы), когда деньги поступят; перечисление на р/с подтверждают Финансы. После оплаты — «Выпустить».'),
                 ]),
         ];
     }
@@ -145,7 +145,7 @@ class CreateCertificate extends CreateRecord
         }
     }
 
-    /** Несколько сертификатов — покупка (платные) или бесплатная выдача: общие состав, счёт и выпуск. */
+    /** Несколько сертификатов — группа (платная или бесплатная): общие состав, счёт и выпуск. */
     private function createPurchase(array $data): Model
     {
         $batches = app(CertificateBatchManager::class);

@@ -138,7 +138,7 @@ class CertificateManager
             $kindChanged = $newPackage && $newPackage->is_complimentary !== $certificate->isComplimentary();
             $customerChanged = array_key_exists('customer_id', $data) && (int) $data['customer_id'] !== (int) $certificate->customer_id;
             if ($certificate->batch_id && ($packageChanged || $soldAtChanged || $customerChanged)) {
-                throw new DomainRuleViolation('Сертификат входит в '.$certificate->batch->term('acc').': пакет, покупатель и дата продажи у всех её сертификатов общие.');
+                throw new DomainRuleViolation('Сертификат входит в '.$certificate->batch->term('acc').': пакет, заказчик и дата продажи у всех её сертификатов общие.');
             }
             if ($soldAtChanged || $kindChanged || $packageChanged) {
                 $this->assertNoActivePayments($certificate);
@@ -522,7 +522,7 @@ class CertificateManager
             throw new DomainRuleViolation('Для бесплатного сертификата укажите основание (кому и зачем).');
         }
         if ($kind === CertificateKind::Sale && ! $customerId) {
-            throw new DomainRuleViolation('Для продажи укажите покупателя.');
+            throw new DomainRuleViolation('Для продажи укажите заказчика.');
         }
     }
 

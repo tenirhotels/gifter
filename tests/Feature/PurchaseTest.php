@@ -34,7 +34,7 @@ use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/** Замечание 25.10.2026: несколько сертификатов в одной продаже — покупка с одним счётом. */
+/** Замечание 25.10.2026: несколько сертификатов в одной продаже — группа с одним счётом. */
 class PurchaseTest extends TestCase
 {
     use RefreshDatabase;
@@ -79,6 +79,7 @@ class PurchaseTest extends TestCase
     {
         $this->as(Role::Sales);
         Livewire::test(CreateCertificate::class)
+            ->assertSee('Оформление сертификата')->assertSee('Заказчик и получатель')->assertDontSee('Продажа сертификата')
             ->fillForm([
                 'package_id' => $this->package->id, 'certificate_count' => 2, 'customer_id' => $this->customer->id,
                 'extras' => [['service_id' => $this->extra->id, 'quantity' => 1]],
@@ -146,7 +147,7 @@ class PurchaseTest extends TestCase
         ] as $i => $forbidden) {
             try {
                 $forbidden();
-                $this->fail("Действие {$i} с сертификатом покупки");
+                $this->fail("Действие {$i} с сертификатом группы");
             } catch (DomainRuleViolation) {
             }
         }
@@ -177,7 +178,7 @@ class PurchaseTest extends TestCase
         $this->as(Role::Finance);
         $line = $batch->payments()->firstOrFail();
         Livewire::test(ListPayments::class)
-            ->assertSee('Покупка №'.$batch->id.' (из 3)')
+            ->assertSee('Группа №'.$batch->id.' (из 3)')
             ->callAction(TestAction::make('reconcile')->table($line));
         $this->assertSame(3, $batch->payments()->whereNotNull('reconciled_at')->count());
     }

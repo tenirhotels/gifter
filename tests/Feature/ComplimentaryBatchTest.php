@@ -9,8 +9,10 @@ use App\Enums\ComplimentaryPurpose;
 use App\Enums\ProviderType;
 use App\Enums\Role;
 use App\Exceptions\DomainRuleViolation;
+use App\Filament\Resources\CertificateBatches\Pages\ListCertificateBatches;
 use App\Filament\Resources\CertificateBatches\Pages\ViewCertificateBatch;
 use App\Filament\Resources\Certificates\Pages\CreateCertificate;
+use App\Filament\Resources\Certificates\Pages\ListCertificates;
 use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\Providers\Pages\CreateProvider;
 use App\Filament\Widgets\DirectorQueueWidget;
@@ -31,7 +33,7 @@ use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/** Замечания 23.10.2026: реквизиты поставщика, бесплатные пакеты, выпуск нескольких сертификатов (покупка). */
+/** Замечания 23.10.2026: реквизиты поставщика, бесплатные пакеты, выпуск нескольких сертификатов (группа). */
 class ComplimentaryBatchTest extends TestCase
 {
     use RefreshDatabase;
@@ -108,7 +110,7 @@ class ComplimentaryBatchTest extends TestCase
         $this->assertNull($certificate->complimentary_purpose);
     }
 
-    // Бесплатные покупки (несколько сертификатов через «Новый сертификат»)
+    // Бесплатные группы (несколько сертификатов через «Новый сертификат»)
 
     private function freePurchase(int $quantity = 2, string $reason = 'Бартер'): CertificateBatch
     {
@@ -128,7 +130,7 @@ class ComplimentaryBatchTest extends TestCase
         $this->assertSame('Ждёт согласования директора', $batch->statusLabel());
 
         Livewire::test(ViewCertificateBatch::class, ['record' => $batch->id])
-            ->assertSee('Бесплатная выдача №'.$batch->id)->assertDontSee('Покупка №')
+            ->assertSee('Группа №'.$batch->id)->assertSee('Бесплатная')->assertSee('Заказчик')->assertDontSee('Покупка №')->assertDontSee('Партнёр')
             ->assertActionHidden('approveBatch')
             ->assertActionHidden('issueBatch')
             ->assertActionHidden('invoiceBatch');
@@ -136,9 +138,9 @@ class ComplimentaryBatchTest extends TestCase
         $this->as(Role::SalesDirector);
         $queries = new DashboardQueries(auth()->user());
         $this->assertSame([1, 5], [$queries->freeIssuesAwaitingApproval()->count(), $queries->complimentaryAwaitingApproval()->count()]);
-        Livewire::test(DirectorQueueWidget::class)->assertSee('Бесплатные сертификаты ждут согласования')->assertSee('бесплатных выдач: 1')
+        Livewire::test(DirectorQueueWidget::class)->assertSee('Бесплатные сертификаты ждут согласования')->assertSee('в группах: 1')
             ->assertDontSee('покупк');
-        $this->assertSame('Бесплатная выдача №'.$batch->id, $batch->shortLabel());
+        $this->assertSame('Группа №'.$batch->id, $batch->shortLabel());
         Livewire::test(ViewCertificateBatch::class, ['record' => $batch->id])->callAction('approveBatch', ['comment' => 'Ок']);
         $this->assertSame(BatchStatus::Approved, $batch->refresh()->status);
 
@@ -162,7 +164,7 @@ class ComplimentaryBatchTest extends TestCase
             ->assertActionVisible('openBatch');
         try {
             app(CertificateManager::class)->issue($certificate);
-            $this->fail('Выпуск одного сертификата покупки');
+            $this->fail('Выпуск одного сертификата группы');
         } catch (DomainRuleViolation) {
         }
 
@@ -177,7 +179,7 @@ class ComplimentaryBatchTest extends TestCase
         foreach ([[1, ['complimentary_reason' => 'тест']], [201, ['complimentary_reason' => 'тест']], [3, []]] as [$quantity, $data]) {
             try {
                 app(CertificateBatchManager::class)->create($this->blogger, $quantity, $data);
-                $this->fail("Покупка × {$quantity}");
+                $this->fail("Группа × {$quantity}");
             } catch (DomainRuleViolation) {
             }
         }
@@ -193,7 +195,20 @@ class ComplimentaryBatchTest extends TestCase
         $this->as(Role::SalesManager);
         $this->get('/admin')->assertOk()->assertDontSee('Бесплатные блоками')->assertDontSee('/admin/certificate-batches"', false);
         $this->get('/admin/certificate-batches/create')->assertNotFound();
-        $this->get('/admin/certificate-batches')->assertOk();
+        $this->get('/admin/certificate-batches')->assertOk()->assertSee('Группы сертификатов')->assertDontSee('Покупки');
+        $this->get('/admin')->assertSee('Заказчики')->assertDontSee('Покупатели');
+    }
+
+    public function test_batch_list_shows_kind_column_and_certificates_can_be_grouped(): void
+    {
+        $this->as(Role::SalesManager);
+        $batch = $this->freePurchase(3);
+
+        Livewire::test(ListCertificateBatches::class)->assertSee('Бесплатная')->assertSee('Группа №'.$batch->id);
+        Livewire::test(ListCertificates::class)
+            ->set('tableGrouping', 'batch_id')
+            ->assertSee($batch->label())
+            ->assertSee('GIF-000003');
     }
 
     public function test_sales_see_only_own_purchases(): void

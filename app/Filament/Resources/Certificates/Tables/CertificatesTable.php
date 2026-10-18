@@ -12,6 +12,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -20,15 +21,21 @@ class CertificatesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('batch.package'))
+            // Переключатель «Группировать → Группа»: сертификаты групп собираются под заголовком группы.
+            ->groups([
+                Group::make('batch_id')->label('Группа')->titlePrefixedWithLabel(false)->collapsible()->orderQueryUsing(fn (Builder $query, string $direction) => $query->orderBy('batch_id', 'desc'))
+                    ->getTitleFromRecordUsing(fn (Certificate $record) => $record->batch?->label() ?? 'Без группы'),
+            ])
             ->columns([
                 TextColumn::make('number')->label('Номер')->searchable()->sortable()->copyable(),
                 TextColumn::make('status')->label('Статус')->badge()->sortable(),
                 TextColumn::make('kind')->label('Тип')->badge()->toggleable(),
-                TextColumn::make('customer.full_name')->label('Покупатель')->placeholder('—')->searchable(),
+                TextColumn::make('customer.full_name')->label('Заказчик')->placeholder('—')->searchable(),
                 TextColumn::make('recipient.full_name')->label('Получатель')->searchable(),
                 TextColumn::make('total_amount')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state))->sortable(),
-                TextColumn::make('batch_id')->label('Покупка / выдача')->placeholder('—')->toggleable()
-                    ->formatStateUsing(fn ($state, Certificate $record) => ($record->isComplimentary() ? 'Выдача №' : 'Покупка №').$state)
+                TextColumn::make('batch_id')->label('Группа')->placeholder('—')->toggleable()
+                    ->formatStateUsing(fn ($state) => '№'.$state)
                     ->url(fn (Certificate $record) => $record->batch_id ? CertificateBatchResource::getUrl('view', ['record' => $record->batch_id]) : null),
                 TextColumn::make('sold_at')->label('Продан')->date('d.m.Y')->sortable(),
                 TextColumn::make('valid_until')->label('Действует по')->date('d.m.Y')->sortable()
@@ -42,9 +49,9 @@ class CertificatesTable
                     ->query(fn (Builder $query) => $query->where('created_by', auth()->id())),
                 Filter::make('no_recipient')->label('Без получателя')
                     ->query(fn (Builder $query) => $query->whereNull('recipient_id')),
-                Filter::make('batch')->schema([TextInput::make('batch_id')->label('Из покупки или выдачи №')->integer()->minValue(1)])
+                Filter::make('batch')->schema([TextInput::make('batch_id')->label('Из группы №')->integer()->minValue(1)])
                     ->query(fn (Builder $query, array $data) => $query->when($data['batch_id'] ?? null, fn (Builder $q, $id) => $q->where('batch_id', (int) $id)))
-                    ->indicateUsing(fn (array $data) => ($data['batch_id'] ?? null) ? 'Покупка / выдача №'.$data['batch_id'] : null),
+                    ->indicateUsing(fn (array $data) => ($data['batch_id'] ?? null) ? 'Группа №'.$data['batch_id'] : null),
                 Filter::make('expiring')->label('Истекают в ближайшие 14 дней')
                     ->query(fn (Builder $query) => $query->whereIn('status', [CertificateStatus::Active, CertificateStatus::Reserved])
                         ->whereDate('valid_until', '<=', today()->addDays(14)->toDateString())),

@@ -32,7 +32,7 @@ class CertificateInfolist
                 TextEntry::make('pending_refund')->label('Внимание')->color('danger')->columnSpanFull()
                     ->state('Запрос на возврат ждёт решения Финансов — действия с сертификатом заблокированы.')
                     ->visible(fn (Certificate $record) => $record->hasPendingRefund()),
-                TextEntry::make('customer_name')->label('Покупатель')->placeholder('—')
+                TextEntry::make('customer_name')->label('Заказчик')->placeholder('—')
                     ->state(fn (Certificate $record) => $record->customer?->displayName())
                     ->helperText(fn (Certificate $record) => self::maskedContacts($record->customer)),
                 TextEntry::make('recipient.full_name')->label('Получатель')->placeholder('не указан')

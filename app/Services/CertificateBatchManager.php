@@ -18,11 +18,11 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Покупка: несколько одинаковых сертификатов одного пакета в одной продаже.
+ * Группа: несколько одинаковых сертификатов одного пакета в одной продаже.
  *
  * Платная: черновики → один счёт на всю сумму (по строке на сертификат, общий номер)
  * → оплата → выпуск. Бесплатная: черновики → согласование директором → выпуск.
- * Черновики покупки оформляются только всей покупкой; после выпуска каждый сертификат
+ * Черновики группы оформляются только всей группой; после выпуска каждый сертификат
  * погашается, бронируется и возвращается отдельно. Получатели — по одному, в любой момент.
  */
 class CertificateBatchManager
@@ -56,7 +56,7 @@ class CertificateBatchManager
                 throw new DomainRuleViolation('Укажите цель бесплатных сертификатов.');
             }
         } elseif (empty($data['customer_id'])) {
-            throw new DomainRuleViolation('Для продажи укажите покупателя.');
+            throw new DomainRuleViolation('Для продажи укажите заказчика.');
         }
         $soldAt = Carbon::parse($data['sold_at'] ?? today())->startOfDay();
         [$validFrom, $validUntil] = $validity->resolve($package, $soldAt);
@@ -69,7 +69,7 @@ class CertificateBatchManager
                 'quantity' => $quantity,
                 'purpose' => $purpose,
                 'reason' => $complimentary ? $reason : null,
-                // Срок покупки хранится только если задан вручную; иначе — по пакету.
+                // Срок группы хранится только если задан вручную; иначе — по пакету.
                 'valid_from' => $validity->isCustom() ? $validFrom : null,
                 'valid_until' => $validity->isCustom() ? $validUntil : null,
                 'status' => BatchStatus::Draft,
@@ -95,7 +95,7 @@ class CertificateBatchManager
         });
     }
 
-    /** Один счёт на всю покупку: по строке на сертификат с общим номером. */
+    /** Один счёт на всю группу: по строке на сертификат с общим номером. */
     public function invoice(CertificateBatch $batch, PaymentMethod $method, ?string $invoiceNumber = null, ?string $comment = null): CertificateBatch
     {
         return $this->transition($batch, BatchStatus::Draft, function (CertificateBatch $batch) use ($method, $invoiceNumber, $comment) {
@@ -103,7 +103,7 @@ class CertificateBatchManager
                 throw new DomainRuleViolation('Бесплатные сертификаты не оплачиваются.');
             }
             if ($batch->payments()->where('status', '!=', PaymentStatus::Cancelled)->exists()) {
-                throw new DomainRuleViolation('Счёт по покупке уже выставлен.');
+                throw new DomainRuleViolation('Счёт по группе уже выставлен.');
             }
             foreach ($batch->certificates as $certificate) {
                 $this->payments->invoice($certificate, $method, invoiceNumber: $invoiceNumber, comment: $comment, batchId: $batch->id);
@@ -125,7 +125,7 @@ class CertificateBatchManager
         return $batch->refresh();
     }
 
-    /** Сумма счёта покупки (без отменённых строк). */
+    /** Сумма счёта группы (без отменённых строк). */
     public function invoiceTotal(CertificateBatch $batch): string
     {
         return Money::fromMinor(Money::toMinor($batch->payments()->where('status', '!=', PaymentStatus::Cancelled)->sum('amount')));
@@ -135,7 +135,7 @@ class CertificateBatchManager
     {
         return $this->transition($batch, BatchStatus::Draft, function (CertificateBatch $batch) use ($comment) {
             if (! $batch->isComplimentary()) {
-                throw new DomainRuleViolation('Согласование нужно только бесплатной выдаче.');
+                throw new DomainRuleViolation('Согласование нужно только бесплатной группе.');
             }
             foreach ($batch->certificates as $certificate) {
                 $this->certificates->approveComplimentary($certificate, trim("{$batch->shortLabel()}. ".($comment ?? '')), viaBatch: true);
@@ -157,7 +157,7 @@ class CertificateBatchManager
         });
     }
 
-    /** Аннулировать покупку до выпуска (без поступивших денег). Выпущенные — поштучно. */
+    /** Аннулировать группу до выпуска (без поступивших денег). Выпущенные — поштучно. */
     public function cancel(CertificateBatch $batch, string $reason): CertificateBatch
     {
         if (trim($reason) === '') {
@@ -182,7 +182,7 @@ class CertificateBatchManager
     {
         $line = $batch->payments()->where('status', PaymentStatus::Pending)->orderBy('id')->first();
         if (! $line) {
-            throw new DomainRuleViolation('По покупке нет выставленного неоплаченного счёта.');
+            throw new DomainRuleViolation('По группе нет выставленного неоплаченного счёта.');
         }
 
         return $line;
@@ -193,7 +193,7 @@ class CertificateBatchManager
         return DB::transaction(function () use ($batch, $expected, $callback) {
             $batch = CertificateBatch::query()->lockForUpdate()->findOrFail($batch->id);
             if ($batch->status !== $expected) {
-                throw new DomainRuleViolation("Покупка в статусе «{$batch->statusLabel()}» — действие недоступно.");
+                throw new DomainRuleViolation("Группа в статусе «{$batch->statusLabel()}» — действие недоступно.");
             }
             $callback($batch);
 

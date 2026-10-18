@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Покупатель сертификата: физлицо или компания (тогда обязателен БИН,
+ * Заказчик сертификата (платного или бесплатного): физлицо или компания (тогда обязателен БИН,
  * а ФИО — контактное лицо компании).
  */
 class Customer extends Model
@@ -35,7 +35,7 @@ class Customer extends Model
     /** Как показывать в списках и выборе: компания — с контактным лицом. */
     public function displayName(): string
     {
-        return $this->isCompany() ? "{$this->company} ({$this->full_name})" : $this->full_name;
+        return $this->isCompany() && filled($this->full_name) ? "{$this->company} ({$this->full_name})" : ($this->isCompany() ? (string) $this->company : $this->full_name);
     }
 
     public function certificates(): HasMany

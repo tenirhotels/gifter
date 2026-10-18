@@ -22,7 +22,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Carbon;
 
-/** Покупка или бесплатная выдача: счёт, оплата, согласование и выпуск — для всех её сертификатов сразу. */
+/** Группа сертификатов (платная или бесплатная): счёт, оплата, согласование и выпуск — для всех её сертификатов сразу. */
 class ViewCertificateBatch extends ViewRecord
 {
     protected static string $resource = CertificateBatchResource::class;
@@ -46,13 +46,13 @@ class ViewCertificateBatch extends ViewRecord
                     .'. Маркетинговый расход по себестоимости: '.Money::format($record->certificates()->sum('total_cost')).'.')
                 ->schema([Textarea::make('comment')->label('Комментарий')])
                 ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action,
-                    fn () => app(CertificateBatchManager::class)->approve($record, $data['comment'] ?? null), 'Бесплатная выдача согласована')),
+                    fn () => app(CertificateBatchManager::class)->approve($record, $data['comment'] ?? null), 'Группа согласована')),
 
             Action::make('invoiceBatch')->label('Выставить счёт')->icon('heroicon-o-document-text')
                 ->authorize(Permission::ManagePayments)
                 ->visible(fn (CertificateBatch $record) => $paidDraft($record)
                     && ! $record->payments()->where('status', '!=', PaymentStatus::Cancelled)->exists())
-                ->modalDescription(fn (CertificateBatch $record) => 'Один счёт на всю покупку: '.Money::format($record->certificates()->sum('total_amount')).'.')
+                ->modalDescription(fn (CertificateBatch $record) => 'Один счёт на всю группу: '.Money::format($record->certificates()->sum('total_amount')).'.')
                 ->schema([
                     Select::make('method')->label('Способ')->options(PaymentMethod::class)->required()->default(PaymentMethod::KaspiInvoice->value),
                     TextInput::make('invoice_number')->label('№ счёта в банке')->maxLength(255),
@@ -93,7 +93,7 @@ class ViewCertificateBatch extends ViewRecord
                     ->visible(fn (CertificateBatch $record) => $record->payments()->where('status', PaymentStatus::Paid)->whereNull('reconciled_at')->exists())
                     ->requiresConfirmation()
                     ->action(fn (CertificateBatch $record, Action $action) => $this->run($action, fn () => app(PaymentManager::class)
-                        ->reconcile($record->payments()->where('status', PaymentStatus::Paid)->whereNull('reconciled_at')->firstOrFail()), 'Счёт покупки сверен')),
+                        ->reconcile($record->payments()->where('status', PaymentStatus::Paid)->whereNull('reconciled_at')->firstOrFail()), 'Счёт группы сверен')),
                 Action::make('cancelBatchInvoice')->label('Отменить счёт')->icon('heroicon-o-x-mark')
                     ->authorize(Permission::ManagePayments)
                     ->visible(fn (CertificateBatch $record) => $paidDraft($record) && $pendingLine($record) !== null)

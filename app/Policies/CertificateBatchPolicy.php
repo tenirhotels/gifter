@@ -8,7 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
-/** Покупки видны как сертификаты: продавцу — свои, остальным ролям с правом просмотра — все. */
+/** Группы видны как сертификаты: продавцу — свои, остальным ролям с правом просмотра — все. */
 class CertificateBatchPolicy extends PermissionPolicy
 {
     protected function viewPermission(): Permission

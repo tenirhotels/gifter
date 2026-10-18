@@ -26,7 +26,7 @@ class ItemsRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
-        // Состав черновика из покупки общий — меняется только всей покупкой.
+        // Состав черновика из группы общий — меняется только всей группой.
         $editable = fn (): bool => $this->certificate()->isDraft() && ! $this->certificate()->isComplimentaryApproved() && ! $this->certificate()->batch_id;
 
         return $table

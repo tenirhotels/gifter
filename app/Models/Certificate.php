@@ -154,4 +154,18 @@ class Certificate extends Model
     {
         return Money::toMinor($this->paidAmount()) >= Money::toMinor($this->total_amount);
     }
+
+    /** Черновик можно выпускать: бесплатный согласован, продажа оплачена полностью. */
+    public function isReadyToIssue(): bool
+    {
+        return $this->isDraft() && ($this->isComplimentary()
+            ? $this->isComplimentaryApproved()
+            : Money::toMinor($this->total_amount) > 0 && $this->isFullyPaid());
+    }
+
+    /** Первый выставленный и ещё не оплаченный счёт. */
+    public function pendingPayment(): ?Payment
+    {
+        return $this->payments()->where('status', PaymentStatus::Pending)->orderBy('id')->first();
+    }
 }

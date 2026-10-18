@@ -46,7 +46,7 @@ final class ContactFields
         ];
     }
 
-    /** Действие «Показать контакты» для записи покупателя/получателя или связанной с ней. */
+    /** Действие «Показать контакты» для записи заказчика/получателя или связанной с ней. */
     public static function revealAction(string $name = 'revealContacts', ?\Closure $person = null, string $label = 'Показать контакты'): Action
     {
         $person ??= fn (Model $record) => $record;

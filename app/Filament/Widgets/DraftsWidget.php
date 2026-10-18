@@ -39,7 +39,7 @@ class DraftsWidget extends TableWidget
             ->columns([
                 TextColumn::make('number')->label('Номер'),
                 TextColumn::make('package.name')->label('Пакет'),
-                TextColumn::make('customer.full_name')->label('Покупатель')->placeholder('—'),
+                TextColumn::make('customer.full_name')->label('Заказчик')->placeholder('—'),
                 TextColumn::make('total_amount')->label('Стоимость')->formatStateUsing(fn ($state) => Money::format($state)),
                 TextColumn::make('paid_sum')->label('Оплачено')->default(0)->formatStateUsing(fn ($state) => Money::format($state))
                     ->color(fn (Certificate $record) => Money::toMinor($record->paid_sum) >= Money::toMinor($record->total_amount) && $record->total_amount > 0 ? 'success' : 'warning'),

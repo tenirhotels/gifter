@@ -83,7 +83,7 @@ class AdminPanelTest extends TestCase
         $this->get("/admin/certificates/{$certificate->id}")->assertOk()->assertSee($certificate->number);
     }
 
-    public function test_issue_without_payment_shows_error_and_keeps_draft(): void
+    public function test_single_sale_invoice_paid_and_issue_from_header(): void
     {
         $service = Service::factory()->create();
         app(ServicePricing::class)->addPrice($service, '1000', Carbon::parse('2026-01-01'));
@@ -95,10 +95,20 @@ class AdminPanelTest extends TestCase
         app(CertificateManager::class)->addItem($certificate, $service, 1);
 
         Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
-            ->callAction('issue')
-            ->assertNotified('Сертификат оплачен не полностью: получено 0 ₸ из 1 000 ₸.');
+            ->assertActionHidden('issue')->assertActionHidden('markPaid')
+            ->assertActionVisible('invoice')
+            ->callAction('invoice', ['method' => 'kaspi_invoice', 'amount' => '1000', 'invoice_number' => 'K-5']);
+        $this->assertSame(PaymentStatus::Pending, $certificate->payments()->firstOrFail()->status);
 
-        $this->assertSame(CertificateStatus::Draft, $certificate->refresh()->status);
+        Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
+            ->assertActionHidden('invoice')->assertActionHidden('issue')
+            ->callAction('markPaid', ['paid_at' => now()]);
+        $this->assertTrue($certificate->refresh()->isFullyPaid());
+
+        Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
+            ->assertActionHidden('markPaid')->assertActionHidden('invoice')
+            ->callAction('issue');
+        $this->assertSame(CertificateStatus::Active, $certificate->refresh()->status);
     }
 
     public function test_new_price_version_from_service_page(): void

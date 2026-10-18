@@ -86,7 +86,7 @@ class PaymentsRelationManager extends RelationManager
                 Action::make('reconcile')->label('Сверено')->icon('heroicon-o-document-check')->color('gray')
                     ->authorize(Permission::ReconcilePayments)
                     ->visible(fn (Payment $record) => $record->status === PaymentStatus::Paid && ! $record->isReconciled())
-                    ->modalDescription(fn (Payment $record) => $record->batch_id ? 'Строка общего счёта покупки: сверяется весь счёт покупки.' : null)
+                    ->modalDescription(fn (Payment $record) => $record->batch_id ? 'Строка общего счёта группы: сверяется весь счёт группы.' : null)
                     ->schema([Textarea::make('comment')->label('Комментарий (необязательно)')])
                     ->action(function (Payment $record, array $data, Action $action) {
                         RunsDomainActions::run($action, fn () => app(PaymentManager::class)->reconcile($record, $data['comment'] ?? null), 'Оплата сверена');

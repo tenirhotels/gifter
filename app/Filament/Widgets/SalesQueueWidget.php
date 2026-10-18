@@ -46,12 +46,12 @@ class SalesQueueWidget extends RoleQueueWidget
 
         $batches = fn (string $filter) => CertificateBatchResource::getUrl('index', ['filters' => [$filter => ['isActive' => true]]]);
         if ($q->purchasesReadyToIssue()->exists()) {
-            $stats[] = $this->counter('Покупки к выпуску', $q->purchasesReadyToIssue(), $batches('ready'), 'success', 'оплачены полностью', 'heroicon-o-rectangle-stack');
+            $stats[] = $this->counter('Платные группы к выпуску', $q->purchasesReadyToIssue(), $batches('ready'), 'success', 'оплачены полностью', 'heroicon-o-rectangle-stack');
         }
 
         if (auth()->user()->hasRole(Role::SalesManager)) {
             if ($q->freeIssuesReadyToIssue()->exists()) {
-                $stats[] = $this->counter('Бесплатные выдачи к выпуску', $q->freeIssuesReadyToIssue(), $batches('ready'), 'success', 'согласованы директором', 'heroicon-o-gift');
+                $stats[] = $this->counter('Бесплатные группы к выпуску', $q->freeIssuesReadyToIssue(), $batches('ready'), 'success', 'согласованы директором', 'heroicon-o-gift');
             }
             $stats[] = $this->counter('Бесплатные у директора', $q->complimentaryAwaitingApproval(),
                 $list(['awaiting_approval' => ['isActive' => true]]), 'info', 'ждут согласования', 'heroicon-o-hand-raised');

@@ -22,7 +22,7 @@ class CustomerForm
         $company = fn (Get $get): bool => self::isCompany($get('type'));
 
         return [
-            ToggleButtons::make('type')->label('Покупатель')->options(CustomerType::class)->inline()
+            ToggleButtons::make('type')->label('Тип заказчика')->options(CustomerType::class)->inline()
                 ->default(CustomerType::Individual)->required()->live()->columnSpanFull(),
             Grid::make(2)->columnSpanFull()->visible($company)->schema([
                 TextInput::make('company')->label('Компания')->required($company)->maxLength(255),

@@ -31,7 +31,7 @@ class CertificateForm
         return $schema->components([
             Section::make('Продукт')->columns(3)->schema(self::productFields()),
             Section::make('Бесплатный сертификат')->columns(2)->visible(fn (Get $get) => self::isComplimentary($get))->schema(self::complimentaryFields()),
-            Section::make('Покупатель и получатель')->columns(2)->schema([self::customerField(), self::recipientField()]),
+            Section::make('Заказчик и получатель')->columns(2)->schema([self::customerField(), self::recipientField()]),
             self::notesField(),
         ]);
     }
@@ -71,13 +71,13 @@ class CertificateForm
 
     public static function customerField(): Select
     {
-        return Select::make('customer_id')->label('Покупатель')
+        return Select::make('customer_id')->label('Заказчик')
             ->relationship('customer', 'full_name')->searchable(['last_name', 'first_name', 'company', 'bin'])->preload()
             ->getOptionLabelFromRecordUsing(fn (Customer $record) => $record->displayName())
             ->createOptionForm(CustomerForm::fields())
             ->required(fn (Get $get): bool => ! self::isComplimentary($get))
             ->helperText(fn (Get $get): ?string => self::isComplimentary($get)
-                ? 'Для бесплатного — необязательно (например, партнёр по бартеру).'
+                ? 'Для бесплатного — необязательно (партнёр, блогер, компания).'
                 : 'Найдите по фамилии, компании или БИН, или создайте нового (+).');
     }
 

@@ -42,7 +42,7 @@ class ExpiringCertificatesWidget extends TableWidget
                     ->description(fn (Certificate $record) => 'осталось '.max(0, (int) today()->diffInDays($record->valid_until)).' дн.'),
                 TextColumn::make('status')->label('Статус')->badge(),
                 TextColumn::make('recipient.full_name')->label('Получатель')->placeholder('не указан'),
-                TextColumn::make('customer.full_name')->label('Покупатель')->placeholder('—'),
+                TextColumn::make('customer.full_name')->label('Заказчик')->placeholder('—'),
             ]);
     }
 }

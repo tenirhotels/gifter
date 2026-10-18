@@ -9,7 +9,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 
-/** Сертификаты покупки или выдачи; получателя указывают на странице каждого сертификата. */
+/** Сертификаты группы; получателя указывают на странице каждого сертификата. */
 class CertificatesRelationManager extends RelationManager
 {
     protected static string $relationship = 'certificates';

@@ -23,14 +23,14 @@ class PaymentManager
 
     /**
      * Выставить счёт. Без суммы — на весь неоплаченный остаток.
-     * Для сертификата из покупки счёт выставляет CertificateBatchManager (один на всю покупку).
+     * Для сертификата из группы счёт выставляет CertificateBatchManager (один на всю группу).
      */
     public function invoice(Certificate $certificate, PaymentMethod $method, ?string $amount = null, ?string $invoiceNumber = null, ?string $comment = null, ?int $batchId = null): Payment
     {
         return DB::transaction(function () use ($certificate, $method, $amount, $invoiceNumber, $comment, $batchId) {
             $certificate = Certificate::query()->lockForUpdate()->findOrFail($certificate->id);
             if ($certificate->batch_id && $batchId !== $certificate->batch_id) {
-                throw new DomainRuleViolation('Сертификат входит в покупку — счёт выставляется на всю покупку на её странице.');
+                throw new DomainRuleViolation('Сертификат входит в группу — счёт выставляется на всю группу на её странице.');
             }
             if ($certificate->status !== CertificateStatus::Draft) {
                 throw new DomainRuleViolation('Счёт выставляется только по черновику, до выпуска сертификата.');
@@ -77,7 +77,7 @@ class PaymentManager
      */
     public function markPaid(Payment $payment, ?Carbon $paidAt = null): Payment
     {
-        // Счёт покупки — один для покупателя: отмечаются все его строки.
+        // Счёт группы — один для заказчика: отмечаются все его строки.
         if ($payment->batch_id) {
             return $this->forBatchSiblings($payment, PaymentStatus::Pending, fn (Payment $line) => $this->markPaidLine($line, $paidAt));
         }
@@ -165,7 +165,7 @@ class PaymentManager
     }
 
     /**
-     * Действие над всеми строками счёта покупки в нужном статусе (одна транзакция).
+     * Действие над всеми строками счёта группы в нужном статусе (одна транзакция).
      * Возвращает переданную строку в её новом состоянии.
      */
     private function forBatchSiblings(Payment $payment, PaymentStatus $status, callable $callback, bool $onlyUnreconciled = false): Payment

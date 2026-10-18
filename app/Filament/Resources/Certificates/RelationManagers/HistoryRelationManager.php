@@ -36,7 +36,7 @@ class HistoryRelationManager extends RelationManager
     }
 
     private const LABELS = [
-        'status' => 'статус', 'customer_id' => 'покупатель', 'recipient_id' => 'получатель', 'sold_at' => 'продан',
+        'status' => 'статус', 'customer_id' => 'заказчик', 'recipient_id' => 'получатель', 'sold_at' => 'продан',
         'valid_from' => 'действует с', 'valid_until' => 'действует по', 'notes' => 'примечание', 'package_id' => 'пакет',
         'method' => 'способ', 'amount' => 'сумма', 'invoice_number' => '№ счёта', 'paid_at' => 'оплачен',
         'service' => 'услуга', 'quantity' => 'кол-во', 'unit_price' => 'цена', 'line_total' => 'сумма',

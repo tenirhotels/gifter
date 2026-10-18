@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Certificates\Pages;
 
 use App\Enums\CertificateStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\Permission;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
 use App\Filament\Resources\Certificates\CertificateResource;
@@ -14,12 +15,14 @@ use App\Models\Recipient;
 use App\Services\AdminCorrections;
 use App\Services\CertificateDocument;
 use App\Services\CertificateManager;
+use App\Services\PaymentManager;
 use App\Services\RefundManager;
 use App\Support\Money;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -40,7 +43,7 @@ class ViewCertificate extends ViewRecord
         return [
             EditAction::make()->label('Реквизиты')->visible(fn (Certificate $record) => $record->isDraft()),
 
-            // У черновика из покупки или выдачи счёт, оплата, согласование, состав и выпуск — на её странице.
+            // У черновика из группы счёт, оплата, согласование, состав и выпуск — на её странице.
             Action::make('openBatch')->icon('heroicon-o-rectangle-stack')
                 ->label(fn (Certificate $record) => $record->batch->shortLabel().($record->isDraft() ? ($record->batch->isComplimentary() ? ': согласование, выпуск' : ': счёт, оплата, выпуск') : ''))
                 ->color(fn (Certificate $record) => $record->isDraft() ? 'primary' : 'gray')
@@ -57,9 +60,38 @@ class ViewCertificate extends ViewRecord
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                     fn () => $this->manager()->approveComplimentary($record, $data['comment'] ?? null), 'Бесплатный сертификат согласован')),
 
+            // Счёт и оплата одиночной продажи — сразу в шапке (частичные счета, сверка — во вкладке «Оплата»).
+            Action::make('invoice')->label('Выставить счёт')->icon('heroicon-o-document-text')
+                ->authorize(Permission::ManagePayments)
+                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && ! $record->pendingPayment()
+                    && Money::toMinor($record->invoicedAmount()) < Money::toMinor($record->total_amount))
+                ->fillForm(fn (Certificate $record) => [
+                    'method' => PaymentMethod::KaspiInvoice->value,
+                    'amount' => Money::fromMinor(Money::toMinor($record->total_amount) - Money::toMinor($record->invoicedAmount())),
+                ])
+                ->schema([
+                    Select::make('method')->label('Способ')->options(PaymentMethod::class)->required(),
+                    TextInput::make('amount')->label('Сумма, ₸')->numeric()->minValue(1)->required()->helperText('По умолчанию — весь неоплаченный остаток.'),
+                    TextInput::make('invoice_number')->label('№ счёта в банке')->maxLength(255),
+                ])
+                ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => app(PaymentManager::class)->invoice(
+                    $record, $data['method'] instanceof PaymentMethod ? $data['method'] : PaymentMethod::from($data['method']),
+                    (string) $data['amount'], $data['invoice_number'] ?? null), 'Счёт выставлен')),
+
+            Action::make('markPaid')->label('Оплачен')->icon('heroicon-o-check')->color('success')
+                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment() !== null)
+                ->authorize(fn (Certificate $record) => auth()->user()->can($record->pendingPayment()?->method->requiresFinanceConfirmation()
+                    ? Permission::ReceiveBankTransfers : Permission::ReceivePayments))
+                ->modalDescription(fn (Certificate $record) => ($line = $record->pendingPayment())
+                    ? $line->method->getLabel().($line->invoice_number ? ' № '.$line->invoice_number : '').' · '.Money::format($line->amount) : null)
+                ->schema([DateTimePicker::make('paid_at')->label('Дата поступления')->default(now())->maxDate(now())->required()])
+                ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
+                    fn () => app(PaymentManager::class)->markPaid($record->pendingPayment(), Carbon::parse($data['paid_at'])), 'Оплата отмечена')),
+
             Action::make('issue')->label('Выпустить')->icon('heroicon-o-check-badge')->color('success')
                 ->authorize(Permission::IssueCertificates)
-                ->visible(fn (Certificate $record) => $record->isDraft() && ! $record->batch_id && (! $record->isComplimentary() || $record->isComplimentaryApproved()))
+                // Кнопка появляется, когда выпуск возможен: продажа оплачена, бесплатный согласован.
+                ->visible(fn (Certificate $record) => ! $record->batch_id && $record->isReadyToIssue())
                 ->requiresConfirmation()
                 ->modalDescription('После выпуска состав и цены фиксируются окончательно.')
                 ->action(fn (Certificate $record, Action $action) => $this->run($action, fn () => $this->manager()->issue($record), 'Сертификат выпущен')),
@@ -92,7 +124,7 @@ class ViewCertificate extends ViewRecord
                     ])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                         fn () => $this->manager()->setRecipient($record, (int) $data['recipient_id']), 'Получатель указан')),
-                ContactFields::revealAction('revealCustomer', fn (Certificate $record) => $record->customer, 'Контакты покупателя'),
+                ContactFields::revealAction('revealCustomer', fn (Certificate $record) => $record->customer, 'Контакты заказчика'),
                 ContactFields::revealAction('revealRecipient', fn (Certificate $record) => $record->recipient, 'Контакты получателя'),
 
                 $this->transitionAction('release', 'Снять бронь', CertificateStatus::Reserved, CertificateStatus::Active, 'heroicon-o-arrow-uturn-left', Permission::ManageReservations),
@@ -170,6 +202,11 @@ class ViewCertificate extends ViewRecord
     {
         RunsDomainActions::run($action, $callback, $success);
         $this->redirect(CertificateResource::getUrl('view', ['record' => $this->getRecord()]));
+    }
+
+    private function isOwnSaleDraft(Certificate $record): bool
+    {
+        return $record->isDraft() && ! $record->isComplimentary() && ! $record->batch_id;
     }
 
     private function manager(): CertificateManager

@@ -13,10 +13,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Несколько сертификатов одного пакета, оформленных вместе. Платные — «покупка»
- * (один счёт на всю сумму, разложенный по сертификатам), бесплатные — «бесплатная
- * выдача» (согласование директором; покупкой не называется). Черновики оформляются,
- * оплачиваются и выпускаются вместе; после выпуска каждый сертификат живёт отдельно.
+ * Группа сертификатов: несколько сертификатов одного пакета, оформленных вместе.
+ * Платная — один счёт на всю сумму, разложенный по сертификатам; бесплатная —
+ * согласование директором. Черновики оформляются, оплачиваются и выпускаются
+ * всей группой; после выпуска каждый сертификат живёт отдельно.
  */
 class CertificateBatch extends Model
 {
@@ -76,27 +76,29 @@ class CertificateBatch extends Model
         return $this->hasMany(Payment::class, 'batch_id');
     }
 
-    public const TERMS = [
-        'nom' => ['покупка', 'бесплатная выдача'],
-        'acc' => ['покупку', 'бесплатную выдачу'],
-        'gen' => ['покупки', 'бесплатной выдачи'],
-    ];
+    public const TERMS = ['nom' => 'группа', 'acc' => 'группу', 'gen' => 'группы'];
 
-    /** Название по типу и падежу: «покупка» / «бесплатная выдача». */
+    /** «группа» в нужном падеже — для сообщений и подписей. */
     public function term(string $case = 'nom', bool $capital = false): string
     {
-        $term = self::TERMS[$case][$this->isComplimentary() ? 1 : 0];
+        $term = self::TERMS[$case];
 
         return $capital ? mb_strtoupper(mb_substr($term, 0, 1)).mb_substr($term, 1) : $term;
     }
 
-    /** «Покупка №3» / «Бесплатная выдача №4». */
-    public function shortLabel(): string
+    /** «Платная» / «Бесплатная». */
+    public function kindLabel(): string
     {
-        return $this->term(capital: true).' №'.$this->id;
+        return $this->isComplimentary() ? 'Бесплатная' : 'Платная';
     }
 
-    /** «Покупка №3 · Романтический уикенд × 2» (бесплатная — с целью). */
+    /** «Группа №4». */
+    public function shortLabel(): string
+    {
+        return 'Группа №'.$this->id;
+    }
+
+    /** «Группа №4 · Романтический уикенд × 10» (бесплатная — с целью). */
     public function label(): string
     {
         return "{$this->shortLabel()} · {$this->package?->name} × {$this->quantity}"
@@ -108,7 +110,7 @@ class CertificateBatch extends Model
         return $this->status->labelFor($this->kind);
     }
 
-    /** Бесплатные выдачи, которые ждут решения директора. */
+    /** Бесплатные группы, которые ждут решения директора. */
     public function scopeAwaitingApproval(Builder $query): Builder
     {
         return $query->where('status', BatchStatus::Draft)->where('kind', CertificateKind::Complimentary);
