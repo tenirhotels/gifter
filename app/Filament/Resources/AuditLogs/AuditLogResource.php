@@ -25,6 +25,8 @@ class AuditLogResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
+    protected static ?string $navigationLabel = 'Журнал аудита';
+
     protected static ?string $modelLabel = 'запись журнала';
 
     protected static ?string $pluralModelLabel = 'Журнал аудита';

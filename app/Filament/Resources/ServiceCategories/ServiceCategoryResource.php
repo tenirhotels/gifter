@@ -26,6 +26,8 @@ class ServiceCategoryResource extends Resource
 
     protected static ?int $navigationSort = 4;
 
+    protected static ?string $navigationLabel = 'Категории услуг';
+
     protected static ?string $modelLabel = 'категория';
 
     protected static ?string $pluralModelLabel = 'Категории услуг';

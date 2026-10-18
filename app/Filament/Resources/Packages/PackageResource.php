@@ -26,6 +26,8 @@ class PackageResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
+    protected static ?string $navigationLabel = 'Пакеты (продукты)';
+
     protected static ?string $modelLabel = 'пакет';
 
     protected static ?string $pluralModelLabel = 'Пакеты (продукты)';
