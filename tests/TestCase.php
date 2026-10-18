@@ -13,11 +13,11 @@ abstract class TestCase extends BaseTestCase
         return Package::firstOrCreate(['name' => 'Тестовый продукт'], ['validity_value' => 12, 'validity_unit' => 'months'])->id;
     }
 
-    /** Бесплатный пакет без базового состава (маркетинг). */
+    /** Бесплатный пакет без базового состава. */
     protected function complimentaryPackageId(): int
     {
         return Package::firstOrCreate(['name' => 'Тестовый бесплатный'], [
-            'validity_value' => 12, 'validity_unit' => 'months', 'is_complimentary' => true, 'complimentary_purpose' => 'marketing',
+            'validity_value' => 12, 'validity_unit' => 'months', 'is_complimentary' => true, 'complimentary_purpose' => 'other',
         ])->id;
     }
 }

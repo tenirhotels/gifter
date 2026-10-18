@@ -44,7 +44,7 @@ class ComplimentaryBatchTest extends TestCase
         app(ServicePricing::class)->addPrice($service, '15000', Carbon::parse('2026-01-01'), cost: '6000');
         $this->blogger = Package::create([
             'name' => 'Блогер: ужин', 'validity_value' => 1, 'validity_unit' => 'months',
-            'is_complimentary' => true, 'complimentary_purpose' => 'blogger',
+            'is_complimentary' => true, 'complimentary_purpose' => 'influencers',
         ]);
         $this->blogger->items()->create(['service_id' => $service->id, 'quantity' => 2]);
     }
@@ -92,7 +92,7 @@ class ComplimentaryBatchTest extends TestCase
         $certificate = app(CertificateManager::class)->createDraft(['package_id' => $this->blogger->id, 'complimentary_reason' => 'Обзор']);
 
         $this->assertTrue($certificate->isComplimentary());
-        $this->assertSame(ComplimentaryPurpose::Blogger, $certificate->complimentary_purpose);
+        $this->assertSame(ComplimentaryPurpose::Influencers, $certificate->complimentary_purpose);
         $this->assertSame('12000.00', (string) $certificate->total_cost);
     }
 
@@ -111,7 +111,7 @@ class ComplimentaryBatchTest extends TestCase
     {
         $this->as(Role::SalesManager);
         Livewire::test(CreateCertificateBatch::class)
-            ->fillForm(['package_id' => $this->blogger->id, 'quantity' => 5, 'purpose' => 'blogger', 'reason' => 'Пресс-тур, октябрь'])
+            ->fillForm(['package_id' => $this->blogger->id, 'quantity' => 5, 'purpose' => 'influencers', 'reason' => 'Пресс-тур, октябрь'])
             ->call('create')->assertHasNoFormErrors();
         $batch = CertificateBatch::firstOrFail();
         $this->assertSame(5, $batch->certificates()->count());

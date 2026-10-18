@@ -13,6 +13,7 @@ use App\Models\CertificateItem;
 use App\Models\Package;
 use App\Models\Service;
 use App\Support\Money;
+use App\Support\ValidityChoice;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -34,8 +35,9 @@ class CertificateManager
      * продажи и вручную при создании не задаётся. Получатель может быть неизвестен.
      *
      * Тип определяет пакет: из бесплатного пакета — бесплатный сертификат.
+     * Для бесплатного срок можно задать при выпуске (`validity`, см. ValidityChoice).
      *
-     * @param  array{package_id:int, customer_id?:int|null, recipient_id?:int|null, complimentary_reason?:string|null, complimentary_purpose?:ComplimentaryPurpose|string|null, sold_at?:string|Carbon|null, notes?:string|null, batch_id?:int|null}  $data
+     * @param  array{package_id:int, customer_id?:int|null, recipient_id?:int|null, complimentary_reason?:string|null, complimentary_purpose?:ComplimentaryPurpose|string|null, sold_at?:string|Carbon|null, notes?:string|null, batch_id?:int|null, validity?:array|ValidityChoice|null}  $data
      */
     public function createDraft(array $data): Certificate
     {
@@ -51,6 +53,8 @@ class CertificateManager
             $kind = $package->is_complimentary ? CertificateKind::Complimentary : CertificateKind::Sale;
             $this->assertKind($kind, $data['customer_id'] ?? null, $data['complimentary_reason'] ?? null);
             $purpose = $kind === CertificateKind::Complimentary ? $this->purpose($data['complimentary_purpose'] ?? null, $package) : null;
+            $validity = ($data['validity'] ?? null) instanceof ValidityChoice ? $data['validity'] : ValidityChoice::fromArray($data['validity'] ?? null);
+            [$validFrom, $validUntil] = $validity->resolve($package, $soldAt);
 
             $certificate = Certificate::create([
                 'number' => $this->numbers->next($soldAt),
@@ -63,14 +67,17 @@ class CertificateManager
                 'complimentary_purpose' => $purpose,
                 'batch_id' => $data['batch_id'] ?? null,
                 'sold_at' => $soldAt,
-                'valid_from' => $soldAt,
-                'valid_until' => $package->validUntil($soldAt),
+                'valid_from' => $validFrom,
+                'valid_until' => $validUntil,
+                'custom_validity' => $validity->isCustom(),
                 'currency' => config('gifter.currency'),
                 'notes' => $data['notes'] ?? null,
                 'created_by' => auth()->id(),
                 'updated_by' => auth()->id(),
             ]);
-            $this->history->record($certificate, HistoryEvent::Created, $package->name.', '.$package->validityLabel(), after: $this->snapshot($certificate));
+            $this->history->record($certificate, HistoryEvent::Created,
+                $package->name.', '.($validity->isCustom() ? $validity->describe($validFrom, $validUntil) : $package->validityLabel()),
+                after: $this->snapshot($certificate));
             $this->addPackageItems($certificate, $package);
 
             return $certificate->refresh();
@@ -150,9 +157,17 @@ class CertificateManager
                 $certificate->complimentary_reason = null;
                 $certificate->complimentary_purpose = null;
             }
-            if (($soldAtChanged || $packageChanged) && $package) {
+            // Срок по пакету пересчитывается; срок, заданный вручную, сохраняется
+            // (кроме смены пакета — это другой продукт, срок снова по пакету).
+            if ($packageChanged && $package) {
+                $certificate->custom_validity = false;
+            }
+            if (($soldAtChanged || $packageChanged) && $package && ! $certificate->custom_validity) {
                 $certificate->valid_from = $certificate->sold_at;
                 $certificate->valid_until = $package->validUntil($certificate->sold_at);
+            }
+            if ($certificate->custom_validity && $certificate->valid_from->lt($certificate->sold_at)) {
+                throw new DomainRuleViolation('Дата продажи позже начала срока, заданного вручную: сначала измените срок.');
             }
             $this->assertKind($certificate->kind, $certificate->customer_id, $certificate->complimentary_reason);
             if (! $certificate->isDirty()) {
@@ -492,7 +507,7 @@ class CertificateManager
         $purpose = $purpose instanceof ComplimentaryPurpose ? $purpose : ComplimentaryPurpose::tryFrom((string) $purpose);
         $purpose ??= $package?->complimentary_purpose;
         if (! $purpose) {
-            throw new DomainRuleViolation('Укажите цель бесплатного сертификата: маркетинг, блогеры или бартер.');
+            throw new DomainRuleViolation('Укажите цель бесплатного сертификата.');
         }
 
         return $purpose;

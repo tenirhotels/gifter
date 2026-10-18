@@ -22,8 +22,8 @@ class PackageForm
             TextInput::make('name')->label('Название')->required()->maxLength(255),
             Toggle::make('is_active')->label('Активен')->default(true),
             Grid::make(2)->columnSpanFull()->schema([
-                Toggle::make('is_complimentary')->label('Бесплатный пакет (маркетинг, блогеры, бартер)')->live()
-                    ->helperText('Сертификаты этого пакета — бесплатные: без оплаты, после согласования директором; можно выпускать блоками. Продавцу пакет не виден.'),
+                Toggle::make('is_complimentary')->label('Бесплатный пакет')->live()
+                    ->helperText('Сертификаты выпускаются без оплаты для маркетинговых, партнёрских и иных специальных целей. Выпуск — после согласования с директором; допускается массовый выпуск. Срок можно задать при выпуске. Продавцу пакет не виден.'),
                 Select::make('complimentary_purpose')->label('Цель по умолчанию')->options(ComplimentaryPurpose::class)
                     ->visible(fn (Get $get) => (bool) $get('is_complimentary'))->required(fn (Get $get) => (bool) $get('is_complimentary')),
             ]),

@@ -79,8 +79,8 @@ class DatabaseSeeder extends Seeder
         }
 
         $blogger = Package::firstOrCreate(['name' => 'Блогер: ужин и SPA'], [
-            'description' => 'Бесплатный пакет для блогеров и бартера', 'validity_value' => 1, 'validity_unit' => 'months',
-            'is_complimentary' => true, 'complimentary_purpose' => 'blogger', 'is_active' => true,
+            'description' => 'Бесплатный пакет для инфлюенсеров и бартера', 'validity_value' => 1, 'validity_unit' => 'months',
+            'is_complimentary' => true, 'complimentary_purpose' => 'influencers', 'is_active' => true,
         ]);
         if (! $blogger->items()->exists()) {
             foreach ([['Ужин', 2], ['SPA', 2]] as $position => [$name, $quantity]) {

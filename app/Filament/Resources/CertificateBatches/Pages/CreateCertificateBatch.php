@@ -25,6 +25,7 @@ class CreateCertificateBatch extends CreateRecord
                 $data['reason'],
                 $data['purpose'],
                 $data['customer_id'] ?? null,
+                $data['validity'] ?? null,
             );
         } catch (DomainRuleViolation $e) {
             Notification::make()->danger()->title($e->getMessage())->send();

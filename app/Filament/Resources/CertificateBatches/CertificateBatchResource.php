@@ -6,6 +6,7 @@ use App\Enums\BatchStatus;
 use App\Enums\ComplimentaryPurpose;
 use App\Enums\Permission;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
+use App\Filament\Support\ValidityFields;
 use App\Models\CertificateBatch;
 use App\Models\Customer;
 use App\Models\Package;
@@ -27,7 +28,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
-/** Блоки бесплатных сертификатов (маркетинг, блогеры, бартер). */
+/** Блоки бесплатных сертификатов: массовый выпуск для инфлюенсеров, партнёров, бартера и др. */
 class CertificateBatchResource extends Resource
 {
     protected static ?string $model = CertificateBatch::class;
@@ -68,13 +69,15 @@ class CertificateBatchResource extends Resource
                 ->relationship('package', 'name', fn ($query) => $query->where('is_active', true)->where('is_complimentary', true))->preload()
                 ->afterStateUpdated(fn ($state, $set) => $set('purpose', Package::find($state)?->complimentary_purpose?->value)),
             TextInput::make('quantity')->label('Количество сертификатов')->integer()->minValue(1)->maxValue(CertificateBatchManager::MAX_QUANTITY)->required()->default(10),
-            Select::make('purpose')->label('Цель')->options(ComplimentaryPurpose::class)->required(),
+            Select::make('purpose')->label('Цель')->options(ComplimentaryPurpose::class)->required()->live()
+                ->helperText(fn ($state) => ($state instanceof ComplimentaryPurpose ? $state : ComplimentaryPurpose::tryFrom((string) $state))?->getDescription()),
             Select::make('customer_id')->label('Партнёр (необязательно)')
                 ->relationship('customer', 'full_name')->searchable(['last_name', 'first_name', 'company', 'bin'])->preload()
                 ->getOptionLabelFromRecordUsing(fn (Customer $record) => $record->displayName())
                 ->createOptionForm(CustomerForm::fields())
                 ->helperText('Например, компания-партнёр по бартеру. Блогерам и гостям получателей указывают потом в каждом сертификате.'),
             Textarea::make('reason')->label('Основание (кому и зачем)')->required()->columnSpanFull(),
+            ValidityFields::make(),
         ]);
     }
 
@@ -87,6 +90,9 @@ class CertificateBatchResource extends Resource
                 TextEntry::make('purpose')->label('Цель'),
                 TextEntry::make('package.name')->label('Пакет')->helperText(fn (CertificateBatch $record) => $record->package?->validityLabel()),
                 TextEntry::make('quantity')->label('Сертификатов'),
+                TextEntry::make('validity')->label('Срок действия')
+                    ->state(fn (CertificateBatch $record) => $record->valid_from && $record->valid_until
+                        ? $record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y') : 'по пакету'),
                 TextEntry::make('customer.full_name')->label('Партнёр')->placeholder('—')
                     ->state(fn (CertificateBatch $record) => $record->customer?->displayName()),
                 TextEntry::make('reason')->label('Основание')->columnSpanFull(),

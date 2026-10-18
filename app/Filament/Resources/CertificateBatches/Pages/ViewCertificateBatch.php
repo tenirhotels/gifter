@@ -29,7 +29,9 @@ class ViewCertificateBatch extends ViewRecord
             Action::make('approveBatch')->label('Согласовать блок')->icon('heroicon-o-hand-thumb-up')->color('success')
                 ->authorize(Permission::ApproveComplimentary)
                 ->visible(fn (CertificateBatch $record) => $record->status === BatchStatus::Draft)
-                ->modalDescription(fn (CertificateBatch $record) => "Будет согласовано {$record->quantity} бесплатных сертификатов. Маркетинговый расход по себестоимости: "
+                ->modalDescription(fn (CertificateBatch $record) => "Будет согласовано {$record->quantity} бесплатных сертификатов"
+                    .($record->valid_from ? ", срок {$record->valid_from->format('d.m.Y')} — {$record->valid_until->format('d.m.Y')} (задан вручную)" : ', срок по пакету')
+                    .'. Маркетинговый расход по себестоимости: '
                     .Money::format($record->certificates()->sum('total_cost')).'.')
                 ->schema([Textarea::make('comment')->label('Комментарий')])
                 ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action,

@@ -39,7 +39,8 @@ class CertificateInfolist
                     ->helperText(fn (Certificate $record) => self::maskedContacts($record->recipient)),
                 TextEntry::make('sold_at')->label('Дата продажи')->date('d.m.Y'),
                 TextEntry::make('validity')->label('Срок действия')
-                    ->state(fn (Certificate $record) => $record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y')),
+                    ->state(fn (Certificate $record) => $record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y'))
+                    ->helperText(fn (Certificate $record) => $record->custom_validity ? 'задан вручную при выпуске' : null),
                 TextEntry::make('package.name')->label('Пакет')->placeholder('—')
                     ->helperText(fn (Certificate $record) => $record->package?->validityLabel()),
                 TextEntry::make('notes')->label('Примечание')->placeholder('—'),

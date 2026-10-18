@@ -7,6 +7,7 @@ use App\Enums\ComplimentaryPurpose;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\CertificateBatch;
 use App\Models\Package;
+use App\Support\ValidityChoice;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -20,7 +21,8 @@ class CertificateBatchManager
 
     public function __construct(private readonly CertificateManager $certificates) {}
 
-    public function create(Package $package, int $quantity, string $reason, ComplimentaryPurpose|string|null $purpose = null, ?int $customerId = null): CertificateBatch
+    /** @param  array|null  $validity  срок для всех сертификатов блока (см. ValidityChoice); null — по пакету */
+    public function create(Package $package, int $quantity, string $reason, ComplimentaryPurpose|string|null $purpose = null, ?int $customerId = null, ?array $validity = null): CertificateBatch
     {
         if (! $package->is_complimentary) {
             throw new DomainRuleViolation('Блоком выпускаются только сертификаты бесплатного пакета.');
@@ -33,16 +35,22 @@ class CertificateBatchManager
         }
         $purpose = $purpose instanceof ComplimentaryPurpose ? $purpose : (ComplimentaryPurpose::tryFrom((string) $purpose) ?? $package->complimentary_purpose);
         if (! $purpose) {
-            throw new DomainRuleViolation('Укажите цель блока: маркетинг, блогеры или бартер.');
+            throw new DomainRuleViolation('Укажите цель блока.');
         }
 
-        return DB::transaction(function () use ($package, $quantity, $reason, $purpose, $customerId) {
+        $validity = ValidityChoice::fromArray($validity);
+        [$validFrom, $validUntil] = $validity->resolve($package, today());
+
+        return DB::transaction(function () use ($package, $quantity, $reason, $purpose, $customerId, $validity, $validFrom, $validUntil) {
             $batch = CertificateBatch::create([
                 'package_id' => $package->id,
                 'customer_id' => $customerId,
                 'quantity' => $quantity,
                 'purpose' => $purpose,
                 'reason' => $reason,
+                // Срок блока хранится только если задан вручную; иначе — по пакету.
+                'valid_from' => $validity->isCustom() ? $validFrom : null,
+                'valid_until' => $validity->isCustom() ? $validUntil : null,
                 'status' => BatchStatus::Draft,
                 'created_by' => auth()->id(),
             ]);
@@ -53,6 +61,7 @@ class CertificateBatchManager
                     'complimentary_reason' => $reason,
                     'complimentary_purpose' => $purpose,
                     'batch_id' => $batch->id,
+                    'validity' => $validity,
                 ]);
             }
 

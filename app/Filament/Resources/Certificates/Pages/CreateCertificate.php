@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Exceptions\DomainRuleViolation;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Certificates\Schemas\CertificateForm;
+use App\Filament\Support\ValidityFields;
 use App\Models\Package;
 use App\Models\Service;
 use App\Services\CertificateManager;
@@ -44,7 +45,10 @@ class CreateCertificate extends CreateRecord
         return [
             Step::make('Продукт')->icon('heroicon-o-squares-2x2')->schema([
                 Grid::make(3)->schema(CertificateForm::productFields()),
-                Grid::make(2)->visible(fn (Get $get) => CertificateForm::isComplimentary($get))->schema(CertificateForm::complimentaryFields()),
+                Grid::make(2)->visible(fn (Get $get) => CertificateForm::isComplimentary($get))->schema([
+                    ...CertificateForm::complimentaryFields(),
+                    ValidityFields::make(),
+                ]),
             ]),
             Step::make('Покупатель и получатель')->icon('heroicon-o-user')->columns(2)
                 ->schema([CertificateForm::customerField(), CertificateForm::recipientField()]),

@@ -18,7 +18,7 @@ class CertificateBatch extends Model
     use PreventsDeletion;
 
     protected $fillable = [
-        'package_id', 'customer_id', 'quantity', 'purpose', 'reason', 'status',
+        'package_id', 'customer_id', 'quantity', 'purpose', 'reason', 'valid_from', 'valid_until', 'status',
         'created_by', 'approved_by', 'approved_at', 'issued_at',
     ];
 
@@ -28,6 +28,8 @@ class CertificateBatch extends Model
             'status' => BatchStatus::class,
             'purpose' => ComplimentaryPurpose::class,
             'quantity' => 'integer',
+            'valid_from' => 'date',
+            'valid_until' => 'date',
             'approved_at' => 'datetime',
             'issued_at' => 'datetime',
         ];

@@ -47,7 +47,8 @@ class ViewCertificate extends ViewRecord
             Action::make('approveComplimentary')->label('Согласовать бесплатный')->icon('heroicon-o-hand-thumb-up')->color('success')
                 ->authorize(Permission::ApproveComplimentary)
                 ->visible(fn (Certificate $record) => $record->isDraft() && $record->isComplimentary() && ! $record->isComplimentaryApproved() && ! $record->batch_id)
-                ->modalDescription(fn (Certificate $record) => 'Маркетинговый расход по себестоимости: '.Money::format($record->total_cost)
+                ->modalDescription(fn (Certificate $record) => 'Срок: '.$record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y')
+                    .($record->custom_validity ? ' (задан вручную)' : '').'. Маркетинговый расход по себестоимости: '.Money::format($record->total_cost)
                     .($record->hasUnknownCost() ? ' (у части услуг себестоимость не указана)' : '').'. После согласования состав фиксируется.')
                 ->schema([Textarea::make('comment')->label('Комментарий')])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,

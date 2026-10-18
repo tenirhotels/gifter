@@ -6,6 +6,7 @@ use App\Enums\ComplimentaryPurpose;
 use App\Enums\Permission;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
 use App\Filament\Resources\Recipients\Schemas\RecipientForm;
+use App\Filament\Support\ValidityFields;
 use App\Models\Customer;
 use App\Models\Package;
 use Filament\Forms\Components\DatePicker;
@@ -15,8 +16,8 @@ use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Carbon;
 
 /**
  * Реквизиты черновика. Продукт — пакет: он задаёт состав, срок действия и тип
@@ -45,17 +46,11 @@ class CertificateForm
                     ->orderBy('is_complimentary')->orderBy('name'))
                 ->preload()
                 ->getOptionLabelFromRecordUsing(fn (Package $record) => "{$record->name} — {$record->validityLabel()}".($record->is_complimentary ? ' · бесплатный' : ''))
+                ->afterStateUpdated(fn ($state, Set $set) => $set('complimentary_purpose', Package::find($state)?->complimentary_purpose?->value))
                 ->helperText('Пакет задаёт состав, срок действия и тип: бесплатный пакет даёт бесплатный сертификат.'),
             Placeholder::make('validity_preview')->label('Срок действия')
-                ->content(function (Get $get) {
-                    $package = Package::find($get('package_id'));
-                    if (! $package) {
-                        return 'по выбранному пакету';
-                    }
-                    $soldAt = Carbon::parse($get('sold_at') ?: today());
-
-                    return $soldAt->format('d.m.Y').' — '.$package->validUntil($soldAt)->format('d.m.Y');
-                }),
+                ->hidden(fn (Get $get) => self::isComplimentary($get))
+                ->content(fn (Get $get) => ValidityFields::preview(Package::find($get('package_id')), $get('validity'), $get('sold_at'))),
             DatePicker::make('sold_at')->label('Дата продажи')->default(today())->required()->live()
                 ->helperText('Цены и срок считаются от этой даты.')
                 ->visible(fn () => auth()->user()?->can(Permission::EditSaleDate)),
@@ -66,8 +61,9 @@ class CertificateForm
     public static function complimentaryFields(): array
     {
         return [
-            Select::make('complimentary_purpose')->label('Цель')->options(ComplimentaryPurpose::class)->required()
-                ->default(fn (Get $get) => Package::find($get('package_id'))?->complimentary_purpose),
+            Select::make('complimentary_purpose')->label('Цель')->options(ComplimentaryPurpose::class)->required()->live()
+                ->default(fn (Get $get) => Package::find($get('package_id'))?->complimentary_purpose)
+                ->helperText(fn ($state) => ($state instanceof ComplimentaryPurpose ? $state : ComplimentaryPurpose::tryFrom((string) $state))?->getDescription()),
             Textarea::make('complimentary_reason')->label('Основание (кому и зачем)')->required()
                 ->helperText('Выпускается без оплаты после согласования директором; расход — маркетинговый.'),
         ];

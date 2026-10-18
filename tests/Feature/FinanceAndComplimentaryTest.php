@@ -118,12 +118,12 @@ class FinanceAndComplimentaryTest extends TestCase
 
         $this->as(Role::SalesManager);
         Livewire::test(CreateCertificate::class)
-            ->fillForm(['package_id' => $free, 'complimentary_purpose' => 'blogger', 'complimentary_reason' => 'Обзор в Instagram', 'recipient_id' => $recipient->id])
+            ->fillForm(['package_id' => $free, 'complimentary_purpose' => 'influencers', 'complimentary_reason' => 'Обзор в Instagram', 'recipient_id' => $recipient->id])
             ->call('create')
             ->assertHasNoFormErrors();
         $certificate = Certificate::firstOrFail();
         $this->assertTrue($certificate->isComplimentary());
-        $this->assertSame(ComplimentaryPurpose::Blogger, $certificate->complimentary_purpose);
+        $this->assertSame(ComplimentaryPurpose::Influencers, $certificate->complimentary_purpose);
     }
 
     // --- Видимость продавца ---
