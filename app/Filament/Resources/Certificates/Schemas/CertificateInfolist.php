@@ -4,10 +4,12 @@ namespace App\Filament\Resources\Certificates\Schemas;
 
 use App\Enums\Permission;
 use App\Models\Certificate;
+use App\Support\ContactMask;
 use App\Support\Money;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Model;
 
 class CertificateInfolist
 {
@@ -28,14 +30,16 @@ class CertificateInfolist
                 TextEntry::make('pending_refund')->label('Внимание')->color('danger')->columnSpanFull()
                     ->state('Запрос на возврат ждёт решения Финансов — действия с сертификатом заблокированы.')
                     ->visible(fn (Certificate $record) => $record->hasPendingRefund()),
-                TextEntry::make('customer.full_name')->label('Покупатель')->placeholder('—')
-                    ->helperText(fn (Certificate $record) => collect([$record->customer?->phone, $record->customer?->email])->filter()->implode(', ') ?: null),
-                TextEntry::make('recipient.full_name')->label('Получатель')
-                    ->helperText(fn (Certificate $record) => collect([$record->recipient->phone, $record->recipient->email])->filter()->implode(', ') ?: null),
+                TextEntry::make('customer_name')->label('Покупатель')->placeholder('—')
+                    ->state(fn (Certificate $record) => $record->customer?->displayName())
+                    ->helperText(fn (Certificate $record) => self::maskedContacts($record->customer)),
+                TextEntry::make('recipient.full_name')->label('Получатель')->placeholder('не указан')
+                    ->helperText(fn (Certificate $record) => self::maskedContacts($record->recipient)),
                 TextEntry::make('sold_at')->label('Дата продажи')->date('d.m.Y'),
                 TextEntry::make('validity')->label('Срок действия')
                     ->state(fn (Certificate $record) => $record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y')),
-                TextEntry::make('package.name')->label('Пакет')->placeholder('—'),
+                TextEntry::make('package.name')->label('Пакет')->placeholder('—')
+                    ->helperText(fn (Certificate $record) => $record->package?->validityLabel()),
                 TextEntry::make('notes')->label('Примечание')->placeholder('—'),
                 TextEntry::make('cancellation_reason')->label('Причина аннулирования')->visible(fn (Certificate $record) => filled($record->cancellation_reason))->color('danger'),
             ]),
@@ -57,5 +61,10 @@ class CertificateInfolist
                 TextEntry::make('issued_at')->label('Выпущен')->dateTime('d.m.Y H:i')->placeholder('ещё не выпущен'),
             ]),
         ]);
+    }
+
+    private static function maskedContacts(?Model $person): ?string
+    {
+        return $person ? (collect([ContactMask::phone($person->phone), ContactMask::email($person->email)])->filter()->implode(', ') ?: null) : null;
     }
 }

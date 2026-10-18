@@ -28,7 +28,7 @@ class PackageResource extends Resource
 
     protected static ?string $modelLabel = 'пакет';
 
-    protected static ?string $pluralModelLabel = 'Пакеты';
+    protected static ?string $pluralModelLabel = 'Пакеты (продукты)';
 
     protected static ?string $recordTitleAttribute = 'name';
 

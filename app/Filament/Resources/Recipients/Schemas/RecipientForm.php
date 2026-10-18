@@ -2,9 +2,10 @@
 
 namespace App\Filament\Resources\Recipients\Schemas;
 
+use App\Filament\Support\ContactFields;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
 
 class RecipientForm
@@ -13,9 +14,8 @@ class RecipientForm
     public static function fields(): array
     {
         return [
-            TextInput::make('full_name')->label('ФИО')->required()->maxLength(255),
-            TextInput::make('phone')->label('Телефон')->tel()->maxLength(32),
-            TextInput::make('email')->label('Email')->email()->maxLength(255),
+            Grid::make(3)->columnSpanFull()->schema(ContactFields::nameInputs()),
+            Grid::make(2)->columnSpanFull()->schema(ContactFields::contactInputs()),
             Textarea::make('notes')->label('Примечание')->columnSpanFull(),
         ];
     }

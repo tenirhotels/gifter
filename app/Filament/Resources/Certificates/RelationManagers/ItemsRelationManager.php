@@ -7,7 +7,6 @@ use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\Certificate;
 use App\Models\CertificateItem;
-use App\Models\Package;
 use App\Models\Service;
 use App\Services\CertificateManager;
 use App\Support\Money;
@@ -32,7 +31,8 @@ class ItemsRelationManager extends RelationManager
         return $table
             ->description('Сертификат погашается только целиком: услуги по отдельности не гасятся и не обмениваются на деньги.')
             ->columns([
-                TextColumn::make('service_name_snapshot')->label('Услуга'),
+                TextColumn::make('service_name_snapshot')->label('Услуга')
+                    ->description(fn (CertificateItem $record) => $record->from_package ? 'из пакета' : 'доп. услуга'),
                 TextColumn::make('quantity')->label('Кол-во'),
                 TextColumn::make('unit_snapshot')->label('Единица'),
                 TextColumn::make('unit_price')->label('Цена')->formatStateUsing(fn ($state) => Money::format($state)),
@@ -48,7 +48,7 @@ class ItemsRelationManager extends RelationManager
             ])
             ->paginated(false)
             ->headerActions([
-                Action::make('addItem')->label('Добавить услугу')->icon('heroicon-o-plus')->visible($editable)->authorize(Permission::ComposeDrafts)
+                Action::make('addItem')->label('Добавить доп. услугу')->icon('heroicon-o-plus')->visible($editable)->authorize(Permission::ComposeDrafts)
                     ->schema([
                         Select::make('service_id')->label('Услуга')->required()->searchable()->preload()
                             ->options(fn () => Service::where('is_active', true)->orderBy('name')->pluck('name', 'id')),
@@ -59,19 +59,10 @@ class ItemsRelationManager extends RelationManager
                             ->addItem($this->certificate(), Service::findOrFail($data['service_id']), (int) $data['quantity']), 'Услуга добавлена');
                         $this->refreshPage();
                     }),
-                Action::make('applyPackage')->label('Добавить пакет')->icon('heroicon-o-squares-plus')->color('gray')->visible($editable)->authorize(Permission::ComposeDrafts)
-                    ->schema([
-                        Select::make('package_id')->label('Пакет')->required()
-                            ->options(fn () => Package::where('is_active', true)->orderBy('name')->pluck('name', 'id')),
-                    ])
-                    ->action(function (array $data, Action $action) {
-                        RunsDomainActions::run($action, fn () => app(CertificateManager::class)
-                            ->applyPackage($this->certificate(), Package::findOrFail($data['package_id'])), 'Услуги пакета добавлены');
-                        $this->refreshPage();
-                    }),
             ])
             ->recordActions([
-                Action::make('remove')->label('Убрать')->icon('heroicon-o-x-mark')->color('danger')->visible($editable)->authorize(Permission::ComposeDrafts)
+                Action::make('remove')->label('Убрать')->icon('heroicon-o-x-mark')->color('danger')->visible($editable)
+                    ->authorize(fn (CertificateItem $record) => auth()->user()->can($record->from_package ? Permission::RemovePackageItems : Permission::ComposeDrafts))
                     ->requiresConfirmation()
                     ->action(function (CertificateItem $record, Action $action) {
                         RunsDomainActions::run($action, fn () => app(CertificateManager::class)->removeItem($record), 'Услуга убрана');

@@ -53,6 +53,7 @@ class RolesTest extends TestCase
     private function draft(): Certificate
     {
         $certificate = app(CertificateManager::class)->createDraft([
+            'package_id' => $this->emptyPackageId(),
             'customer_id' => Customer::factory()->create()->id,
             'recipient_id' => Recipient::factory()->create()->id,
         ]);

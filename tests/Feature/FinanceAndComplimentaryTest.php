@@ -54,6 +54,7 @@ class FinanceAndComplimentaryTest extends TestCase
     private function draft(array $data = []): Certificate
     {
         $certificate = app(CertificateManager::class)->createDraft($data + [
+            'package_id' => $this->emptyPackageId(),
             'customer_id' => Customer::factory()->create()->id,
             'recipient_id' => Recipient::factory()->create()->id,
         ]);
@@ -113,7 +114,7 @@ class FinanceAndComplimentaryTest extends TestCase
 
         $this->as(Role::SalesManager);
         Livewire::test(CreateCertificate::class)
-            ->fillForm(['kind' => 'complimentary', 'complimentary_reason' => 'Партнёр', 'recipient_id' => $recipient->id])
+            ->fillForm(['package_id' => $this->emptyPackageId(), 'kind' => 'complimentary', 'complimentary_reason' => 'Партнёр', 'recipient_id' => $recipient->id])
             ->call('create')
             ->assertHasNoFormErrors();
         $this->assertTrue(Certificate::firstOrFail()->isComplimentary());

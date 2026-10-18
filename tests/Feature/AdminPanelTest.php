@@ -56,7 +56,7 @@ class AdminPanelTest extends TestCase
         $recipient = Recipient::factory()->create();
 
         Livewire::test(CreateCertificate::class)
-            ->fillForm(['customer_id' => $customer->id, 'recipient_id' => $recipient->id])
+            ->fillForm(['package_id' => $this->emptyPackageId(), 'customer_id' => $customer->id, 'recipient_id' => $recipient->id])
             ->call('create')
             ->assertHasNoFormErrors();
 
@@ -88,6 +88,7 @@ class AdminPanelTest extends TestCase
         $service = Service::factory()->create();
         app(ServicePricing::class)->addPrice($service, '1000', Carbon::parse('2026-01-01'));
         $certificate = app(CertificateManager::class)->createDraft([
+            'package_id' => $this->emptyPackageId(),
             'customer_id' => Customer::factory()->create()->id,
             'recipient_id' => Recipient::factory()->create()->id,
         ]);

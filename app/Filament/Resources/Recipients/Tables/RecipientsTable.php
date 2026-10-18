@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Recipients\Tables;
 
+use App\Filament\Support\ContactFields;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -12,13 +13,11 @@ class RecipientsTable
     {
         return $table
             ->columns([
-                TextColumn::make('full_name')->label('ФИО')->searchable()->sortable(),
-                TextColumn::make('phone')->label('Телефон')->searchable(),
-                TextColumn::make('email')->label('Email')->searchable(),
+                TextColumn::make('full_name')->label('ФИО')->searchable(['last_name', 'first_name', 'middle_name'])->sortable(['last_name']),
+                ...ContactFields::maskedColumns(),
                 TextColumn::make('certificates_count')->label('Сертификатов')->counts('certificates')->sortable(),
-                TextColumn::make('created_at')->label('Создан')->dateTime('d.m.Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->recordActions([EditAction::make()])
-            ->defaultSort('full_name');
+            ->recordActions([ContactFields::revealAction(label: 'Контакты'), EditAction::make()])
+            ->defaultSort('last_name');
     }
 }

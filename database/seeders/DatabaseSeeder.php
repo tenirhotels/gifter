@@ -21,11 +21,11 @@ class DatabaseSeeder extends Seeder
     {
         $providers = [];
         foreach ([
-            ['Отель', ProviderType::Hotel],
-            ['Ресторан отеля', ProviderType::Restaurant],
-            ['SPA-центр отеля', ProviderType::InternalDepartment],
-            ['Канатная дорога', ProviderType::ThirdParty],
-            ['Трансферная компания', ProviderType::ThirdParty],
+            ['Служба размещения', ProviderType::Rooms],
+            ['Ресторан отеля', ProviderType::FoodBeverage],
+            ['SPA-центр отеля', ProviderType::OtherDepartment],
+            ['Канатная дорога', ProviderType::External],
+            ['Трансферная компания', ProviderType::External],
         ] as [$name, $type]) {
             $providers[$name] = Provider::firstOrCreate(['name' => $name], ['type' => $type]);
         }
@@ -37,8 +37,8 @@ class DatabaseSeeder extends Seeder
 
         // название, единица, категория, поставщик, цена, себестоимость, [подготовка, время, подтверждение]
         $services = [
-            ['Проживание', 'ночь', 'Проживание', 'Отель', '150000', '60000', [false, false, false]],
-            ['Завтрак', 'персона', 'Питание', 'Отель', '8500', '3500', [false, false, false]],
+            ['Проживание', 'ночь', 'Проживание', 'Служба размещения', '150000', '60000', [false, false, false]],
+            ['Завтрак', 'персона', 'Питание', 'Служба размещения', '8500', '3500', [false, false, false]],
             ['Ужин', 'персона', 'Питание', 'Ресторан отеля', '15000', '6000', [true, true, true]],
             ['SPA', 'сеанс', 'SPA и отдых', 'SPA-центр отеля', '40000', '12000', [true, true, false]],
             ['Канатная дорога', 'билет', 'Экскурсии', 'Канатная дорога', '12000', '10000', [true, true, false]],
@@ -59,10 +59,21 @@ class DatabaseSeeder extends Seeder
             }
         }
 
-        $package = Package::firstOrCreate(['name' => 'Романтический уикенд'], ['description' => '2 ночи для двоих', 'is_active' => true]);
+        $package = Package::firstOrCreate(['name' => 'Романтический уикенд'], [
+            'description' => '2 ночи для двоих', 'validity_value' => 2, 'validity_unit' => 'months', 'is_active' => true,
+        ]);
         if (! $package->items()->exists()) {
             foreach ([['Проживание', 2], ['Завтрак', 4], ['Ужин', 2], ['SPA', 2]] as $position => [$name, $quantity]) {
                 $package->items()->create(['service_id' => Service::where('name', $name)->value('id'), 'quantity' => $quantity, 'position' => $position]);
+            }
+        }
+
+        $weekend = Package::firstOrCreate(['name' => 'Ночь в отеле'], [
+            'description' => 'Проживание с завтраком', 'validity_value' => 2, 'validity_unit' => 'months', 'is_active' => true,
+        ]);
+        if (! $weekend->items()->exists()) {
+            foreach ([['Проживание', 1], ['Завтрак', 2]] as $position => [$name, $quantity]) {
+                $weekend->items()->create(['service_id' => Service::where('name', $name)->value('id'), 'quantity' => $quantity, 'position' => $position]);
             }
         }
     }

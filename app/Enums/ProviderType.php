@@ -6,18 +6,18 @@ use Filament\Support\Contracts\HasLabel;
 
 enum ProviderType: string implements HasLabel
 {
-    case Hotel = 'hotel';
-    case Restaurant = 'restaurant';
-    case InternalDepartment = 'internal_department';
-    case ThirdParty = 'third_party';
+    case Rooms = 'rooms';
+    case FoodBeverage = 'food_beverage';
+    case OtherDepartment = 'other_department';
+    case External = 'external';
 
     public function getLabel(): string
     {
         return match ($this) {
-            self::Hotel => 'Отель',
-            self::Restaurant => 'Ресторан отеля',
-            self::InternalDepartment => 'Другой отдел отеля',
-            self::ThirdParty => 'Сторонний поставщик',
+            self::Rooms => 'Rooms — Служба размещения',
+            self::FoodBeverage => 'F&B — Ресторанная служба',
+            self::OtherDepartment => 'Other Hotel Department — Другой отдел отеля',
+            self::External => 'External Provider — Внешний поставщик',
         };
     }
 }

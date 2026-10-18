@@ -15,7 +15,8 @@ class PackagesTable
         return $table
             ->columns([
                 TextColumn::make('name')->label('Название')->searchable()->sortable(),
-                TextColumn::make('composition')->label('Состав')->state(fn (Package $record): string => $record->items
+                TextColumn::make('validity')->label('Срок')->state(fn (Package $record): string => $record->validity_unit->format($record->validity_value)),
+                TextColumn::make('composition')->label('Базовый состав')->state(fn (Package $record): string => $record->items
                     ->map(fn ($item) => "{$item->service->name} × {$item->quantity}")->implode(', '))->wrap(),
                 IconColumn::make('is_active')->label('Активен')->boolean(),
             ])

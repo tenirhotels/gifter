@@ -28,15 +28,22 @@ class CertificateManager
     ) {}
 
     /**
-     * @param  array{customer_id?:int|null, recipient_id:int, kind?:CertificateKind|string, complimentary_reason?:string|null, sold_at?:string|Carbon|null, valid_from?:string|Carbon|null, valid_until?:string|Carbon|null, notes?:string|null, package_id?:int|null}  $data
+     * Черновик по пакету (продукту). Срок действия считается из пакета от даты
+     * продажи и вручную при создании не задаётся. Получатель может быть неизвестен.
+     *
+     * @param  array{package_id:int, customer_id?:int|null, recipient_id?:int|null, kind?:CertificateKind|string, complimentary_reason?:string|null, sold_at?:string|Carbon|null, notes?:string|null}  $data
      */
     public function createDraft(array $data): Certificate
     {
         return DB::transaction(function () use ($data) {
+            if (empty($data['package_id'])) {
+                throw new DomainRuleViolation('Выберите пакет: он задаёт состав и срок действия сертификата.');
+            }
+            $package = Package::findOrFail($data['package_id']);
+            if (! $package->is_active) {
+                throw new DomainRuleViolation("Пакет «{$package->name}» не активен.");
+            }
             $soldAt = Carbon::parse($data['sold_at'] ?? today())->startOfDay();
-            $validFrom = Carbon::parse($data['valid_from'] ?? $soldAt)->startOfDay();
-            $validUntil = Carbon::parse($data['valid_until'] ?? $validFrom->copy()->addDays(config('gifter.validity_days')))->startOfDay();
-            $this->assertValidity($validFrom, $validUntil);
             $kind = $data['kind'] ?? CertificateKind::Sale;
             $kind = $kind instanceof CertificateKind ? $kind : CertificateKind::from($kind);
             $this->assertKind($kind, $data['customer_id'] ?? null, $data['complimentary_reason'] ?? null);
@@ -44,43 +51,47 @@ class CertificateManager
             $certificate = Certificate::create([
                 'number' => $this->numbers->next($soldAt),
                 'customer_id' => $data['customer_id'] ?? null,
-                'recipient_id' => $data['recipient_id'],
+                'recipient_id' => $data['recipient_id'] ?? null,
+                'package_id' => $package->id,
                 'status' => CertificateStatus::Draft,
                 'kind' => $kind,
                 'complimentary_reason' => $kind === CertificateKind::Complimentary ? $data['complimentary_reason'] : null,
                 'sold_at' => $soldAt,
-                'valid_from' => $validFrom,
-                'valid_until' => $validUntil,
+                'valid_from' => $soldAt,
+                'valid_until' => $package->validUntil($soldAt),
                 'currency' => config('gifter.currency'),
                 'notes' => $data['notes'] ?? null,
                 'created_by' => auth()->id(),
                 'updated_by' => auth()->id(),
             ]);
-            $this->history->record($certificate, HistoryEvent::Created, after: $this->snapshot($certificate));
-
-            if (! empty($data['package_id'])) {
-                $this->applyPackage($certificate, Package::findOrFail($data['package_id']));
-            }
+            $this->history->record($certificate, HistoryEvent::Created, $package->name.', '.$package->validityLabel(), after: $this->snapshot($certificate));
+            $this->addPackageItems($certificate, $package);
 
             return $certificate->refresh();
         });
     }
 
     /**
-     * Правка реквизитов черновика. Смена даты продажи пересчитывает цены.
+     * Правка реквизитов черновика. Смена пакета заменяет базовый состав (доп. услуги
+     * остаются); смена пакета или даты продажи пересчитывает срок и цены.
      *
-     * @param  array{customer_id?:int, recipient_id?:int, sold_at?:string|Carbon, valid_from?:string|Carbon, valid_until?:string|Carbon, notes?:string|null}  $data
+     * @param  array{customer_id?:int|null, recipient_id?:int|null, package_id?:int, kind?:CertificateKind|string, complimentary_reason?:string|null, sold_at?:string|Carbon, notes?:string|null}  $data
      */
     public function updateDraft(Certificate $certificate, array $data): Certificate
     {
         return $this->locked($certificate, function (Certificate $certificate) use ($data) {
             $this->assertDraft($certificate);
-            $data = array_intersect_key($data, array_flip(['customer_id', 'recipient_id', 'kind', 'complimentary_reason', 'sold_at', 'valid_from', 'valid_until', 'notes']));
+            $data = array_intersect_key($data, array_flip(['customer_id', 'recipient_id', 'package_id', 'kind', 'complimentary_reason', 'sold_at', 'notes']));
             $soldAtChanged = isset($data['sold_at']) && ! Carbon::parse($data['sold_at'])->isSameDay($certificate->sold_at);
             $kindChanged = isset($data['kind']) && CertificateKind::from($data['kind'] instanceof CertificateKind ? $data['kind']->value : $data['kind']) !== $certificate->kind;
-            if ($soldAtChanged || $kindChanged) {
+            $packageChanged = isset($data['package_id']) && (int) $data['package_id'] !== $certificate->package_id;
+            if ($soldAtChanged || $kindChanged || $packageChanged) {
                 $this->assertNoActivePayments($certificate);
                 $this->assertNotApproved($certificate);
+            }
+            $package = $packageChanged ? Package::findOrFail($data['package_id']) : $certificate->package;
+            if ($packageChanged && ! $package->is_active) {
+                throw new DomainRuleViolation("Пакет «{$package->name}» не активен.");
             }
 
             $before = $this->snapshot($certificate);
@@ -88,7 +99,10 @@ class CertificateManager
             if (! $certificate->isComplimentary()) {
                 $certificate->complimentary_reason = null;
             }
-            $this->assertValidity($certificate->valid_from, $certificate->valid_until);
+            if (($soldAtChanged || $packageChanged) && $package) {
+                $certificate->valid_from = $certificate->sold_at;
+                $certificate->valid_until = $package->validUntil($certificate->sold_at);
+            }
             $this->assertKind($certificate->kind, $certificate->customer_id, $certificate->complimentary_reason);
             if (! $certificate->isDirty()) {
                 return $certificate;
@@ -96,6 +110,11 @@ class CertificateManager
             $certificate->save();
             $this->history->record($certificate, HistoryEvent::Updated, null, ...$this->diff($before, $this->snapshot($certificate)));
 
+            if ($packageChanged) {
+                $certificate->items()->where('from_package', true)->get()->each->delete();
+                $this->addPackageItems($certificate, $package);
+                $this->recalculateTotal($certificate);
+            }
             if ($soldAtChanged) {
                 $this->reprice($certificate);
             }
@@ -129,22 +148,36 @@ class CertificateManager
         });
     }
 
-    /** Добавляет в черновик услуги пакета; цены — на дату продажи сертификата. */
-    public function applyPackage(Certificate $certificate, Package $package): void
+    /** Базовый состав пакета в черновик; цены — на дату продажи сертификата. */
+    private function addPackageItems(Certificate $certificate, Package $package): void
     {
-        $this->locked($certificate, function (Certificate $certificate) use ($package) {
-            $this->assertCompositionEditable($certificate);
-            $package->loadMissing('items.service');
-            if ($package->items->isEmpty()) {
-                throw new DomainRuleViolation("В пакете «{$package->name}» нет услуг.");
+        $package->loadMissing('items.service');
+        if ($package->items->isEmpty()) {
+            return; // пакет задаёт только срок, состав — доп. услугами
+        }
+        foreach ($package->items as $packageItem) {
+            $this->createItem($certificate, $packageItem->service, $packageItem->quantity, fromPackage: true);
+        }
+        $this->recalculateTotal($certificate);
+        $this->history->record($certificate, HistoryEvent::PackageApplied, $package->name,
+            after: ['package_id' => $package->id, 'items' => $certificate->items()->get()->map($this->itemSnapshot(...))->all()]);
+    }
+
+    /** Получатель указывается или меняется в любой момент до погашения. */
+    public function setRecipient(Certificate $certificate, ?int $recipientId): Certificate
+    {
+        return $this->locked($certificate, function (Certificate $certificate) use ($recipientId) {
+            if ($certificate->status->isFinal() || $certificate->status === CertificateStatus::InUse) {
+                throw new DomainRuleViolation("Получателя сертификата в статусе «{$certificate->status->getLabel()}» изменить нельзя.");
             }
-            foreach ($package->items as $packageItem) {
-                $this->createItem($certificate, $packageItem->service, $packageItem->quantity);
+            if ($certificate->recipient_id === $recipientId) {
+                return $certificate;
             }
-            $certificate->update(['package_id' => $package->id, 'updated_by' => auth()->id()]);
-            $this->recalculateTotal($certificate);
-            $this->history->record($certificate, HistoryEvent::PackageApplied, $package->name,
-                after: ['package_id' => $package->id, 'items' => $certificate->items()->get()->map($this->itemSnapshot(...))->all()]);
+            $before = ['recipient_id' => $certificate->recipient_id];
+            $certificate->update(['recipient_id' => $recipientId, 'updated_by' => auth()->id()]);
+            $this->history->record($certificate, HistoryEvent::RecipientChanged, $certificate->recipient?->full_name, $before, ['recipient_id' => $recipientId]);
+
+            return $certificate;
         });
     }
 
@@ -217,6 +250,9 @@ class CertificateManager
             }
             if (! $from->canTransitionTo($target)) {
                 throw new DomainRuleViolation("Переход «{$from->getLabel()}» → «{$target->getLabel()}» недопустим.");
+            }
+            if ($target === CertificateStatus::Reserved && ! $certificate->recipient_id) {
+                throw new DomainRuleViolation('Для брони укажите получателя (гостя).');
             }
 
             $certificate->update(['status' => $target, 'updated_by' => auth()->id()]);
@@ -315,7 +351,7 @@ class CertificateManager
         }
     }
 
-    private function createItem(Certificate $certificate, Service $service, int $quantity): CertificateItem
+    private function createItem(Certificate $certificate, Service $service, int $quantity, bool $fromPackage = false): CertificateItem
     {
         if ($quantity < 1) {
             throw new DomainRuleViolation('Количество должно быть не меньше 1.');
@@ -339,6 +375,7 @@ class CertificateManager
             'requires_fulfillment' => $service->requires_fulfillment,
             'requires_scheduling' => $service->requires_scheduling,
             'requires_confirmation' => $service->requires_confirmation,
+            'from_package' => $fromPackage,
             'position' => (int) $certificate->items()->max('position') + 1,
         ]);
     }
@@ -426,6 +463,7 @@ class CertificateManager
     {
         return [
             'customer_id' => $certificate->customer_id,
+            'package_id' => $certificate->package_id,
             'kind' => $certificate->kind?->value,
             'complimentary_reason' => $certificate->complimentary_reason,
             'recipient_id' => $certificate->recipient_id,
@@ -448,6 +486,7 @@ class CertificateManager
     {
         return [
             'service' => $item->service_name_snapshot,
+            'from_package' => $item->from_package,
             'quantity' => $item->quantity,
             'unit_price' => (string) $item->unit_price,
             'line_total' => (string) $item->line_total,

@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\Packages\Schemas;
 
+use App\Enums\ValidityUnit;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
 
 class PackageForm
@@ -16,9 +19,15 @@ class PackageForm
         return $schema->components([
             TextInput::make('name')->label('Название')->required()->maxLength(255),
             Toggle::make('is_active')->label('Активен')->default(true),
+            Grid::make(2)->schema([
+                TextInput::make('validity_value')->label('Срок действия')->integer()->minValue(1)->maxValue(1000)->default(2)->required(),
+                Select::make('validity_unit')->label('Единица')->options(ValidityUnit::class)->default(ValidityUnit::Months)->required(),
+            ])->columnSpan(1),
+            Placeholder::make('validity_hint')->label(' ')
+                ->content('Считается от даты продажи. Продавец срок не меняет; исключения — менеджер продаж с указанием причины. Новый срок действует только для новых сертификатов.'),
             Textarea::make('description')->label('Описание')->columnSpanFull(),
-            Repeater::make('items')->label('Состав')->relationship()
-                ->helperText('Шаблон: изменение пакета не меняет уже созданные сертификаты.')
+            Repeater::make('items')->label('Базовый состав')->relationship()
+                ->helperText('Входит в каждый сертификат пакета. Доп. услуги продавец добавляет в сертификате. Изменения не затрагивают созданные сертификаты.')
                 ->orderColumn('position')
                 ->schema([
                     Select::make('service_id')->label('Услуга')
@@ -26,7 +35,7 @@ class PackageForm
                         ->required()->distinct()->searchable()->preload(),
                     TextInput::make('quantity')->label('Количество')->integer()->minValue(1)->default(1)->required(),
                 ])
-                ->columns(2)->columnSpanFull()->minItems(1),
+                ->columns(2)->columnSpanFull(),
         ]);
     }
 }

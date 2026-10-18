@@ -5,12 +5,14 @@ namespace App\Filament\Resources\Services\RelationManagers;
 use App\Enums\Permission;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\Service;
+use App\Models\ServicePrice;
 use App\Services\ServicePricing;
 use App\Support\Money;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Component;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Carbon;
@@ -36,16 +38,30 @@ class PricesRelationManager extends RelationManager
                 TextColumn::make('created_at')->label('Добавлено')->dateTime('d.m.Y H:i'),
             ])
             ->defaultSort('valid_from', 'desc')
+            ->description('Добавленную сегодня цену можно исправить, пока она не попала в сертификаты. Более ранние версии не меняются — добавьте новую.')
+            ->recordActions([
+                Action::make('fixPrice')->label('Исправить')->icon('heroicon-o-pencil-square')
+                    ->authorize(Permission::ManagePrices)
+                    ->visible(fn (ServicePrice $record) => app(ServicePricing::class)->isEditable($record))
+                    ->fillForm(fn (ServicePrice $record) => [
+                        'price' => $record->price, 'cost' => $record->cost,
+                        'valid_from' => $record->valid_from, 'valid_until' => $record->valid_until,
+                    ])
+                    ->schema(fn () => $this->priceFields())
+                    ->action(function (ServicePrice $record, array $data, Action $action) {
+                        RunsDomainActions::run($action, fn () => app(ServicePricing::class)->updatePrice(
+                            $record,
+                            (string) $data['price'],
+                            Carbon::parse($data['valid_from']),
+                            filled($data['valid_until'] ?? null) ? Carbon::parse($data['valid_until']) : null,
+                            filled($data['cost'] ?? null) ? (string) $data['cost'] : null,
+                        ), 'Цена исправлена');
+                    }),
+            ])
             ->headerActions([
                 Action::make('addPrice')->label('Новая цена')->icon('heroicon-o-plus')
                     ->authorize(Permission::ManagePrices)
-                    ->schema([
-                        TextInput::make('price')->label('Цена продажи, ₸')->numeric()->minValue(1)->required(),
-                        TextInput::make('cost')->label('Себестоимость, ₸')->numeric()->minValue(0)
-                            ->helperText('Во что услуга обходится отелю (билеты, продукты, оплата поставщику). Нужна для маржи и маркетинговых расходов.'),
-                        DatePicker::make('valid_from')->label('Действует с')->required()->default(today()),
-                        DatePicker::make('valid_until')->label('Действует по')->helperText('Пусто — бессрочно. Открытая предыдущая цена закроется автоматически.'),
-                    ])
+                    ->schema(fn () => $this->priceFields())
                     ->action(function (array $data, Action $action) {
                         /** @var Service $service */
                         $service = $this->getOwnerRecord();
@@ -58,6 +74,19 @@ class PricesRelationManager extends RelationManager
                         ), 'Цена добавлена');
                     }),
             ]);
+    }
+
+    /** @return list<Component> */
+    private function priceFields(): array
+    {
+        return [
+            TextInput::make('price')->label('Цена продажи, ₸')->numeric()->minValue(1)->required(),
+            TextInput::make('cost')->label('Себестоимость, ₸')->numeric()->minValue(0)
+                ->visible(fn () => auth()->user()?->can(Permission::ViewCosts))
+                ->helperText('Во что услуга обходится отелю (билеты, продукты, оплата поставщику). Нужна для маржи и маркетинговых расходов.'),
+            DatePicker::make('valid_from')->label('Действует с')->required()->default(today()),
+            DatePicker::make('valid_until')->label('Действует по')->helperText('Пусто — бессрочно. Открытая предыдущая цена закроется автоматически.'),
+        ];
     }
 
     public function isReadOnly(): bool

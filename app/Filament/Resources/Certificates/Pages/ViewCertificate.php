@@ -5,8 +5,11 @@ namespace App\Filament\Resources\Certificates\Pages;
 use App\Enums\CertificateStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
+use App\Filament\Resources\Recipients\Schemas\RecipientForm;
+use App\Filament\Support\ContactFields;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\Certificate;
+use App\Models\Recipient;
 use App\Services\CertificateManager;
 use App\Services\RefundManager;
 use App\Support\Money;
@@ -14,6 +17,7 @@ use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\ViewRecord;
@@ -55,6 +59,22 @@ class ViewCertificate extends ViewRecord
                 'Сертификат погашается целиком, со всеми услугами. Отменить погашение нельзя.'),
 
             ActionGroup::make([
+                Action::make('setRecipient')->label(fn (Certificate $record) => $record->recipient_id ? 'Сменить получателя' : 'Указать получателя')
+                    ->icon('heroicon-o-user-plus')
+                    ->authorize(Permission::AssignRecipient)
+                    ->visible(fn (Certificate $record) => ! $record->isDraft() && ! $record->status->isFinal() && $record->status !== CertificateStatus::InUse)
+                    ->fillForm(fn (Certificate $record) => ['recipient_id' => $record->recipient_id])
+                    ->schema([
+                        Select::make('recipient_id')->label('Получатель')->required()
+                            ->options(fn () => Recipient::query()->orderBy('last_name')->pluck('full_name', 'id'))->searchable()
+                            ->createOptionForm(RecipientForm::fields())
+                            ->createOptionUsing(fn (array $data) => Recipient::create($data)->getKey()),
+                    ])
+                    ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
+                        fn () => $this->manager()->setRecipient($record, (int) $data['recipient_id']), 'Получатель указан')),
+                ContactFields::revealAction('revealCustomer', fn (Certificate $record) => $record->customer, 'Контакты покупателя'),
+                ContactFields::revealAction('revealRecipient', fn (Certificate $record) => $record->recipient, 'Контакты получателя'),
+
                 $this->transitionAction('release', 'Снять бронь', CertificateStatus::Reserved, CertificateStatus::Active, 'heroicon-o-arrow-uturn-left', Permission::ManageReservations),
 
                 Action::make('changeValidity')->label('Изменить срок')->icon('heroicon-o-clock')

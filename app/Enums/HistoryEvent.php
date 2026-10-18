@@ -8,6 +8,7 @@ enum HistoryEvent: string implements HasLabel
 {
     case Created = 'created';
     case Updated = 'updated';
+    case RecipientChanged = 'recipient_changed';
     case ItemAdded = 'item_added';
     case ItemRemoved = 'item_removed';
     case PackageApplied = 'package_applied';
@@ -32,6 +33,7 @@ enum HistoryEvent: string implements HasLabel
         return match ($this) {
             self::Created => 'Создан черновик',
             self::Updated => 'Изменены данные',
+            self::RecipientChanged => 'Указан получатель',
             self::ItemAdded => 'Добавлена услуга',
             self::ItemRemoved => 'Удалена услуга',
             self::PackageApplied => 'Применён пакет',

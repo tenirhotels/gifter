@@ -52,6 +52,7 @@ class CertificateLifecycleTest extends TestCase
     private function draft(array $overrides = []): Certificate
     {
         return $this->certificates->createDraft($overrides + [
+            'package_id' => $this->emptyPackageId(),
             'customer_id' => Customer::factory()->create()->id,
             'recipient_id' => Recipient::factory()->create()->id,
         ]);
@@ -308,7 +309,8 @@ class CertificateLifecycleTest extends TestCase
         $this->certificates->issue($overdue);
         $fresh = $this->paidDraft();
         $this->certificates->issue($fresh);
-        $draft = $this->draft(['valid_from' => '2026-01-01', 'valid_until' => '2026-12-31']);
+        $draft = $this->draft();
+        $this->certificates->changeValidity($draft, Carbon::parse('2026-01-01'), Carbon::parse('2026-12-31'), 'тест');
 
         Carbon::setTestNow('2027-01-01 01:00:00');
         $this->artisan('gifter:expire-certificates')->assertSuccessful();

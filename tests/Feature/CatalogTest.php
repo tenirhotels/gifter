@@ -40,7 +40,7 @@ class CatalogTest extends TestCase
         parent::setUp();
         Carbon::setTestNow('2026-10-18 12:00:00');
         $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
-        $this->restaurant = Provider::create(['name' => 'Ресторан отеля', 'type' => ProviderType::Restaurant]);
+        $this->restaurant = Provider::create(['name' => 'Ресторан отеля', 'type' => ProviderType::FoodBeverage]);
         $this->food = ServiceCategory::create(['name' => 'Питание']);
     }
 
@@ -66,6 +66,7 @@ class CatalogTest extends TestCase
     private function draft(array $data = []): Certificate
     {
         return app(CertificateManager::class)->createDraft($data + [
+            'package_id' => $this->emptyPackageId(),
             'customer_id' => Customer::factory()->create()->id,
             'recipient_id' => Recipient::factory()->create()->id,
         ]);
@@ -109,7 +110,7 @@ class CatalogTest extends TestCase
         $certificate = $this->draft();
         $item = app(CertificateManager::class)->addItem($certificate, $dinner, 2);
 
-        $dinner->update(['requires_confirmation' => false, 'provider_id' => Provider::create(['name' => 'Другой', 'type' => ProviderType::ThirdParty])->id]);
+        $dinner->update(['requires_confirmation' => false, 'provider_id' => Provider::create(['name' => 'Другой', 'type' => ProviderType::External])->id]);
         app(ServicePricing::class)->addPrice($dinner, '18000', Carbon::parse('2026-11-01'), cost: '9000');
 
         $item->refresh();
