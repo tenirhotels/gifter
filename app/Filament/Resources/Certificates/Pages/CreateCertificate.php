@@ -9,6 +9,7 @@ use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Certificates\Schemas\CertificateForm;
 use App\Filament\Support\ValidityFields;
 use App\Models\CertificateBatch;
+use App\Models\Customer;
 use App\Models\Package;
 use App\Models\Service;
 use App\Services\CertificateBatchManager;
@@ -24,8 +25,11 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -44,29 +48,45 @@ class CreateCertificate extends CreateRecord
 
     protected static ?string $title = 'Оформление сертификата';
 
+    /** Шаги мастера слева, «Сводка» справа: что оформляется, на какой срок и на какую сумму — видно на любом шаге. */
+    public function form(Schema $schema): Schema
+    {
+        return parent::form($schema)->components([
+            Grid::make(['default' => 1, 'lg' => 3])->columnSpanFull()->schema([
+                $this->getWizardComponent()->columnSpan(['default' => 1, 'lg' => 2]),
+                Section::make('Сводка')->icon('heroicon-o-clipboard-document-list')->columnSpan(1)
+                    ->extraAttributes(['class' => 'gf-summary'])
+                    ->schema([Text::make(fn (Get $get) => $this->summary($get))]),
+            ]),
+        ]);
+    }
+
     public function getSteps(): array
     {
+        [$package, , $soldAt] = CertificateForm::productFields(withValidityPreview: false);
+
         return [
             Step::make('Продукт')->icon('heroicon-o-squares-2x2')->schema([
-                Grid::make(3)->schema(CertificateForm::productFields()),
-                Grid::make(3)->schema([
+                Grid::make(['default' => 1, 'md' => 2])->schema([
+                    $package->columnSpanFull(),
                     TextInput::make('certificate_count')->label('Количество сертификатов')->integer()
                         ->minValue(1)->maxValue(CertificateBatchManager::MAX_QUANTITY)->default(1)->required()->live(onBlur: true)
-                        ->helperText('Больше 1 — оформляются вместе: общий счёт (для платных), получатели у каждого свои.'),
+                        ->helperText('Больше 1 — группа: общий счёт для платных, получатель у каждого свой.'),
+                    $soldAt,
                 ]),
                 Grid::make(2)->visible(fn (Get $get) => CertificateForm::isComplimentary($get))->schema([
                     ...CertificateForm::complimentaryFields(),
                     ValidityFields::make(),
                 ]),
             ]),
-            Step::make('Заказчик и получатель')->icon('heroicon-o-user')->columns(2)
+            Step::make('Заказчик')->icon('heroicon-o-user')->columns(2)
                 ->schema([
                     CertificateForm::customerField(),
                     CertificateForm::recipientField()->hidden(fn (Get $get) => self::count($get) > 1),
                     Placeholder::make('recipients_hint')->label('Получатели')->visible(fn (Get $get) => self::count($get) > 1)
                         ->content('У каждого сертификата свой получатель — укажите их после оформления.'),
                 ]),
-            Step::make('Состав и стоимость')->icon('heroicon-o-list-bullet')->schema([
+            Step::make('Состав')->icon('heroicon-o-list-bullet')->schema([
                 Repeater::make('extras')->label('Доп. услуги к пакету')->addActionLabel('Добавить доп. услугу')
                     ->defaultItems(0)->live()->columns(2)->reorderable(false)
                     ->schema([
@@ -113,6 +133,37 @@ class CreateCertificate extends CreateRecord
         return new HtmlString('<table style="width:100%;font-size:.875rem"><thead><tr style="text-align:left;opacity:.7"><th>Услуга</th><th style="text-align:right">Кол-во</th>'
             .'<th style="text-align:right">Цена</th><th style="text-align:right">Сумма</th></tr></thead><tbody>'.$rows
             .'</tbody><tfoot>'.$total.'</tfoot></table>'.$missing);
+    }
+
+    /** Сводка справа: ведёт итоговая сумма, ниже — пакет, срок, состав, заказчик. */
+    private function summary(Get $get): HtmlString
+    {
+        $package = Package::find($get('package_id'));
+        if (! $package) {
+            return new HtmlString('<div class="gf-summary-empty">Выберите пакет: здесь появятся состав, срок действия и сумма.</div>');
+        }
+        $count = self::count($get);
+        $free = (bool) $package->is_complimentary;
+        $quote = app(CertificateManager::class)->quote($package, array_values($get('extras') ?? []), Carbon::parse($get('sold_at') ?: today()));
+        $total = Money::multiply($quote['total'], $count);
+        $validity = $free
+            ? ValidityFields::preview($package, $get('validity'), $get('sold_at'))
+            : ValidityFields::preview($package, null, $get('sold_at'));
+        $customer = Customer::find($get('customer_id'))?->displayName();
+        $extras = collect($quote['lines'])->reject(fn (array $line) => $line['from_package']);
+
+        $row = fn (string $label, string $value) => '<div class="gf-summary-row"><dt>'.e($label).'</dt><dd>'.$value.'</dd></div>';
+        $rows = $row('Пакет', e($package->name))
+            .$row('Тип', $free ? 'бесплатный, после согласования директора' : 'продажа')
+            .$row('Срок', e($validity))
+            .$row('Состав', e(collect($quote['lines'])->where('from_package', true)->map(fn (array $l) => "{$l['name']} × {$l['quantity']}")->implode(', ') ?: 'пакет без услуг'))
+            .($extras->isNotEmpty() ? $row('Доп. услуги', e($extras->map(fn (array $l) => "{$l['name']} × {$l['quantity']}")->implode(', '))) : '')
+            .$row('Заказчик', $customer ? e($customer) : '<span class="gf-muted">'.($free ? 'не обязателен' : 'не выбран').'</span>')
+            .($count > 1 ? $row('Сертификатов', $count.' шт., группа · <span class="gf-nowrap">'.Money::format($quote['total']).'</span> за 1') : '');
+        $missing = $quote['missing'] ? '<p class="gf-summary-warn">Нет цены на дату продажи: '.e(implode(', ', $quote['missing'])).'</p>' : '';
+
+        return new HtmlString('<div class="gf-summary-total"><span>'.($free ? 'Стоимость по прайсу' : 'К оплате').'</span><strong>'.Money::format($total).'</strong></div>'
+            .'<dl class="gf-summary-list">'.$rows.'</dl>'.$missing);
     }
 
     private static function count(Get $get): int

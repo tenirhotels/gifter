@@ -79,7 +79,7 @@ class PurchaseTest extends TestCase
     {
         $this->as(Role::Sales);
         Livewire::test(CreateCertificate::class)
-            ->assertSee('Оформление сертификата')->assertSee('Заказчик и получатель')->assertDontSee('Продажа сертификата')
+            ->assertSee('Оформление сертификата')->assertSee('Сводка')->assertSee('Выберите пакет')->assertDontSee('Продажа сертификата')
             ->fillForm([
                 'package_id' => $this->package->id, 'certificate_count' => 2, 'customer_id' => $this->customer->id,
                 'extras' => [['service_id' => $this->extra->id, 'quantity' => 1]],

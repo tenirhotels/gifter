@@ -43,7 +43,7 @@ class AdminPanelProvider extends PanelProvider
             ->databaseTransactions()
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
             ->defaultAvatarProvider(InitialsAvatarProvider::class)
-            ->renderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.dashboard-styles'))
+            ->renderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.app-styles'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

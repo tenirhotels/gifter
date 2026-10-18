@@ -36,8 +36,11 @@ class CertificateForm
         ]);
     }
 
-    /** @return list<Component> */
-    public static function productFields(): array
+    /**
+     * @param  bool  $withValidityPreview  в мастере срок показывается в «Сводке», а не рядом с полем
+     * @return list<Component>
+     */
+    public static function productFields(bool $withValidityPreview = true): array
     {
         return [
             Select::make('package_id')->label('Пакет')->required()->live()
@@ -49,7 +52,7 @@ class CertificateForm
                 ->afterStateUpdated(fn ($state, Set $set) => $set('complimentary_purpose', Package::find($state)?->complimentary_purpose?->value))
                 ->helperText('Пакет задаёт состав, срок действия и тип: бесплатный пакет даёт бесплатный сертификат.'),
             Placeholder::make('validity_preview')->label('Срок действия')
-                ->hidden(fn (Get $get) => self::isComplimentary($get))
+                ->hidden(fn (Get $get) => ! $withValidityPreview || self::isComplimentary($get))
                 ->content(fn (Get $get) => ValidityFields::preview(Package::find($get('package_id')), $get('validity'), $get('sold_at'))),
             DatePicker::make('sold_at')->label('Дата продажи')->default(today())->required()->live()
                 ->helperText('Цены и срок считаются от этой даты.')
@@ -71,7 +74,7 @@ class CertificateForm
 
     public static function customerField(): Select
     {
-        return Select::make('customer_id')->label('Заказчик')
+        return Select::make('customer_id')->label('Заказчик')->live()
             ->relationship('customer', 'full_name')->searchable(['last_name', 'first_name', 'company', 'bin'])->preload()
             ->getOptionLabelFromRecordUsing(fn (Customer $record) => $record->displayName())
             ->createOptionForm(CustomerForm::fields())

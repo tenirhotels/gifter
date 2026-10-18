@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Очередь работы для роли: только то, что требует действия сейчас, каждая
  * плитка ведёт в отфильтрованный список. Плитка с ненулевым «требует действия» —
- * с цветной полосой и иконкой своего цвета; ноль — приглушён. Стили — resources/views/filament/dashboard-styles.blade.php.
+ * с тонкой рамкой и иконкой своего цвета; ноль — приглушён. Стили — resources/views/filament/app-styles.blade.php.
  */
 abstract class RoleQueueWidget extends StatsOverviewWidget
 {
