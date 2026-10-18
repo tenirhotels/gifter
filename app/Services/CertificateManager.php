@@ -28,6 +28,7 @@ class CertificateManager
         private readonly CertificateNumberGenerator $numbers,
         private readonly ServicePricing $pricing,
         private readonly CertificateHistoryRecorder $history,
+        private readonly FulfillmentManager $fulfillments,
     ) {}
 
     /**
@@ -338,6 +339,8 @@ class CertificateManager
             $certificate->update(['status' => $target, 'updated_by' => auth()->id()]);
             $this->history->record($certificate, $target === CertificateStatus::Expired ? HistoryEvent::Expired : HistoryEvent::StatusChanged,
                 $reason, ['status' => $from->value], ['status' => $target->value]);
+            // Бронь открывает заявки по услугам, требующим подготовки; снятие брони и погашение закрывают открытые.
+            $this->fulfillments->syncWithCertificate($certificate);
 
             return $certificate;
         });
@@ -373,6 +376,7 @@ class CertificateManager
             ]);
             $this->history->record($certificate, HistoryEvent::Cancelled, $reason,
                 ['status' => $from->value], ['status' => CertificateStatus::Cancelled->value]);
+            $this->fulfillments->syncWithCertificate($certificate);
 
             return $certificate;
         });

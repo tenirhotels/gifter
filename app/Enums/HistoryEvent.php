@@ -29,6 +29,7 @@ enum HistoryEvent: string implements HasLabel
     case Cancelled = 'cancelled';
     case Expired = 'expired';
     case AdminCorrection = 'admin_correction';
+    case FulfillmentChanged = 'fulfillment_changed';
 
     public function getLabel(): string
     {
@@ -56,6 +57,7 @@ enum HistoryEvent: string implements HasLabel
             self::Cancelled => 'Сертификат аннулирован',
             self::Expired => 'Срок действия истёк',
             self::AdminCorrection => 'Исправление администратора',
+            self::FulfillmentChanged => 'Исполнение услуги',
         };
     }
 }

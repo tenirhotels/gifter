@@ -2,10 +2,12 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\FulfillmentStatus;
 use App\Enums\RefundStatus;
 use App\Enums\Role;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
 use App\Filament\Resources\Certificates\CertificateResource;
+use App\Filament\Resources\Fulfillments\ServiceFulfillmentResource;
 use App\Filament\Resources\Refunds\RefundResource;
 use App\Filament\Support\RoleQueueWidget;
 use App\Support\Money;
@@ -53,6 +55,8 @@ class SalesQueueWidget extends RoleQueueWidget
             if ($q->freeIssuesReadyToIssue()->exists()) {
                 $stats[] = $this->counter('Бесплатные группы к выпуску', $q->freeIssuesReadyToIssue(), $batches('ready'), 'success', 'согласованы директором', 'heroicon-o-gift');
             }
+            $stats[] = $this->counter('Заявки ждут отправки', $q->fulfillments()->where('status', FulfillmentStatus::Pending),
+                ServiceFulfillmentResource::getUrl('index', ['filters' => ['status' => ['values' => ['pending']]]]), 'warning', 'исполнение услуг', 'heroicon-o-paper-airplane');
             $stats[] = $this->counter('Бесплатные у директора', $q->complimentaryAwaitingApproval(),
                 $list(['awaiting_approval' => ['isActive' => true]]), 'info', 'ждут согласования', 'heroicon-o-hand-raised');
             $stats[] = $this->counter('Возвраты на согласовании', $q->refunds(RefundStatus::Requested),

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Certificates\Pages;
 
 use App\Enums\CertificateStatus;
+use App\Enums\FulfillmentStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\Permission;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
@@ -18,6 +19,7 @@ use App\Services\CertificateManager;
 use App\Services\PaymentManager;
 use App\Services\RefundManager;
 use App\Support\Money;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
@@ -107,8 +109,15 @@ class ViewCertificate extends ViewRecord
 
             $this->transitionAction('reserve', 'Отметить бронь', CertificateStatus::Active, CertificateStatus::Reserved, 'heroicon-o-calendar', Permission::ManageReservations),
             $this->transitionAction('checkIn', 'Заезд', CertificateStatus::Reserved, CertificateStatus::InUse, 'heroicon-o-arrow-right-end-on-rectangle', Permission::ManageReservations),
+            // Решение 27.10.2026: погасить можно и с невыполненными заявками — они закроются как отменённые.
             $this->transitionAction('redeem', 'Погасить', CertificateStatus::InUse, CertificateStatus::Used, 'heroicon-o-check-circle', Permission::RedeemCertificates,
-                'Сертификат погашается целиком, со всеми услугами. Отменить погашение нельзя.'),
+                function (Certificate $record) {
+                    $open = $record->fulfillments()->whereIn('status', FulfillmentStatus::open())->with('item')->get();
+
+                    return 'Сертификат погашается целиком, со всеми услугами. Отменить погашение нельзя.'
+                        .($open->isEmpty() ? '' : ' Внимание: не выполнены '.$open->map(fn ($f) => "{$f->serviceLabel()} ({$f->status->getLabel()})")->implode(', ')
+                            .' — эти заявки закроются как отменённые.');
+                }),
 
             ActionGroup::make([
                 Action::make('setRecipient')->label(fn (Certificate $record) => $record->recipient_id ? 'Сменить получателя' : 'Указать получателя')
@@ -186,7 +195,7 @@ class ViewCertificate extends ViewRecord
         ];
     }
 
-    private function transitionAction(string $name, string $label, CertificateStatus $from, CertificateStatus $to, string $icon, Permission $permission, ?string $warning = null): Action
+    private function transitionAction(string $name, string $label, CertificateStatus $from, CertificateStatus $to, string $icon, Permission $permission, string|Closure|null $warning = null): Action
     {
         return Action::make($name)->label($label)->icon($icon)
             ->authorize($permission)

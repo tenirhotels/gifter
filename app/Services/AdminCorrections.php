@@ -25,7 +25,10 @@ use Illuminate\Support\Str;
  */
 class AdminCorrections
 {
-    public function __construct(private readonly CertificateHistoryRecorder $history) {}
+    public function __construct(
+        private readonly CertificateHistoryRecorder $history,
+        private readonly FulfillmentManager $fulfillments,
+    ) {}
 
     public function setStatus(Certificate $certificate, CertificateStatus $target, string $reason): Certificate
     {
@@ -51,6 +54,7 @@ class AdminCorrections
             $certificate->update($changes);
             $this->record($certificate, "Статус «{$from->getLabel()}» → «{$target->getLabel()}»", $reason,
                 ['status' => $from->value], ['status' => $target->value]);
+            $this->fulfillments->syncWithCertificate($certificate, "Исправление администратора: {$reason}");
 
             return $certificate;
         });
@@ -113,6 +117,7 @@ class AdminCorrections
                     ->where('event', HistoryEvent::RefundApproved)->latest('id')->first();
                 $previous = CertificateStatus::tryFrom($approval?->before['status'] ?? '') ?? CertificateStatus::Active;
                 $certificate->update(['status' => $previous, 'cancelled_at' => null, 'cancellation_reason' => null, 'updated_by' => auth()->id()]);
+                $this->fulfillments->syncWithCertificate($certificate, "Исправление администратора: {$reason}");
             }
             $refund->update([
                 'status' => RefundStatus::Requested, 'reviewed_by' => null, 'reviewed_at' => null,

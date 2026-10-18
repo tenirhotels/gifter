@@ -79,6 +79,12 @@ class Certificate extends Model
         return $this->hasMany(CertificateItem::class)->orderBy('position')->orderBy('id');
     }
 
+    /** Заявки на исполнение услуг (фаза 5). */
+    public function fulfillments(): HasMany
+    {
+        return $this->hasMany(ServiceFulfillment::class);
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class)->orderBy('id');

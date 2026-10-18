@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
+use App\Enums\FulfillmentStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\RefundStatus;
@@ -12,6 +13,7 @@ use App\Models\CertificateBatch;
 use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\Service;
+use App\Models\ServiceFulfillment;
 use App\Models\User;
 use App\Policies\CertificateBatchPolicy;
 use App\Policies\CertificatePolicy;
@@ -88,6 +90,25 @@ final class DashboardQueries
     public function freeIssuesReadyToIssue(): Builder
     {
         return $this->batches()->readyToIssue()->where('kind', CertificateKind::Complimentary);
+    }
+
+    /** Заявки на исполнение по видимым сертификатам. */
+    public function fulfillments(): Builder
+    {
+        return ServiceFulfillment::query()->whereHas('certificate', fn (Builder $q) => CertificatePolicy::scopeVisible($q, $this->user));
+    }
+
+    /** Ждут подтверждения поставщика: отправлены или назначены, но ещё не подтверждены. */
+    public function fulfillmentsAwaitingConfirmation(): Builder
+    {
+        return $this->fulfillments()->where('requires_confirmation', true)
+            ->whereIn('status', [FulfillmentStatus::Requested, FulfillmentStatus::Scheduled]);
+    }
+
+    /** Открытые заявки с датой на сегодня. */
+    public function fulfillmentsToday(): Builder
+    {
+        return $this->fulfillments()->whereIn('status', FulfillmentStatus::open())->whereDate('scheduled_date', today()->toDateString());
     }
 
     /** Выпущенные в этом месяце (продажи, без бесплатных и аннулированных). */

@@ -21,7 +21,10 @@ use Illuminate\Support\Facades\DB;
  */
 class RefundManager
 {
-    public function __construct(private readonly CertificateHistoryRecorder $history) {}
+    public function __construct(
+        private readonly CertificateHistoryRecorder $history,
+        private readonly FulfillmentManager $fulfillments,
+    ) {}
 
     public function request(Certificate $certificate, string $amount, string $reason): Refund
     {
@@ -82,6 +85,7 @@ class RefundManager
             ]);
             $this->history->record($certificate, HistoryEvent::RefundApproved, $comment,
                 ['status' => $from->value], ['status' => CertificateStatus::Cancelled->value]);
+            $this->fulfillments->syncWithCertificate($certificate);
 
             return $refund;
         });

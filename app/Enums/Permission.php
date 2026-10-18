@@ -33,6 +33,8 @@ enum Permission: string
     case CancelCertificates = 'certificates.cancel';
     case ManageReservations = 'certificates.reservations';
     case RedeemCertificates = 'certificates.redeem';
+    /** Заявки на исполнение услуг: отправить поставщику, назначить время, подтвердить, отметить выполнение. */
+    case ManageFulfillments = 'fulfillments.manage';
 
     // Деньги
     case ManagePayments = 'payments.manage';
@@ -71,6 +73,8 @@ enum Permission: string
             self::ViewAllCertificates => [Role::SalesManager, Role::SalesDirector, Role::FrontOffice, Role::Finance],
             self::CreateComplimentary, self::ChangeValidity, self::CancelCertificates, self::RequestRefunds => [Role::SalesManager],
             self::ManageReservations, self::RedeemCertificates => [Role::FrontOffice],
+            // Решение 27.10.2026: заявки ведут Front Office и менеджер продаж.
+            self::ManageFulfillments => [Role::FrontOffice, Role::SalesManager],
             self::ReceivePayments => [...$sales, Role::Finance],
             self::ReceiveBankTransfers, self::ReconcilePayments, self::ApproveRefunds => [Role::Finance],
             self::ViewPaymentRegister => [Role::Finance],

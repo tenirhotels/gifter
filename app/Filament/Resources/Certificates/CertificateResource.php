@@ -70,6 +70,7 @@ class CertificateResource extends Resource
     {
         return [
             RelationManagers\ItemsRelationManager::class,
+            RelationManagers\FulfillmentsRelationManager::class,
             RelationManagers\PaymentsRelationManager::class,
             RelationManagers\RefundsRelationManager::class,
             RelationManagers\HistoryRelationManager::class,
