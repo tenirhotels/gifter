@@ -15,10 +15,20 @@ enum BatchStatus: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Draft => 'Ждёт согласования',
+            self::Draft => 'Черновик',
             self::Approved => 'Согласован',
             self::Issued => 'Выпущен',
             self::Cancelled => 'Аннулирован',
+        };
+    }
+
+    /** Подпись с учётом типа: бесплатный черновик ждёт директора, платный — оплаты. */
+    public function labelFor(CertificateKind $kind): string
+    {
+        return match (true) {
+            $this === self::Draft && $kind === CertificateKind::Complimentary => 'Ждёт согласования директора',
+            $this === self::Draft => 'Черновик: счёт и оплата',
+            default => $this->getLabel(),
         };
     }
 

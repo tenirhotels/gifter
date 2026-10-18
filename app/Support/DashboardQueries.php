@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Enums\BatchStatus;
 use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Enums\PaymentMethod;
@@ -14,6 +13,7 @@ use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\Service;
 use App\Models\User;
+use App\Policies\CertificateBatchPolicy;
 use App\Policies\CertificatePolicy;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -61,15 +61,25 @@ final class DashboardQueries
             ->whereDate('valid_until', '<=', today()->addDays(self::EXPIRING_DAYS)->toDateString());
     }
 
-    /** Штучные бесплатные на согласовании (блоки считаются отдельно). */
+    /** Штучные бесплатные на согласовании (покупки считаются отдельно). */
     public function complimentaryAwaitingApproval(): Builder
     {
         return $this->drafts()->where('kind', CertificateKind::Complimentary)->whereNull('complimentary_approved_at')->whereNull('batch_id');
     }
 
-    public function batches(BatchStatus $status): Builder
+    public function purchases(): Builder
     {
-        return CertificateBatch::query()->where('status', $status);
+        return CertificateBatchPolicy::scopeVisible(CertificateBatch::query(), $this->user);
+    }
+
+    public function purchasesAwaitingApproval(): Builder
+    {
+        return $this->purchases()->awaitingApproval();
+    }
+
+    public function purchasesReadyToIssue(): Builder
+    {
+        return $this->purchases()->readyToIssue();
     }
 
     /** Выпущенные в этом месяце (продажи, без бесплатных и аннулированных). */

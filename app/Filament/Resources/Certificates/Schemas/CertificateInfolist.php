@@ -22,7 +22,7 @@ class CertificateInfolist
                 TextEntry::make('status')->label('Статус')->badge(),
                 TextEntry::make('kind')->label('Тип')->badge(),
                 TextEntry::make('complimentary_reason')->label('Основание')->visible(fn (Certificate $record) => $record->isComplimentary())
-                    ->helperText(fn (Certificate $record) => collect([$record->complimentary_purpose?->getLabel(), $record->batch_id ? "блок №{$record->batch_id}" : null])->filter()->implode(' · ') ?: null),
+                    ->helperText(fn (Certificate $record) => collect([$record->complimentary_purpose?->getLabel(), $record->batch_id ? "покупка №{$record->batch_id}" : null])->filter()->implode(' · ') ?: null),
                 TextEntry::make('complimentary_approval')->label('Согласование директора')
                     ->visible(fn (Certificate $record) => $record->isComplimentary())
                     ->state(fn (Certificate $record) => $record->isComplimentaryApproved()

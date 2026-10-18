@@ -14,7 +14,7 @@ class Payment extends Model
     use PreventsDeletion;
 
     protected $fillable = [
-        'certificate_id', 'method', 'status', 'amount', 'currency', 'invoice_number', 'invoiced_at',
+        'certificate_id', 'batch_id', 'method', 'status', 'amount', 'currency', 'invoice_number', 'invoiced_at',
         'paid_at', 'cancelled_at', 'reconciled_at', 'reconciled_by', 'comment', 'recorded_by',
     ];
 
@@ -34,6 +34,11 @@ class Payment extends Model
     public function certificate(): BelongsTo
     {
         return $this->belongsTo(Certificate::class);
+    }
+
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(CertificateBatch::class, 'batch_id');
     }
 
     public function reconciler(): BelongsTo

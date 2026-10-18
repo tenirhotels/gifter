@@ -21,11 +21,17 @@ class PaymentManager
 {
     public function __construct(private readonly CertificateHistoryRecorder $history) {}
 
-    /** Выставить счёт. Без суммы — на весь неоплаченный остаток. */
-    public function invoice(Certificate $certificate, PaymentMethod $method, ?string $amount = null, ?string $invoiceNumber = null, ?string $comment = null): Payment
+    /**
+     * Выставить счёт. Без суммы — на весь неоплаченный остаток.
+     * Для сертификата из покупки счёт выставляет CertificateBatchManager (один на всю покупку).
+     */
+    public function invoice(Certificate $certificate, PaymentMethod $method, ?string $amount = null, ?string $invoiceNumber = null, ?string $comment = null, ?int $batchId = null): Payment
     {
-        return DB::transaction(function () use ($certificate, $method, $amount, $invoiceNumber, $comment) {
+        return DB::transaction(function () use ($certificate, $method, $amount, $invoiceNumber, $comment, $batchId) {
             $certificate = Certificate::query()->lockForUpdate()->findOrFail($certificate->id);
+            if ($certificate->batch_id && $batchId !== $certificate->batch_id) {
+                throw new DomainRuleViolation('Сертификат входит в покупку — счёт выставляется на всю покупку на её странице.');
+            }
             if ($certificate->status !== CertificateStatus::Draft) {
                 throw new DomainRuleViolation('Счёт выставляется только по черновику, до выпуска сертификата.');
             }
@@ -48,6 +54,7 @@ class PaymentManager
             }
 
             $payment = $certificate->payments()->create([
+                'batch_id' => $batchId,
                 'method' => $method,
                 'status' => PaymentStatus::Pending,
                 'amount' => Money::fromMinor($amountMinor),
@@ -70,6 +77,16 @@ class PaymentManager
      */
     public function markPaid(Payment $payment, ?Carbon $paidAt = null): Payment
     {
+        // Счёт покупки — один для покупателя: отмечаются все его строки.
+        if ($payment->batch_id) {
+            return $this->forBatchSiblings($payment, PaymentStatus::Pending, fn (Payment $line) => $this->markPaidLine($line, $paidAt));
+        }
+
+        return $this->markPaidLine($payment, $paidAt);
+    }
+
+    private function markPaidLine(Payment $payment, ?Carbon $paidAt): Payment
+    {
         return $this->lockedPending($payment, function (Payment $payment) use ($paidAt) {
             $before = $this->snapshot($payment);
             $reconciled = $payment->method->requiresFinanceConfirmation();
@@ -88,6 +105,15 @@ class PaymentManager
 
     /** Отменить неоплаченный счёт. Поступившую оплату отменить нельзя. */
     public function cancel(Payment $payment, string $reason): Payment
+    {
+        if ($payment->batch_id) {
+            return $this->forBatchSiblings($payment, PaymentStatus::Pending, fn (Payment $line) => $this->cancelLine($line, $reason));
+        }
+
+        return $this->cancelLine($payment, $reason);
+    }
+
+    private function cancelLine(Payment $payment, string $reason): Payment
     {
         return $this->lockedPending($payment, function (Payment $payment) use ($reason) {
             if (trim($reason) === '') {
@@ -108,6 +134,15 @@ class PaymentManager
     /** Сверка Финансами: поступление подтверждено выпиской банка. */
     public function reconcile(Payment $payment, ?string $comment = null): Payment
     {
+        if ($payment->batch_id) {
+            return $this->forBatchSiblings($payment, PaymentStatus::Paid, fn (Payment $line) => $line->isReconciled() ? $line : $this->reconcileLine($line, $comment), onlyUnreconciled: true);
+        }
+
+        return $this->reconcileLine($payment, $comment);
+    }
+
+    private function reconcileLine(Payment $payment, ?string $comment): Payment
+    {
         return DB::transaction(function () use ($payment, $comment) {
             $fresh = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             if ($fresh->status !== PaymentStatus::Paid) {
@@ -126,6 +161,27 @@ class PaymentManager
             $payment->setRawAttributes($fresh->getAttributes(), true);
 
             return $fresh;
+        });
+    }
+
+    /**
+     * Действие над всеми строками счёта покупки в нужном статусе (одна транзакция).
+     * Возвращает переданную строку в её новом состоянии.
+     */
+    private function forBatchSiblings(Payment $payment, PaymentStatus $status, callable $callback, bool $onlyUnreconciled = false): Payment
+    {
+        return DB::transaction(function () use ($payment, $status, $callback, $onlyUnreconciled) {
+            $lines = Payment::query()->where('batch_id', $payment->batch_id)->where('invoice_number', $payment->invoice_number)
+                ->where('status', $status)->when($onlyUnreconciled, fn ($q) => $q->whereNull('reconciled_at'))->orderBy('id')->get();
+            if ($lines->isEmpty()) {
+                throw new DomainRuleViolation("Счёт в статусе «{$payment->status->getLabel()}» изменить нельзя.");
+            }
+            foreach ($lines as $line) {
+                $callback($line);
+            }
+            $payment->refresh();
+
+            return $payment;
         });
     }
 

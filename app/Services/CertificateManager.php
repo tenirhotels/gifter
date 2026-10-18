@@ -136,8 +136,9 @@ class CertificateManager
             $packageChanged = isset($data['package_id']) && (int) $data['package_id'] !== $certificate->package_id;
             $newPackage = $packageChanged ? Package::findOrFail($data['package_id']) : null;
             $kindChanged = $newPackage && $newPackage->is_complimentary !== $certificate->isComplimentary();
-            if ($certificate->batch_id && ($packageChanged || $soldAtChanged)) {
-                throw new DomainRuleViolation('Сертификат из блока: пакет и дату продажи меняют для всего блока.');
+            $customerChanged = array_key_exists('customer_id', $data) && (int) $data['customer_id'] !== (int) $certificate->customer_id;
+            if ($certificate->batch_id && ($packageChanged || $soldAtChanged || $customerChanged)) {
+                throw new DomainRuleViolation('Сертификат входит в покупку: пакет, покупатель и дата продажи у всех её сертификатов общие.');
             }
             if ($soldAtChanged || $kindChanged || $packageChanged) {
                 $this->assertNoActivePayments($certificate);
@@ -189,9 +190,10 @@ class CertificateManager
         });
     }
 
-    public function addItem(Certificate $certificate, Service $service, int $quantity): CertificateItem
+    public function addItem(Certificate $certificate, Service $service, int $quantity, bool $viaBatch = false): CertificateItem
     {
-        return $this->locked($certificate, function (Certificate $certificate) use ($service, $quantity) {
+        return $this->locked($certificate, function (Certificate $certificate) use ($service, $quantity, $viaBatch) {
+            $this->assertNotInBatch($certificate, $viaBatch);
             $this->assertCompositionEditable($certificate);
             $item = $this->createItem($certificate, $service, $quantity);
             $this->recalculateTotal($certificate);
@@ -209,6 +211,7 @@ class CertificateManager
             if ($item->from_package) {
                 throw new DomainRuleViolation('Услуги пакета не убираются: пакет продаётся целиком. Можно сменить пакет или убрать доп. услугу.');
             }
+            $this->assertNotInBatch($certificate, false);
             $this->assertCompositionEditable($certificate);
             $snapshot = $this->itemSnapshot($item);
             $item->delete();
@@ -498,7 +501,7 @@ class CertificateManager
     private function assertNotInBatch(Certificate $certificate, bool $viaBatch): void
     {
         if ($certificate->batch_id && ! $viaBatch) {
-            throw new DomainRuleViolation('Сертификат входит в блок — это действие выполняется для всего блока.');
+            throw new DomainRuleViolation('Сертификат входит в покупку — это действие выполняется на странице покупки для всех её сертификатов.');
         }
     }
 

@@ -21,8 +21,6 @@ enum Permission: string
     case CreateCertificates = 'certificates.create';
     case CreateComplimentary = 'certificates.create_complimentary';
     case ApproveComplimentary = 'certificates.approve_complimentary';
-    /** Просмотр блоков бесплатных сертификатов. Создают и выпускают — CreateComplimentary, согласуют — ApproveComplimentary. */
-    case ViewBatches = 'certificates.view_batches';
     case EditDrafts = 'certificates.edit_draft';
     /** Дата продажи черновика (от неё зависят цены и срок) — не продавцу. */
     case EditSaleDate = 'certificates.edit_sale_date';
@@ -80,7 +78,6 @@ enum Permission: string
             self::ManageCatalog, self::ManagePrices, self::ApproveComplimentary => [Role::SalesDirector],
             // Себестоимость и маржа — не продажам (решение 21.10.2026).
             self::ViewCosts => [Role::SalesDirector, Role::Finance],
-            self::ViewBatches => [Role::SalesManager, Role::SalesDirector, Role::Finance],
             self::ManageUsers, self::ViewAuditLog, self::AdminCorrections => [],
         };
     }

@@ -2,50 +2,47 @@
 
 namespace App\Filament\Resources\CertificateBatches;
 
-use App\Enums\BatchStatus;
-use App\Enums\ComplimentaryPurpose;
 use App\Enums\Permission;
-use App\Filament\Resources\Customers\Schemas\CustomerForm;
-use App\Filament\Support\ValidityFields;
 use App\Models\CertificateBatch;
-use App\Models\Customer;
-use App\Models\Package;
+use App\Policies\CertificateBatchPolicy;
 use App\Services\CertificateBatchManager;
 use App\Support\Money;
-use BackedEnum;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use UnitEnum;
 
-/** Блоки бесплатных сертификатов: массовый выпуск для инфлюенсеров, партнёров, бартера и др. */
+/**
+ * Покупка — несколько сертификатов в одной продаже. Своего пункта меню нет:
+ * создаётся мастером «Новый сертификат» (количество > 1), открывается
+ * со страницы сертификата, из реестра и с главной.
+ */
 class CertificateBatchResource extends Resource
 {
     protected static ?string $model = CertificateBatch::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static bool $shouldRegisterNavigation = false;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Продажи';
+    protected static ?string $modelLabel = 'покупка';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?string $pluralModelLabel = 'Покупки';
 
-    protected static ?string $modelLabel = 'блок бесплатных';
+    protected static ?string $breadcrumb = 'Покупки';
 
-    protected static ?string $pluralModelLabel = 'Бесплатные блоками';
+    public static function getEloquentQuery(): Builder
+    {
+        return CertificateBatchPolicy::scopeVisible(parent::getEloquentQuery(), auth()->user());
+    }
 
-    protected static ?string $navigationLabel = 'Бесплатные блоками';
-
-    protected static ?string $breadcrumb = 'Бесплатные блоками';
+    public static function canCreate(): bool
+    {
+        return false;
+    }
 
     public static function canEdit(Model $record): bool
     {
@@ -62,49 +59,44 @@ class CertificateBatchResource extends Resource
         return false;
     }
 
-    public static function form(Schema $schema): Schema
-    {
-        return $schema->components([
-            Select::make('package_id')->label('Бесплатный пакет')->required()->live()
-                ->relationship('package', 'name', fn ($query) => $query->where('is_active', true)->where('is_complimentary', true))->preload()
-                ->afterStateUpdated(fn ($state, $set) => $set('purpose', Package::find($state)?->complimentary_purpose?->value)),
-            TextInput::make('quantity')->label('Количество сертификатов')->integer()->minValue(1)->maxValue(CertificateBatchManager::MAX_QUANTITY)->required()->default(10),
-            Select::make('purpose')->label('Цель')->options(ComplimentaryPurpose::class)->required()->live()
-                ->helperText(fn ($state) => ($state instanceof ComplimentaryPurpose ? $state : ComplimentaryPurpose::tryFrom((string) $state))?->getDescription()),
-            Select::make('customer_id')->label('Партнёр (необязательно)')
-                ->relationship('customer', 'full_name')->searchable(['last_name', 'first_name', 'company', 'bin'])->preload()
-                ->getOptionLabelFromRecordUsing(fn (Customer $record) => $record->displayName())
-                ->createOptionForm(CustomerForm::fields())
-                ->helperText('Например, компания-партнёр по бартеру. Блогерам и гостям получателей указывают потом в каждом сертификате.'),
-            Textarea::make('reason')->label('Основание (кому и зачем)')->required()->columnSpanFull(),
-            ValidityFields::make(),
-        ]);
-    }
-
     public static function infolist(Schema $schema): Schema
     {
         return $schema->columns(3)->components([
-            Section::make('Блок')->columns(3)->columnSpan(2)->schema([
-                TextEntry::make('id')->label('Номер блока')->formatStateUsing(fn ($state) => "№{$state}"),
-                TextEntry::make('status')->label('Статус')->badge(),
-                TextEntry::make('purpose')->label('Цель'),
-                TextEntry::make('package.name')->label('Пакет')->helperText(fn (CertificateBatch $record) => $record->package?->validityLabel()),
+            Section::make('Покупка')->columns(3)->columnSpan(2)->schema([
+                TextEntry::make('status')->label('Статус')->badge()->formatStateUsing(fn ($state, CertificateBatch $record) => $record->statusLabel()),
+                TextEntry::make('kind')->label('Тип')->badge(),
                 TextEntry::make('quantity')->label('Сертификатов'),
+                TextEntry::make('package.name')->label('Пакет')->helperText(fn (CertificateBatch $record) => $record->package?->validityLabel()),
                 TextEntry::make('validity')->label('Срок действия')
                     ->state(fn (CertificateBatch $record) => $record->valid_from && $record->valid_until
-                        ? $record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y') : 'по пакету'),
-                TextEntry::make('customer.full_name')->label('Партнёр')->placeholder('—')
+                        ? $record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y').' (задан вручную)' : 'по пакету'),
+                TextEntry::make('customer_name')->label(fn (CertificateBatch $record) => $record->isComplimentary() ? 'Партнёр' : 'Покупатель')->placeholder('—')
                     ->state(fn (CertificateBatch $record) => $record->customer?->displayName()),
-                TextEntry::make('reason')->label('Основание')->columnSpanFull(),
+                TextEntry::make('purpose')->label('Цель')->visible(fn (CertificateBatch $record) => $record->isComplimentary()),
+                TextEntry::make('reason')->label('Основание')->columnSpan(2)->visible(fn (CertificateBatch $record) => $record->isComplimentary()),
             ]),
-            Section::make('Согласование')->columnSpan(1)->schema([
-                TextEntry::make('creator.name')->label('Создал')->helperText(fn (CertificateBatch $record) => $record->created_at?->format('d.m.Y H:i')),
-                TextEntry::make('approver.name')->label('Согласовал директор')->placeholder('ждёт согласования')
-                    ->helperText(fn (CertificateBatch $record) => $record->approved_at?->format('d.m.Y H:i')),
-                TextEntry::make('issued_at')->label('Выпущен')->dateTime('d.m.Y H:i')->placeholder('ещё не выпущен'),
+            Section::make('Деньги и согласование')->columnSpan(1)->schema([
+                TextEntry::make('total')->label(fn (CertificateBatch $record) => $record->isComplimentary() ? 'Стоимость по прайсу' : 'Стоимость покупки')
+                    ->state(fn (CertificateBatch $record) => Money::format($record->certificates()->sum('total_amount')))->weight('bold'),
+                TextEntry::make('invoice')->label('Счёт')
+                    ->visible(fn (CertificateBatch $record) => ! $record->isComplimentary())
+                    ->state(function (CertificateBatch $record) {
+                        $line = $record->payments()->where('status', '!=', 'cancelled')->first();
+                        if (! $line) {
+                            return 'не выставлен';
+                        }
+
+                        return trim("{$line->method->getLabel()} ".($line->invoice_number ? "№ {$line->invoice_number}" : '')
+                            .' · '.Money::format(app(CertificateBatchManager::class)->invoiceTotal($record)).' · '.$line->status->getLabel());
+                    }),
                 TextEntry::make('marketing_cost')->label('Маркетинговый расход (себестоимость)')
                     ->state(fn (CertificateBatch $record) => Money::format($record->certificates()->sum('total_cost')))
-                    ->visible(fn () => auth()->user()?->can(Permission::ViewCosts)),
+                    ->visible(fn (CertificateBatch $record) => $record->isComplimentary() && auth()->user()?->can(Permission::ViewCosts)),
+                TextEntry::make('creator.name')->label('Оформил')->helperText(fn (CertificateBatch $record) => $record->created_at?->format('d.m.Y H:i')),
+                TextEntry::make('approver.name')->label('Согласовал директор')->placeholder('ждёт согласования')
+                    ->helperText(fn (CertificateBatch $record) => $record->approved_at?->format('d.m.Y H:i'))
+                    ->visible(fn (CertificateBatch $record) => $record->isComplimentary()),
+                TextEntry::make('issued_at')->label('Выпущена')->dateTime('d.m.Y H:i')->placeholder('ещё не выпущена'),
             ]),
         ]);
     }
@@ -112,21 +104,21 @@ class CertificateBatchResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['package', 'creator', 'customer']))
             ->columns([
-                TextColumn::make('id')->label('Блок')->formatStateUsing(fn ($state) => "№{$state}")->sortable(),
-                TextColumn::make('status')->label('Статус')->badge(),
-                TextColumn::make('purpose')->label('Цель'),
+                TextColumn::make('id')->label('Покупка')->formatStateUsing(fn ($state) => "№{$state}"),
+                TextColumn::make('status')->label('Статус')->badge()->formatStateUsing(fn ($state, CertificateBatch $record) => $record->statusLabel()),
                 TextColumn::make('package.name')->label('Пакет'),
                 TextColumn::make('quantity')->label('Шт.'),
-                TextColumn::make('reason')->label('Основание')->limit(60)->wrap(),
-                TextColumn::make('creator.name')->label('Создал')->description(fn ($record) => $record->created_at?->format('d.m.Y')),
+                TextColumn::make('customer.full_name')->label('Покупатель')->placeholder('—'),
+                TextColumn::make('created_at')->label('Оформлена')->date('d.m.Y'),
             ])
             ->filters([
-                SelectFilter::make('status')->label('Статус')->options(BatchStatus::class),
-                SelectFilter::make('purpose')->label('Цель')->options(ComplimentaryPurpose::class),
+                Filter::make('awaiting_approval')->label('Бесплатные: ждут согласования директора')
+                    ->query(fn (Builder $query) => $query->awaitingApproval()),
+                Filter::make('ready')->label('Можно выпускать')
+                    ->query(fn (Builder $query) => $query->readyToIssue()),
             ])
-            ->recordActions([ViewAction::make()])
+            ->recordUrl(fn (CertificateBatch $record) => static::getUrl('view', ['record' => $record]))
             ->defaultSort('id', 'desc');
     }
 
@@ -139,7 +131,6 @@ class CertificateBatchResource extends Resource
     {
         return [
             'index' => Pages\ListCertificateBatches::route('/'),
-            'create' => Pages\CreateCertificateBatch::route('/create'),
             'view' => Pages\ViewCertificateBatch::route('/{record}'),
         ];
     }

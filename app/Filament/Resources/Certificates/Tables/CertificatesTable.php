@@ -4,8 +4,11 @@ namespace App\Filament\Resources\Certificates\Tables;
 
 use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
+use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
+use App\Models\Certificate;
 use App\Support\Money;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -24,6 +27,9 @@ class CertificatesTable
                 TextColumn::make('customer.full_name')->label('Покупатель')->placeholder('—')->searchable(),
                 TextColumn::make('recipient.full_name')->label('Получатель')->searchable(),
                 TextColumn::make('total_amount')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state))->sortable(),
+                TextColumn::make('batch_id')->label('Покупка')->placeholder('—')->toggleable()
+                    ->formatStateUsing(fn ($state) => '№'.$state)
+                    ->url(fn (Certificate $record) => $record->batch_id ? CertificateBatchResource::getUrl('view', ['record' => $record->batch_id]) : null),
                 TextColumn::make('sold_at')->label('Продан')->date('d.m.Y')->sortable(),
                 TextColumn::make('valid_until')->label('Действует по')->date('d.m.Y')->sortable()
                     ->color(fn ($record) => in_array($record->status, [CertificateStatus::Active, CertificateStatus::Reserved], true)
@@ -36,6 +42,9 @@ class CertificatesTable
                     ->query(fn (Builder $query) => $query->where('created_by', auth()->id())),
                 Filter::make('no_recipient')->label('Без получателя')
                     ->query(fn (Builder $query) => $query->whereNull('recipient_id')),
+                Filter::make('batch')->schema([TextInput::make('batch_id')->label('Из покупки №')->integer()->minValue(1)])
+                    ->query(fn (Builder $query, array $data) => $query->when($data['batch_id'] ?? null, fn (Builder $q, $id) => $q->where('batch_id', (int) $id)))
+                    ->indicateUsing(fn (array $data) => ($data['batch_id'] ?? null) ? 'Покупка №'.$data['batch_id'] : null),
                 Filter::make('expiring')->label('Истекают в ближайшие 14 дней')
                     ->query(fn (Builder $query) => $query->whereIn('status', [CertificateStatus::Active, CertificateStatus::Reserved])
                         ->whereDate('valid_until', '<=', today()->addDays(14)->toDateString())),

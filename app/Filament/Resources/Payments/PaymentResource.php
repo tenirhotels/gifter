@@ -82,10 +82,11 @@ class PaymentResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['certificate.customer', 'recorder', 'reconciler']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['certificate.customer', 'batch', 'recorder', 'reconciler']))
             ->columns([
                 TextColumn::make('certificate.number')->label('Сертификат')->searchable()
-                    ->url(fn (Payment $record) => CertificateResource::getUrl('view', ['record' => $record->certificate_id])),
+                    ->url(fn (Payment $record) => CertificateResource::getUrl('view', ['record' => $record->certificate_id]))
+                    ->description(fn (Payment $record) => $record->batch_id ? "Покупка №{$record->batch_id} (из {$record->batch->quantity})" : null),
                 TextColumn::make('certificate.customer.full_name')->label('Плательщик')->placeholder('—')->searchable(),
                 TextColumn::make('method')->label('Способ'),
                 TextColumn::make('amount')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state))->sortable(),
@@ -108,6 +109,7 @@ class PaymentResource extends Resource
                 Action::make('receiveTransfer')->label('Поступило на р/с')->icon('heroicon-o-banknotes')->color('success')
                     ->authorize(Permission::ReceiveBankTransfers)
                     ->visible(fn (Payment $record) => $record->status === PaymentStatus::Pending && $record->method === PaymentMethod::BankTransfer)
+                    ->modalDescription(fn (Payment $record) => $record->batch_id ? 'Общий счёт покупки: отметка относится ко всем его строкам.' : null)
                     ->schema([DateTimePicker::make('paid_at')->label('Дата поступления по выписке')->default(now())->maxDate(now())->required()])
                     ->action(fn (Payment $record, array $data, Action $action) => RunsDomainActions::run($action,
                         fn () => app(PaymentManager::class)->markPaid($record, Carbon::parse($data['paid_at'])), 'Поступление отмечено и сверено')),
@@ -115,6 +117,7 @@ class PaymentResource extends Resource
                     ->authorize(Permission::ReconcilePayments)
                     ->visible(fn (Payment $record) => $record->status === PaymentStatus::Paid && ! $record->isReconciled())
                     ->requiresConfirmation()
+                    ->modalDescription(fn (Payment $record) => $record->batch_id ? 'Общий счёт покупки: сверяются все его строки.' : null)
                     ->action(fn (Payment $record, Action $action) => RunsDomainActions::run($action,
                         fn () => app(PaymentManager::class)->reconcile($record), 'Оплата сверена')),
                 ...PaymentCorrectionActions::make(),
@@ -126,6 +129,8 @@ class PaymentResource extends Resource
                     ->action(function (Collection $records) {
                         $done = 0;
                         foreach ($records as $payment) {
+                            // Строки одного счёта покупки сверяются вместе — уже сверенные пропускаем.
+                            $payment->refresh();
                             if ($payment->status === PaymentStatus::Paid && ! $payment->isReconciled()) {
                                 app(PaymentManager::class)->reconcile($payment);
                                 $done++;

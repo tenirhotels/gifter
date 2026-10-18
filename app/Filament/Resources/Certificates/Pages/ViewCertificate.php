@@ -40,8 +40,11 @@ class ViewCertificate extends ViewRecord
         return [
             EditAction::make()->label('Реквизиты')->visible(fn (Certificate $record) => $record->isDraft()),
 
-            Action::make('openBatch')->label(fn (Certificate $record) => 'Блок №'.$record->batch_id)->icon('heroicon-o-rectangle-stack')->color('gray')
-                ->visible(fn (Certificate $record) => $record->batch_id && auth()->user()?->can(Permission::ViewBatches))
+            // У черновика из покупки счёт, оплата, состав и выпуск — только на странице покупки.
+            Action::make('openBatch')->icon('heroicon-o-rectangle-stack')
+                ->label(fn (Certificate $record) => 'Покупка №'.$record->batch_id.($record->isDraft() ? ': счёт, оплата, выпуск' : ''))
+                ->color(fn (Certificate $record) => $record->isDraft() ? 'primary' : 'gray')
+                ->visible(fn (Certificate $record) => $record->batch_id && auth()->user()?->can('view', $record->batch))
                 ->url(fn (Certificate $record) => CertificateBatchResource::getUrl('view', ['record' => $record->batch_id])),
 
             Action::make('approveComplimentary')->label('Согласовать бесплатный')->icon('heroicon-o-hand-thumb-up')->color('success')

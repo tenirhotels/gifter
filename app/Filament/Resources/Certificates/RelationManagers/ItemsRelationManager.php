@@ -26,7 +26,8 @@ class ItemsRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
-        $editable = fn (): bool => $this->certificate()->isDraft() && ! $this->certificate()->isComplimentaryApproved();
+        // Состав черновика из покупки общий — меняется только всей покупкой.
+        $editable = fn (): bool => $this->certificate()->isDraft() && ! $this->certificate()->isComplimentaryApproved() && ! $this->certificate()->batch_id;
 
         return $table
             ->description('Услуги пакета неизменны — это и есть продукт. Доп. услуги можно добавлять и убирать в черновике. Сертификат погашается только целиком.')

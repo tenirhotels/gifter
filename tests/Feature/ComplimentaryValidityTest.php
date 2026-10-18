@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Enums\ComplimentaryPurpose;
 use App\Enums\Role;
 use App\Exceptions\DomainRuleViolation;
-use App\Filament\Resources\CertificateBatches\Pages\CreateCertificateBatch;
 use App\Filament\Resources\Certificates\Pages\CreateCertificate;
 use App\Models\Certificate;
 use App\Models\CertificateBatch;
@@ -113,18 +112,20 @@ class ComplimentaryValidityTest extends TestCase
 
     public function test_batch_with_custom_validity_applies_to_all(): void
     {
-        $batch = app(CertificateBatchManager::class)->create($this->free, 3, 'Фестиваль', 'partners', null,
-            ['mode' => 'duration', 'from' => '2026-11-15', 'value' => 2, 'unit' => 'months']);
+        $batch = app(CertificateBatchManager::class)->create($this->free, 3, [
+            'complimentary_reason' => 'Фестиваль', 'complimentary_purpose' => 'partners',
+            'validity' => ['mode' => 'duration', 'from' => '2026-11-15', 'value' => 2, 'unit' => 'months'],
+        ]);
 
         $this->assertSame('2027-01-15', $batch->valid_until->toDateString());
         $this->assertSame(['2027-01-15'], $batch->certificates()->get()->map(fn ($c) => $c->valid_until->toDateString())->unique()->values()->all());
         $this->assertTrue($batch->certificates()->first()->custom_validity);
 
-        $plain = app(CertificateBatchManager::class)->create($this->free, 1, 'Розыгрыш');
+        $plain = app(CertificateBatchManager::class)->create($this->free, 2, ['complimentary_reason' => 'Розыгрыш']);
         $this->assertNull($plain->valid_from);
     }
 
-    public function test_wizard_and_batch_form_pass_validity(): void
+    public function test_wizard_passes_validity_for_one_and_several(): void
     {
         $this->actingAs(User::factory()->create(['roles' => [Role::SalesManager]]));
         Livewire::test(CreateCertificate::class)
@@ -136,13 +137,16 @@ class ComplimentaryValidityTest extends TestCase
             ->call('create')->assertHasNoFormErrors();
         $this->assertSame('2027-03-01', Certificate::firstOrFail()->valid_until->toDateString());
 
-        Livewire::test(CreateCertificateBatch::class)
+        Livewire::test(CreateCertificate::class)
             ->fillForm([
-                'package_id' => $this->free->id, 'quantity' => 2, 'purpose' => 'internal', 'reason' => 'Корпоратив',
+                'package_id' => $this->free->id, 'certificate_count' => 2, 'complimentary_purpose' => 'internal', 'complimentary_reason' => 'Корпоратив',
                 'validity' => ['mode' => 'duration', 'from' => '2026-12-20', 'value' => 14, 'unit' => 'days'],
             ])
             ->call('create')->assertHasNoFormErrors();
-        $this->assertSame('2027-01-03', CertificateBatch::firstOrFail()->valid_until->toDateString());
+        $batch = CertificateBatch::firstOrFail();
+        $this->assertSame('2027-01-03', $batch->valid_until->toDateString());
+        $this->assertSame(ComplimentaryPurpose::Internal, $batch->purpose);
+        $this->assertSame(2, $batch->certificates()->count());
     }
 
     public function test_choosing_package_prefills_purpose(): void

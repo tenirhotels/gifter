@@ -2,7 +2,6 @@
 
 namespace App\Filament\Widgets;
 
-use App\Enums\BatchStatus;
 use App\Enums\Role;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
 use App\Filament\Resources\Certificates\CertificateResource;
@@ -35,8 +34,8 @@ class DirectorQueueWidget extends RoleQueueWidget
         return [
             $this->counter('Бесплатные ждут согласования', $q->complimentaryAwaitingApproval(),
                 CertificateResource::getUrl('index', ['filters' => ['awaiting_approval' => ['isActive' => true]]]), 'danger', 'нужно ваше решение'),
-            $this->counter('Блоки ждут согласования', $q->batches(BatchStatus::Draft),
-                CertificateBatchResource::getUrl('index', ['filters' => ['status' => ['value' => 'draft']]]), 'danger', 'бесплатные блоками'),
+            $this->counter('Бесплатные покупки ждут согласования', $q->purchasesAwaitingApproval(),
+                CertificateBatchResource::getUrl('index', ['filters' => ['awaiting_approval' => ['isActive' => true]]]), 'danger', 'несколько сертификатов сразу'),
             Stat::make('Продажи за месяц', Money::format(Money::fromMinor($revenue)))
                 ->description((clone $sold)->count().' серт. · маржа '.Money::format(Money::fromMinor($revenue - $cost)))
                 ->color('gray'),

@@ -9,12 +9,12 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 
-/** Сертификаты блока; получателя указывают на странице сертификата. */
+/** Сертификаты покупки; получателя указывают на странице каждого сертификата. */
 class CertificatesRelationManager extends RelationManager
 {
     protected static string $relationship = 'certificates';
 
-    protected static ?string $title = 'Сертификаты блока';
+    protected static ?string $title = 'Сертификаты покупки';
 
     public function table(Table $table): Table
     {
