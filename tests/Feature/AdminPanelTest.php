@@ -109,4 +109,14 @@ class AdminPanelTest extends TestCase
 
         $this->assertSame('5000.00', (string) $service->prices()->first()->price);
     }
+
+    public function test_demo_users_are_created_for_every_role_locally(): void
+    {
+        $this->artisan('gifter:demo-users')
+            ->expectsQuestion('Общий пароль для тестовых пользователей (не короче 10 символов)', 'local-test-pass')
+            ->assertSuccessful();
+
+        $this->assertSame(Role::Sales, User::where('email', 'sales@gifter.local')->first()->roles->first());
+        $this->assertSame(7, User::count());
+    }
 }

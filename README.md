@@ -6,13 +6,15 @@
 
 ## Запуск для разработки
 
+Подробная инструкция для теста (Windows / macOS / Linux, тестовые пользователи по ролям, что проверить): [docs/local-run.md](docs/local-run.md).
+
 ```bash
 composer install
 cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
 php artisan migrate --seed        # демо-каталог: поставщики, категории, услуги, цены, пакет
-php artisan gifter:create-user    # первый пользователь: пароль и роли вводятся интерактивно
+php artisan gifter:demo-users     # тестовые пользователи для всех ролей (только локально)
 php artisan serve                 # панель: http://127.0.0.1:8000/admin
 ```
 
