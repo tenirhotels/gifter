@@ -1,0 +1,14 @@
+# Локальный тест: docker compose up --build  →  http://localhost:8000/admin
+services:
+  gifter:
+    build: .
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      APP_URL: "http://localhost:${APP_PORT:-8000}"
+      APP_PORT: "${APP_PORT:-8000}"
+    volumes:
+      - gifter-data:/data
+
+volumes:
+  gifter-data:

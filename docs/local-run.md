@@ -1,8 +1,42 @@
 # Локальный запуск для теста
 
-Нужны **PHP 8.3+**, **Composer** и **Git**. База — SQLite-файл, MySQL для теста не нужен.
+Два способа: **Docker** (ничего, кроме Docker, ставить не нужно) или **PHP напрямую**. База в обоих случаях — SQLite-файл, MySQL для теста не нужен.
 
-## 1. Установить PHP и Composer
+## Способ 1 — Docker
+
+Нужен [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows / macOS) или Docker Engine с плагином compose (Linux).
+
+```bash
+git clone -b claude/charming-gauss-o7jrdg https://github.com/tenirhotels/gifter.git
+cd gifter
+docker compose up --build
+```
+
+Первая сборка — несколько минут (скачиваются PHP и пакеты). При первом запуске контейнер сам создаёт ключ приложения и базу, применяет миграции и загружает демо-каталог. Когда в логе появится `Server running on [http://0.0.0.0:8000]`, в **другом окне терминала** создайте тестовых пользователей (команда спросит общий пароль):
+
+```bash
+docker compose exec gifter php artisan gifter:demo-users
+```
+
+Открыть **http://localhost:8000/admin**. Логины — в разделе «Тестовые пользователи» ниже.
+
+| Действие | Команда |
+|---|---|
+| Остановить | `Ctrl+C` или `docker compose down` |
+| Запустить снова (данные сохраняются) | `docker compose up` |
+| После обновления кода (`git pull`) | `docker compose up --build` — новые миграции применятся сами |
+| Начать с чистой базы | `docker compose down -v`, затем `docker compose up` и снова `gifter:demo-users` |
+| Другой порт, если 8000 занят | `APP_PORT=8080 docker compose up` (PowerShell: `$env:APP_PORT=8080; docker compose up`) |
+| Автотесты в контейнере | `docker compose exec gifter php artisan test` |
+| Любая команда artisan | `docker compose exec gifter php artisan …` |
+
+База и `.env` хранятся в томе Docker `gifter-data`, а не в папке проекта.
+
+## Способ 2 — PHP напрямую
+
+Нужны **PHP 8.3+**, **Composer** и **Git**.
+
+### 1. Установить PHP и Composer
 
 **Windows — проще всего [Laragon](https://laragon.org/download/)** (в нём сразу PHP, Composer и Git). После установки: правый клик по значку Laragon → PHP → выбрать версию 8.3 или новее.
 
@@ -22,14 +56,14 @@ extension=zip
 
 Проверка: `php -v` (8.3+) и `php -m` (в списке есть `intl`, `pdo_sqlite`, `zip`).
 
-## 2. Скачать проект
+### 2. Скачать проект
 
 ```bash
 git clone -b claude/charming-gauss-o7jrdg https://github.com/tenirhotels/gifter.git
 cd gifter
 ```
 
-## 3. Установить и подготовить
+### 3. Установить и подготовить
 
 ```bash
 composer install
@@ -56,6 +90,18 @@ php artisan migrate --seed
 php artisan gifter:demo-users
 ```
 
+### 4. Запустить
+
+```bash
+php artisan serve
+```
+
+Открыть **http://127.0.0.1:8000/admin** и войти любым из тестовых пользователей.
+
+## Тестовые пользователи
+
+Создаются командой `gifter:demo-users` (в Docker — через `docker compose exec gifter …`), пароль общий — тот, что ввели.
+
 | Email | Роль |
 |---|---|
 | admin@gifter.local | Администратор |
@@ -65,13 +111,7 @@ php artisan gifter:demo-users
 | frontoffice@gifter.local | Front Office / Бронирование |
 | finance@gifter.local | Финансы |
 
-## 4. Запустить
-
-```bash
-php artisan serve
-```
-
-Открыть **http://127.0.0.1:8000/admin** и войти любым из пользователей выше. Удобно держать два браузера (или обычное окно + инкогнито), чтобы смотреть один сертификат глазами разных ролей.
+Удобно держать два браузера (или обычное окно + инкогнито), чтобы смотреть один сертификат глазами разных ролей.
 
 ## Что проверить
 

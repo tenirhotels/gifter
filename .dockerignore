@@ -1,0 +1,13 @@
+.git
+vendor
+node_modules
+.env
+database/database.sqlite
+storage/logs/*.log
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*.php
+public/css/filament
+public/js/filament
+public/fonts/filament
+docker-compose.yml

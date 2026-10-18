@@ -6,7 +6,9 @@
 
 ## Запуск для разработки
 
-Подробная инструкция для теста (Windows / macOS / Linux, тестовые пользователи по ролям, что проверить): [docs/local-run.md](docs/local-run.md).
+Быстрее всего — Docker: `docker compose up --build`, затем `docker compose exec gifter php artisan gifter:demo-users` и http://localhost:8000/admin.
+
+Подробная инструкция (Docker или PHP напрямую на Windows / macOS / Linux, тестовые пользователи по ролям, что проверить): [docs/local-run.md](docs/local-run.md).
 
 ```bash
 composer install
