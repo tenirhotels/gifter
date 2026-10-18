@@ -124,6 +124,8 @@ class CertificateSalesTest extends TestCase
         $pdf = app(CertificateDocument::class)->pdf($certificate);
         $this->assertStringStartsWith('%PDF', $pdf);
         $this->assertGreaterThan(5000, strlen($pdf));
+        // QR — SVG: не требует расширения gd.
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', app(CertificateDocument::class)->qrDataUri('https://example.com'));
     }
 
     public function test_pdf_download_is_recorded_in_history(): void

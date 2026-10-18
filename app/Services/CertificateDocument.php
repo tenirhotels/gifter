@@ -6,7 +6,7 @@ use App\Enums\HistoryEvent;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\Certificate;
 use Barryvdh\DomPDF\Facade\Pdf;
-use chillerlan\QRCode\Output\QRGdImagePNG;
+use chillerlan\QRCode\Output\QRMarkupSVG;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 
@@ -25,10 +25,13 @@ class CertificateDocument
 
     public function qrDataUri(string $content): string
     {
+        // SVG, а не PNG: не нужно расширение gd, и QR остаётся чётким при печати.
         $options = new QROptions([
-            'outputInterface' => QRGdImagePNG::class,
+            'outputInterface' => QRMarkupSVG::class,
             'outputBase64' => true,
-            'scale' => 6,
+            'svgAddXmlHeader' => true,
+            'connectPaths' => true,
+            'drawLightModules' => false,
             'quietzoneSize' => 2,
         ]);
 
