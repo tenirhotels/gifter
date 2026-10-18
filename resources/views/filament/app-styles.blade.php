@@ -2,9 +2,18 @@
     Общие стили панели поверх темы Filament (цвета — только переменные темы).
     1) Плитки инфопанели (App\Filament\Support\RoleQueueWidget): иконка в цветной подложке;
        «требует действия» — тонкая рамка своего цвета со всех сторон (не полоса с одного края).
+    0) Карточки просмотра (infolist): подпись мелкая и приглушённая, значение — основного цвета;
+       подпись прижата к значению, а поля разделены большим отступом — глаз читает пары «подпись — значение».
     2) «Сводка» мастера оформления (CreateCertificate): закреплена справа, ведёт итоговая сумма.
 --}}
 <style>
+    .fi-in-entry { row-gap: .25rem; }
+    .fi-in-entry-label { font-size: .75rem; line-height: 1rem; font-weight: 500; letter-spacing: .01em; color: var(--gray-500); }
+    .dark .fi-in-entry-label { color: var(--gray-400); }
+    .fi-in-entry-content-col { font-size: .9375rem; }
+    .fi-in-entry .fi-sc-text { font-size: .8125rem; color: var(--gray-500); }
+    .dark .fi-in-entry .fi-sc-text { color: var(--gray-400); }
+
     .gf-stat { --gf-tone: var(--gray-400); padding: 1rem 1.25rem; }
     .gf-stat[data-tone="danger"] { --gf-tone: var(--danger-500); }
     .gf-stat[data-tone="warning"] { --gf-tone: var(--warning-500); }
