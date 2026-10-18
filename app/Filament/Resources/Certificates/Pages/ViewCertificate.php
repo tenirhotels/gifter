@@ -8,11 +8,14 @@ use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\Certificate;
 use App\Services\CertificateManager;
+use App\Services\RefundManager;
+use App\Support\Money;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Carbon;
 
@@ -59,10 +62,25 @@ class ViewCertificate extends ViewRecord
 
                 Action::make('cancel')->label('Аннулировать')->icon('heroicon-o-no-symbol')->color('danger')
                     ->authorize(Permission::CancelCertificates)
-                    ->visible(fn (Certificate $record) => $record->status->canTransitionTo(CertificateStatus::Cancelled))
+                    ->visible(fn (Certificate $record) => $record->status->canTransitionTo(CertificateStatus::Cancelled)
+                        && Money::toMinor($record->paidAmount()) === 0 && ! $record->hasPendingRefund())
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->modalDescription('Сертификат не удаляется: он остаётся в реестре со статусом «Аннулирован».')
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => $this->manager()->cancel($record, $data['reason']), 'Сертификат аннулирован')),
+
+                Action::make('requestRefund')->label('Возврат и аннулирование')->icon('heroicon-o-receipt-refund')->color('danger')
+                    ->authorize(Permission::RequestRefunds)
+                    ->visible(fn (Certificate $record) => $record->status->canTransitionTo(CertificateStatus::Cancelled)
+                        && Money::toMinor($record->paidAmount()) > 0 && ! $record->hasPendingRefund())
+                    ->modalDescription('Редкий случай. Запрос уйдёт на согласование Финансам; до решения сертификат заблокирован. После согласования он будет аннулирован.')
+                    ->fillForm(fn (Certificate $record) => ['amount' => $record->paidAmount()])
+                    ->schema([
+                        TextInput::make('amount')->label('Сумма к возврату, ₸')->numeric()->minValue(0)->required()
+                            ->helperText('От 0 до суммы поступивших оплат.'),
+                        Textarea::make('reason')->label('Причина и с кем согласовано')->required(),
+                    ])
+                    ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => app(RefundManager::class)
+                        ->request($record, (string) $data['amount'], $data['reason']), 'Запрос на возврат отправлен Финансам')),
             ])->label('Ещё')->button()->color('gray'),
         ];
     }

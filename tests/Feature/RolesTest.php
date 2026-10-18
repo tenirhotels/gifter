@@ -110,8 +110,8 @@ class RolesTest extends TestCase
 
     public function test_sales_sells_but_cannot_cancel_or_change_validity(): void
     {
-        $certificate = $this->draft();
         $this->as(Role::Sales);
+        $certificate = $this->draft();
 
         Livewire::test(ItemsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
             ->assertActionVisible(TestAction::make('addItem')->table());
@@ -130,7 +130,7 @@ class RolesTest extends TestCase
             ->assertActionHidden('reserve');
     }
 
-    public function test_sales_manager_can_change_validity_and_cancel(): void
+    public function test_sales_manager_can_change_validity_and_request_refund(): void
     {
         $certificate = $this->issued();
         $this->as(Role::SalesManager);
@@ -141,8 +141,10 @@ class RolesTest extends TestCase
         $this->assertSame('2027-12-31', $certificate->refresh()->valid_until->toDateString());
 
         Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
-            ->callAction('cancel', ['reason' => 'Возврат']);
-        $this->assertSame(CertificateStatus::Cancelled, $certificate->refresh()->status);
+            ->assertActionHidden('cancel')
+            ->callAction('requestRefund', ['amount' => '10000', 'reason' => 'Согласовано с директором']);
+        $this->assertTrue($certificate->refresh()->hasPendingRefund());
+        $this->assertSame(CertificateStatus::Active, $certificate->status);
     }
 
     public function test_front_office_reserves_checks_in_and_redeems_but_cannot_sell(): void

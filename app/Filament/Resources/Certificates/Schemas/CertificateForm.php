@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\Certificates\Schemas;
 
+use App\Enums\CertificateKind;
+use App\Enums\Permission;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
 use App\Filament\Resources\Recipients\Schemas\RecipientForm;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -18,12 +21,23 @@ class CertificateForm
 {
     public static function configure(Schema $schema): Schema
     {
+        $complimentary = fn (Get $get): bool => self::isComplimentary($get('kind'));
+
         return $schema->components([
+            Section::make('Тип')->columns(2)->visible(fn () => auth()->user()?->can(Permission::CreateComplimentary))->schema([
+                ToggleButtons::make('kind')->label('Тип сертификата')->options(CertificateKind::class)->inline()
+                    ->default(CertificateKind::Sale)->required()->live(),
+                Textarea::make('complimentary_reason')->label('Основание (маркетинговая цель)')
+                    ->helperText('Бесплатный сертификат не оплачивается; стоимость услуг по прайсу учитывается как маркетинговый расход.')
+                    ->visible($complimentary)->required($complimentary),
+            ]),
             Section::make('Покупатель и получатель')->columns(2)->schema([
                 Select::make('customer_id')->label('Покупатель')
                     ->relationship('customer', 'full_name')->searchable(['full_name', 'phone', 'email'])->preload()
                     ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->full_name.' '.($record->phone ? "({$record->phone})" : '')))
-                    ->createOptionForm(CustomerForm::fields())->required(),
+                    ->createOptionForm(CustomerForm::fields())
+                    ->required(fn (Get $get): bool => ! self::isComplimentary($get('kind')))
+                    ->helperText(fn (Get $get): ?string => self::isComplimentary($get('kind')) ? 'Для бесплатного — необязательно.' : null),
                 Select::make('recipient_id')->label('Получатель')
                     ->relationship('recipient', 'full_name')->searchable(['full_name', 'phone', 'email'])->preload()
                     ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->full_name.' '.($record->phone ? "({$record->phone})" : '')))
@@ -50,5 +64,10 @@ class CertificateForm
             ]),
             Textarea::make('notes')->label('Примечание')->columnSpanFull(),
         ]);
+    }
+
+    private static function isComplimentary(mixed $kind): bool
+    {
+        return ($kind instanceof CertificateKind ? $kind : CertificateKind::tryFrom((string) $kind)) === CertificateKind::Complimentary;
     }
 }

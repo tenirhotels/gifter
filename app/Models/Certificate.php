@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\RefundStatus;
 use App\Models\Concerns\PreventsDeletion;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,8 +22,10 @@ class Certificate extends Model
 {
     use HasFactory, PreventsDeletion;
 
+    protected $attributes = ['kind' => 'sale'];
+
     protected $fillable = [
-        'number', 'customer_id', 'recipient_id', 'package_id', 'status', 'sold_at', 'valid_from',
+        'number', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'sold_at', 'valid_from',
         'valid_until', 'total_amount', 'currency', 'issued_at', 'cancelled_at', 'cancellation_reason',
         'notes', 'created_by', 'updated_by',
     ];
@@ -30,6 +34,7 @@ class Certificate extends Model
     {
         return [
             'status' => CertificateStatus::class,
+            'kind' => CertificateKind::class,
             'sold_at' => 'date',
             'valid_from' => 'date',
             'valid_until' => 'date',
@@ -77,6 +82,22 @@ class Certificate extends Model
     public function history(): HasMany
     {
         return $this->hasMany(CertificateHistory::class)->orderByDesc('id');
+    }
+
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class)->orderByDesc('id');
+    }
+
+    public function isComplimentary(): bool
+    {
+        return $this->kind === CertificateKind::Complimentary;
+    }
+
+    /** Есть запрос на возврат, ожидающий решения Финансов: сертификат заморожен. */
+    public function hasPendingRefund(): bool
+    {
+        return $this->refunds()->where('status', RefundStatus::Requested)->exists();
     }
 
     public function isDraft(): bool

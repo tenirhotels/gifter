@@ -10,11 +10,13 @@ use App\Filament\Resources\Certificates\Schemas\CertificateForm;
 use App\Filament\Resources\Certificates\Schemas\CertificateInfolist;
 use App\Filament\Resources\Certificates\Tables\CertificatesTable;
 use App\Models\Certificate;
+use App\Policies\CertificatePolicy;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
@@ -44,6 +46,11 @@ class CertificateResource extends Resource
         return false;
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return CertificatePolicy::scopeVisible(parent::getEloquentQuery(), auth()->user());
+    }
+
     public static function form(Schema $schema): Schema
     {
         return CertificateForm::configure($schema);
@@ -64,6 +71,7 @@ class CertificateResource extends Resource
         return [
             RelationManagers\ItemsRelationManager::class,
             RelationManagers\PaymentsRelationManager::class,
+            RelationManagers\RefundsRelationManager::class,
             RelationManagers\HistoryRelationManager::class,
         ];
     }

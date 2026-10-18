@@ -29,6 +29,9 @@ class PaymentManager
             if ($certificate->status !== CertificateStatus::Draft) {
                 throw new DomainRuleViolation('Счёт выставляется только по черновику, до выпуска сертификата.');
             }
+            if ($certificate->isComplimentary()) {
+                throw new DomainRuleViolation('Бесплатный сертификат не оплачивается.');
+            }
             $outstanding = Money::toMinor($certificate->total_amount) - Money::toMinor($certificate->invoicedAmount());
             if ($outstanding <= 0) {
                 throw new DomainRuleViolation('На всю сумму сертификата счета уже выставлены.');
@@ -58,11 +61,21 @@ class PaymentManager
         });
     }
 
+    /**
+     * Отметить поступление. Перечисление на р/с отмечают Финансы по выписке —
+     * такая отметка сразу считается сверкой.
+     */
     public function markPaid(Payment $payment, ?Carbon $paidAt = null): Payment
     {
         return $this->lockedPending($payment, function (Payment $payment) use ($paidAt) {
             $before = $this->snapshot($payment);
-            $payment->update(['status' => PaymentStatus::Paid, 'paid_at' => $paidAt ?? now()]);
+            $reconciled = $payment->method->requiresFinanceConfirmation();
+            $payment->update([
+                'status' => PaymentStatus::Paid,
+                'paid_at' => $paidAt ?? now(),
+                'reconciled_at' => $reconciled ? now() : null,
+                'reconciled_by' => $reconciled ? auth()->id() : null,
+            ]);
             $this->history->record($payment->certificate, HistoryEvent::PaymentPaid,
                 $payment->method->getLabel().', '.Money::format($payment->amount), $before, $this->snapshot($payment));
 
@@ -86,6 +99,30 @@ class PaymentManager
             $this->history->record($payment->certificate, HistoryEvent::PaymentCancelled, $reason, $before, $this->snapshot($payment));
 
             return $payment;
+        });
+    }
+
+    /** Сверка Финансами: поступление подтверждено выпиской банка. */
+    public function reconcile(Payment $payment, ?string $comment = null): Payment
+    {
+        return DB::transaction(function () use ($payment, $comment) {
+            $fresh = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            if ($fresh->status !== PaymentStatus::Paid) {
+                throw new DomainRuleViolation('Сверить можно только поступившую оплату.');
+            }
+            if ($fresh->isReconciled()) {
+                throw new DomainRuleViolation('Оплата уже сверена.');
+            }
+            $fresh->update([
+                'reconciled_at' => now(),
+                'reconciled_by' => auth()->id(),
+                'comment' => $comment ? trim(($fresh->comment ? $fresh->comment."\n" : '').'Сверка: '.$comment) : $fresh->comment,
+            ]);
+            $this->history->record($fresh->certificate, HistoryEvent::PaymentReconciled,
+                $fresh->method->getLabel().', '.Money::format($fresh->amount).($comment ? '. '.$comment : ''));
+            $payment->setRawAttributes($fresh->getAttributes(), true);
+
+            return $fresh;
         });
     }
 
@@ -113,6 +150,7 @@ class PaymentManager
             'amount' => (string) $payment->amount,
             'invoice_number' => $payment->invoice_number,
             'paid_at' => $payment->paid_at?->toDateTimeString(),
+            'reconciled' => $payment->reconciled_at !== null,
         ];
     }
 }

@@ -14,15 +14,27 @@ enum Permission: string
 
     // Сертификаты
     case ViewCertificates = 'certificates.view';
+    /** Видеть чужие сертификаты; без этого права — только созданные самим пользователем. */
+    case ViewAllCertificates = 'certificates.view_all';
     case CreateCertificates = 'certificates.create';
+    case CreateComplimentary = 'certificates.create_complimentary';
     case EditDrafts = 'certificates.edit_draft';
     case ComposeDrafts = 'certificates.compose_draft';
-    case ManagePayments = 'certificates.payments';
     case IssueCertificates = 'certificates.issue';
     case ChangeValidity = 'certificates.change_validity';
+    /** Аннулирование без денег (ничего не оплачено). С оплатой — только через возврат. */
     case CancelCertificates = 'certificates.cancel';
     case ManageReservations = 'certificates.reservations';
     case RedeemCertificates = 'certificates.redeem';
+
+    // Деньги
+    case ManagePayments = 'payments.manage';
+    case ReceivePayments = 'payments.receive';
+    case ReceiveBankTransfers = 'payments.receive_bank_transfer';
+    case ReconcilePayments = 'payments.reconcile';
+    case ViewPaymentRegister = 'payments.register';
+    case RequestRefunds = 'refunds.request';
+    case ApproveRefunds = 'refunds.approve';
 
     // Каталог
     case ViewCatalog = 'catalog.view';
@@ -43,8 +55,12 @@ enum Permission: string
             self::ManageCustomers, self::CreateCertificates, self::EditDrafts, self::ComposeDrafts,
             self::ManagePayments, self::IssueCertificates => $sales,
             self::ViewCertificates => [...$sales, Role::SalesDirector, Role::FrontOffice, Role::Finance],
-            self::ChangeValidity, self::CancelCertificates => [Role::SalesManager],
+            self::ViewAllCertificates => [Role::SalesManager, Role::SalesDirector, Role::FrontOffice, Role::Finance],
+            self::CreateComplimentary, self::ChangeValidity, self::CancelCertificates, self::RequestRefunds => [Role::SalesManager],
             self::ManageReservations, self::RedeemCertificates => [Role::FrontOffice],
+            self::ReceivePayments => [...$sales, Role::Finance],
+            self::ReceiveBankTransfers, self::ReconcilePayments, self::ApproveRefunds => [Role::Finance],
+            self::ViewPaymentRegister => [Role::SalesManager, Role::SalesDirector, Role::Finance],
             self::ViewCatalog => [...$sales, Role::SalesDirector],
             self::ManageCatalog, self::ManagePrices => [Role::SalesDirector],
             self::ManageUsers, self::ViewAuditLog => [],

@@ -256,16 +256,24 @@ class CertificateLifecycleTest extends TestCase
         $this->draft()->history()->first()->update(['description' => 'подмена']);
     }
 
-    public function test_cancel_requires_reason_and_closes_lifecycle(): void
+    public function test_unpaid_certificate_is_cancelled_directly_with_reason(): void
     {
-        $certificate = $this->paidDraft();
-        $this->certificates->issue($certificate);
-        $this->certificates->cancel($certificate, 'Возврат по просьбе покупателя');
+        $certificate = $this->draft();
+        $this->certificates->cancel($certificate, 'Клиент передумал');
 
         $this->assertSame(CertificateStatus::Cancelled, $certificate->status);
         $this->assertSame(HistoryEvent::Cancelled, $certificate->history()->first()->event);
         $this->expectException(DomainRuleViolation::class);
         $this->certificates->transition($certificate, CertificateStatus::Active);
+    }
+
+    public function test_paid_certificate_cannot_be_cancelled_directly(): void
+    {
+        $certificate = $this->paidDraft();
+        $this->certificates->issue($certificate);
+
+        $this->expectException(DomainRuleViolation::class);
+        $this->certificates->cancel($certificate, 'Возврат');
     }
 
     public function test_validity_change_keeps_old_values_in_history(): void

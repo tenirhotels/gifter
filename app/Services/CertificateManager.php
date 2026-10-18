@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Enums\HistoryEvent;
 use App\Enums\PaymentStatus;
@@ -27,7 +28,7 @@ class CertificateManager
     ) {}
 
     /**
-     * @param  array{customer_id:int, recipient_id:int, sold_at?:string|Carbon|null, valid_from?:string|Carbon|null, valid_until?:string|Carbon|null, notes?:string|null, package_id?:int|null}  $data
+     * @param  array{customer_id?:int|null, recipient_id:int, kind?:CertificateKind|string, complimentary_reason?:string|null, sold_at?:string|Carbon|null, valid_from?:string|Carbon|null, valid_until?:string|Carbon|null, notes?:string|null, package_id?:int|null}  $data
      */
     public function createDraft(array $data): Certificate
     {
@@ -36,12 +37,17 @@ class CertificateManager
             $validFrom = Carbon::parse($data['valid_from'] ?? $soldAt)->startOfDay();
             $validUntil = Carbon::parse($data['valid_until'] ?? $validFrom->copy()->addDays(config('gifter.validity_days')))->startOfDay();
             $this->assertValidity($validFrom, $validUntil);
+            $kind = $data['kind'] ?? CertificateKind::Sale;
+            $kind = $kind instanceof CertificateKind ? $kind : CertificateKind::from($kind);
+            $this->assertKind($kind, $data['customer_id'] ?? null, $data['complimentary_reason'] ?? null);
 
             $certificate = Certificate::create([
                 'number' => $this->numbers->next($soldAt),
-                'customer_id' => $data['customer_id'],
+                'customer_id' => $data['customer_id'] ?? null,
                 'recipient_id' => $data['recipient_id'],
                 'status' => CertificateStatus::Draft,
+                'kind' => $kind,
+                'complimentary_reason' => $kind === CertificateKind::Complimentary ? $data['complimentary_reason'] : null,
                 'sold_at' => $soldAt,
                 'valid_from' => $validFrom,
                 'valid_until' => $validUntil,
@@ -69,15 +75,20 @@ class CertificateManager
     {
         return $this->locked($certificate, function (Certificate $certificate) use ($data) {
             $this->assertDraft($certificate);
-            $data = array_intersect_key($data, array_flip(['customer_id', 'recipient_id', 'sold_at', 'valid_from', 'valid_until', 'notes']));
+            $data = array_intersect_key($data, array_flip(['customer_id', 'recipient_id', 'kind', 'complimentary_reason', 'sold_at', 'valid_from', 'valid_until', 'notes']));
             $soldAtChanged = isset($data['sold_at']) && ! Carbon::parse($data['sold_at'])->isSameDay($certificate->sold_at);
-            if ($soldAtChanged) {
+            $kindChanged = isset($data['kind']) && CertificateKind::from($data['kind'] instanceof CertificateKind ? $data['kind']->value : $data['kind']) !== $certificate->kind;
+            if ($soldAtChanged || $kindChanged) {
                 $this->assertNoActivePayments($certificate);
             }
 
             $before = $this->snapshot($certificate);
             $certificate->fill($data + ['updated_by' => auth()->id()]);
+            if (! $certificate->isComplimentary()) {
+                $certificate->complimentary_reason = null;
+            }
             $this->assertValidity($certificate->valid_from, $certificate->valid_until);
+            $this->assertKind($certificate->kind, $certificate->customer_id, $certificate->complimentary_reason);
             if (! $certificate->isDirty()) {
                 return $certificate;
             }
@@ -144,7 +155,7 @@ class CertificateManager
             if (! $certificate->items()->exists()) {
                 throw new DomainRuleViolation('Нельзя выпустить сертификат без услуг.');
             }
-            if (! $certificate->isFullyPaid()) {
+            if (! $certificate->isComplimentary() && ! $certificate->isFullyPaid()) {
                 throw new DomainRuleViolation('Сертификат оплачен не полностью: получено '
                     .Money::format($certificate->paidAmount()).' из '.Money::format($certificate->total_amount).'.');
             }
@@ -167,6 +178,7 @@ class CertificateManager
     public function transition(Certificate $certificate, CertificateStatus $target, ?string $reason = null): Certificate
     {
         return $this->locked($certificate, function (Certificate $certificate) use ($target, $reason) {
+            $this->assertNoPendingRefund($certificate);
             $from = $certificate->status;
             if ($from === CertificateStatus::Draft) {
                 throw new DomainRuleViolation('Черновик переводится в работу только выпуском.');
@@ -186,9 +198,11 @@ class CertificateManager
         });
     }
 
+    /** Аннулирование без денег. Оплаченный сертификат аннулируется через RefundManager. */
     public function cancel(Certificate $certificate, string $reason): Certificate
     {
         return $this->locked($certificate, function (Certificate $certificate) use ($reason) {
+            $this->assertNoPendingRefund($certificate);
             if (trim($reason) === '') {
                 throw new DomainRuleViolation('Укажите причину аннулирования.');
             }
@@ -198,6 +212,9 @@ class CertificateManager
             }
             if ($certificate->payments()->where('status', PaymentStatus::Pending)->exists()) {
                 throw new DomainRuleViolation('Сначала отмените выставленные неоплаченные счета.');
+            }
+            if (Money::toMinor($certificate->paidAmount()) > 0) {
+                throw new DomainRuleViolation('По сертификату есть оплата — аннулирование только через запрос на возврат с согласованием Финансов.');
             }
 
             $certificate->update([
@@ -220,6 +237,7 @@ class CertificateManager
             if (trim($reason) === '') {
                 throw new DomainRuleViolation('Укажите причину изменения срока.');
             }
+            $this->assertNoPendingRefund($certificate);
             if (! in_array($certificate->status, [CertificateStatus::Draft, CertificateStatus::Active, CertificateStatus::Reserved], true)) {
                 throw new DomainRuleViolation("Срок сертификата в статусе «{$certificate->status->getLabel()}» изменить нельзя.");
             }
@@ -311,6 +329,23 @@ class CertificateManager
         });
     }
 
+    private function assertNoPendingRefund(Certificate $certificate): void
+    {
+        if ($certificate->hasPendingRefund()) {
+            throw new DomainRuleViolation('По сертификату ждёт решения запрос на возврат — действия заблокированы до решения Финансов.');
+        }
+    }
+
+    private function assertKind(CertificateKind $kind, ?int $customerId, ?string $reason): void
+    {
+        if ($kind === CertificateKind::Complimentary && trim((string) $reason) === '') {
+            throw new DomainRuleViolation('Для бесплатного сертификата укажите основание (маркетинговая цель).');
+        }
+        if ($kind === CertificateKind::Sale && ! $customerId) {
+            throw new DomainRuleViolation('Для продажи укажите покупателя.');
+        }
+    }
+
     private function assertDraft(Certificate $certificate): void
     {
         if (! $certificate->isDraft()) {
@@ -342,6 +377,8 @@ class CertificateManager
     {
         return [
             'customer_id' => $certificate->customer_id,
+            'kind' => $certificate->kind?->value,
+            'complimentary_reason' => $certificate->complimentary_reason,
             'recipient_id' => $certificate->recipient_id,
             'sold_at' => $certificate->sold_at?->toDateString(),
             'valid_from' => $certificate->valid_from?->toDateString(),

@@ -15,6 +15,11 @@ enum HistoryEvent: string implements HasLabel
     case PaymentRegistered = 'payment_registered';
     case PaymentPaid = 'payment_paid';
     case PaymentCancelled = 'payment_cancelled';
+    case PaymentReconciled = 'payment_reconciled';
+    case RefundRequested = 'refund_requested';
+    case RefundApproved = 'refund_approved';
+    case RefundRejected = 'refund_rejected';
+    case RefundPaid = 'refund_paid';
     case Issued = 'issued';
     case StatusChanged = 'status_changed';
     case ValidityChanged = 'validity_changed';
@@ -33,6 +38,11 @@ enum HistoryEvent: string implements HasLabel
             self::PaymentRegistered => 'Выставлен счёт',
             self::PaymentPaid => 'Оплата получена',
             self::PaymentCancelled => 'Счёт отменён',
+            self::PaymentReconciled => 'Оплата сверена Финансами',
+            self::RefundRequested => 'Запрошены возврат и аннулирование',
+            self::RefundApproved => 'Возврат согласован',
+            self::RefundRejected => 'Возврат отклонён',
+            self::RefundPaid => 'Деньги возвращены',
             self::Issued => 'Сертификат выпущен',
             self::StatusChanged => 'Изменён статус',
             self::ValidityChanged => 'Изменён срок действия',
