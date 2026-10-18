@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Filament\Resources\Certificates\Schemas;
+
+use App\Models\Certificate;
+use App\Support\Money;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+
+class CertificateInfolist
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema->columns(3)->components([
+            Section::make('Сертификат')->columns(2)->columnSpan(2)->schema([
+                TextEntry::make('number')->label('Номер')->copyable()->weight('bold'),
+                TextEntry::make('status')->label('Статус')->badge(),
+                TextEntry::make('customer.full_name')->label('Покупатель')
+                    ->helperText(fn (Certificate $record) => collect([$record->customer->phone, $record->customer->email])->filter()->implode(', ') ?: null),
+                TextEntry::make('recipient.full_name')->label('Получатель')
+                    ->helperText(fn (Certificate $record) => collect([$record->recipient->phone, $record->recipient->email])->filter()->implode(', ') ?: null),
+                TextEntry::make('sold_at')->label('Дата продажи')->date('d.m.Y'),
+                TextEntry::make('validity')->label('Срок действия')
+                    ->state(fn (Certificate $record) => $record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y')),
+                TextEntry::make('package.name')->label('Пакет')->placeholder('—'),
+                TextEntry::make('notes')->label('Примечание')->placeholder('—'),
+                TextEntry::make('cancellation_reason')->label('Причина аннулирования')->visible(fn (Certificate $record) => filled($record->cancellation_reason))->color('danger'),
+            ]),
+            Section::make('Деньги')->columnSpan(1)->schema([
+                TextEntry::make('total_amount')->label('Стоимость')->state(fn (Certificate $record) => Money::format($record->total_amount))->size('lg')->weight('bold'),
+                TextEntry::make('paid')->label('Оплачено')->state(fn (Certificate $record) => Money::format($record->paidAmount()))
+                    ->color(fn (Certificate $record) => $record->isFullyPaid() && $record->total_amount > 0 ? 'success' : 'warning'),
+                TextEntry::make('invoiced')->label('Выставлено счетов')->state(fn (Certificate $record) => Money::format($record->invoicedAmount())),
+                TextEntry::make('creator.name')->label('Создал')->placeholder('—')
+                    ->helperText(fn (Certificate $record) => $record->created_at?->format('d.m.Y H:i')),
+                TextEntry::make('issued_at')->label('Выпущен')->dateTime('d.m.Y H:i')->placeholder('ещё не выпущен'),
+            ]),
+        ]);
+    }
+}

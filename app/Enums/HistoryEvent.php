@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Enums;
+
+use Filament\Support\Contracts\HasLabel;
+
+enum HistoryEvent: string implements HasLabel
+{
+    case Created = 'created';
+    case Updated = 'updated';
+    case ItemAdded = 'item_added';
+    case ItemRemoved = 'item_removed';
+    case PackageApplied = 'package_applied';
+    case Repriced = 'repriced';
+    case PaymentRegistered = 'payment_registered';
+    case PaymentPaid = 'payment_paid';
+    case PaymentCancelled = 'payment_cancelled';
+    case Issued = 'issued';
+    case StatusChanged = 'status_changed';
+    case ValidityChanged = 'validity_changed';
+    case Cancelled = 'cancelled';
+    case Expired = 'expired';
+
+    public function getLabel(): string
+    {
+        return match ($this) {
+            self::Created => 'Создан черновик',
+            self::Updated => 'Изменены данные',
+            self::ItemAdded => 'Добавлена услуга',
+            self::ItemRemoved => 'Удалена услуга',
+            self::PackageApplied => 'Применён пакет',
+            self::Repriced => 'Пересчитаны цены',
+            self::PaymentRegistered => 'Выставлен счёт',
+            self::PaymentPaid => 'Оплата получена',
+            self::PaymentCancelled => 'Счёт отменён',
+            self::Issued => 'Сертификат выпущен',
+            self::StatusChanged => 'Изменён статус',
+            self::ValidityChanged => 'Изменён срок действия',
+            self::Cancelled => 'Сертификат аннулирован',
+            self::Expired => 'Срок действия истёк',
+        };
+    }
+}

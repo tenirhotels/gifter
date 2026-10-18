@@ -1,0 +1,42 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
+use App\Models\Concerns\PreventsDeletion;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+/** Счёт на оплату сертификата (Kaspi / Halyk), отмечается вручную. */
+class Payment extends Model
+{
+    use PreventsDeletion;
+
+    protected $fillable = [
+        'certificate_id', 'method', 'status', 'amount', 'currency', 'invoice_number', 'invoiced_at',
+        'paid_at', 'cancelled_at', 'comment', 'recorded_by',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'method' => PaymentMethod::class,
+            'status' => PaymentStatus::class,
+            'amount' => 'decimal:2',
+            'invoiced_at' => 'datetime',
+            'paid_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+        ];
+    }
+
+    public function certificate(): BelongsTo
+    {
+        return $this->belongsTo(Certificate::class);
+    }
+
+    public function recorder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
+    }
+}

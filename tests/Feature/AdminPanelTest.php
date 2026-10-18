@@ -1,0 +1,111 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\CertificateStatus;
+use App\Enums\PaymentStatus;
+use App\Filament\Resources\Certificates\Pages\CreateCertificate;
+use App\Filament\Resources\Certificates\Pages\ViewCertificate;
+use App\Filament\Resources\Certificates\RelationManagers\ItemsRelationManager;
+use App\Filament\Resources\Certificates\RelationManagers\PaymentsRelationManager;
+use App\Filament\Resources\Services\Pages\EditService;
+use App\Filament\Resources\Services\RelationManagers\PricesRelationManager;
+use App\Models\Certificate;
+use App\Models\Customer;
+use App\Models\Recipient;
+use App\Models\Service;
+use App\Models\User;
+use App\Services\CertificateManager;
+use App\Services\ServicePricing;
+use Filament\Actions\Testing\TestAction;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Livewire\Livewire;
+use Tests\TestCase;
+
+class AdminPanelTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Carbon::setTestNow('2026-10-18 12:00:00');
+        $this->actingAs(User::factory()->create());
+    }
+
+    public function test_inactive_user_cannot_open_panel(): void
+    {
+        $this->actingAs(User::factory()->create(['is_active' => false]));
+        $this->get('/admin')->assertForbidden();
+    }
+
+    public function test_all_index_pages_render(): void
+    {
+        foreach (['certificates', 'certificates/create', 'customers', 'recipients', 'services', 'packages', 'users', 'audit-logs'] as $path) {
+            $this->get("/admin/{$path}")->assertOk();
+        }
+    }
+
+    public function test_sale_through_panel_from_draft_to_issued(): void
+    {
+        $service = Service::factory()->create(['name' => 'SPA']);
+        app(ServicePricing::class)->addPrice($service, '40000', Carbon::parse('2026-01-01'));
+        $customer = Customer::factory()->create();
+        $recipient = Recipient::factory()->create();
+
+        Livewire::test(CreateCertificate::class)
+            ->fillForm(['customer_id' => $customer->id, 'recipient_id' => $recipient->id])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $certificate = Certificate::firstOrFail();
+        $this->assertSame(CertificateStatus::Draft, $certificate->status);
+
+        Livewire::test(ItemsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
+            ->callAction(TestAction::make('addItem')->table(), ['service_id' => $service->id, 'quantity' => 2])
+            ->assertHasNoActionErrors();
+        $this->assertSame('80000.00', (string) $certificate->refresh()->total_amount);
+
+        Livewire::test(PaymentsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
+            ->callAction(TestAction::make('invoice')->table(), ['method' => 'kaspi_invoice', 'amount' => '80000', 'invoice_number' => 'K-1']);
+        $payment = $certificate->payments()->firstOrFail();
+        $this->assertSame(PaymentStatus::Pending, $payment->status);
+
+        Livewire::test(PaymentsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
+            ->callAction(TestAction::make('markPaid')->table($payment), ['paid_at' => now()]);
+
+        Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
+            ->callAction('issue');
+
+        $this->assertSame(CertificateStatus::Active, $certificate->refresh()->status);
+        $this->get("/admin/certificates/{$certificate->id}")->assertOk()->assertSee($certificate->number);
+    }
+
+    public function test_issue_without_payment_shows_error_and_keeps_draft(): void
+    {
+        $service = Service::factory()->create();
+        app(ServicePricing::class)->addPrice($service, '1000', Carbon::parse('2026-01-01'));
+        $certificate = app(CertificateManager::class)->createDraft([
+            'customer_id' => Customer::factory()->create()->id,
+            'recipient_id' => Recipient::factory()->create()->id,
+        ]);
+        app(CertificateManager::class)->addItem($certificate, $service, 1);
+
+        Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
+            ->callAction('issue')
+            ->assertNotified('Сертификат оплачен не полностью: получено 0 ₸ из 1 000 ₸.');
+
+        $this->assertSame(CertificateStatus::Draft, $certificate->refresh()->status);
+    }
+
+    public function test_new_price_version_from_service_page(): void
+    {
+        $service = Service::factory()->create();
+
+        Livewire::test(PricesRelationManager::class, ['ownerRecord' => $service, 'pageClass' => EditService::class])
+            ->callAction(TestAction::make('addPrice')->table(), ['price' => '5000', 'valid_from' => '2026-01-01']);
+
+        $this->assertSame('5000.00', (string) $service->prices()->first()->price);
+    }
+}
