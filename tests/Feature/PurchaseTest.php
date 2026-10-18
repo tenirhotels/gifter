@@ -15,11 +15,13 @@ use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\Certificates\RelationManagers\ItemsRelationManager;
 use App\Filament\Resources\Certificates\RelationManagers\PaymentsRelationManager;
 use App\Filament\Resources\Payments\Pages\ListPayments;
+use App\Filament\Resources\Recipients\Pages\EditRecipient;
 use App\Models\Certificate;
 use App\Models\CertificateBatch;
 use App\Models\Customer;
 use App\Models\Package;
 use App\Models\Payment;
+use App\Models\Recipient;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\CertificateBatchManager;
@@ -95,6 +97,27 @@ class PurchaseTest extends TestCase
         $this->assertSame(2, $batch->certificates()->first()->items()->count());
         $this->assertSame(2, $batch->payments()->where('invoice_number', 'K-77')->where('status', PaymentStatus::Pending)->count());
         $this->assertSame('120000.00', app(CertificateBatchManager::class)->invoiceTotal($batch));
+    }
+
+    public function test_quote_table_groups_package_and_extra_services(): void
+    {
+        $this->as(Role::Sales);
+        Livewire::test(CreateCertificate::class)
+            ->set('data.package_id', $this->package->id)
+            ->set('data.extras', [['service_id' => $this->extra->id, 'quantity' => 1]])
+            ->set('data.certificate_count', 2)
+            ->assertSeeHtml('class="gf-quote"')
+            ->assertSee('Пакет «Уикенд»')->assertSee('Доп. услуги')
+            ->assertSee('За 1 сертификат')->assertSee('Итого за 2 шт.')->assertSee('120 000 ₸');
+    }
+
+    public function test_edit_pages_have_no_big_heading(): void
+    {
+        $this->as(Role::SalesManager);
+        $recipient = Recipient::factory()->create(['last_name' => 'Антонов', 'first_name' => 'Юра']);
+
+        Livewire::test(EditRecipient::class, ['record' => $recipient->id])
+            ->assertDontSeeHtml('fi-header-heading')->assertSet('data.last_name', 'Антонов');
     }
 
     public function test_one_certificate_is_ordinary_sale_without_purchase(): void

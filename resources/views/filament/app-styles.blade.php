@@ -41,4 +41,17 @@
     .gf-nowrap { white-space: nowrap; }
     .gf-summary-warn { margin-top: 1rem; font-size: .875rem; color: var(--danger-600); }
     .dark .gf-summary-warn { color: var(--danger-400); }
+
+    /* 3) Расчёт по прайсу в мастере. */
+    .gf-quote { --gf-line: color-mix(in oklab, var(--gray-950) 8%, transparent); border: 1px solid var(--gf-line); border-radius: .75rem; overflow-x: auto; }
+    .dark .gf-quote { --gf-line: color-mix(in oklab, white 10%, transparent); }
+    .gf-quote table { width: 100%; border-collapse: collapse; font-size: .875rem; line-height: 1.25rem; }
+    .gf-quote th { padding: .625rem 1rem; text-align: left; font-size: .75rem; font-weight: 500; color: var(--gray-500); background: color-mix(in oklab, var(--gray-500) 6%, transparent); border-bottom: 1px solid var(--gf-line); }
+    .gf-quote td { padding: .625rem 1rem; border-bottom: 1px solid var(--gf-line); }
+    .gf-quote tbody tr:last-child td { border-bottom: 0; }
+    .gf-quote .gf-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .gf-quote-group td { padding-top: .875rem; padding-bottom: .375rem; font-size: .75rem; font-weight: 500; color: var(--gray-500); border-bottom: 0; }
+    .gf-quote tfoot td { border-top: 1px solid var(--gf-line); border-bottom: 0; color: var(--gray-500); }
+    .gf-quote tfoot .gf-quote-total td { color: var(--gray-950); font-weight: 600; font-size: 1rem; }
+    .dark .gf-quote tfoot .gf-quote-total td { color: var(--color-white); }
 </style>

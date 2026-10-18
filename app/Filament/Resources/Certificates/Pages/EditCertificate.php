@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Certificates\Pages;
 
 use App\Exceptions\DomainRuleViolation;
 use App\Filament\Resources\Certificates\CertificateResource;
+use App\Filament\Support\WithoutPageHeading;
 use App\Services\CertificateManager;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 /** Правка реквизитов — только для черновика. */
 class EditCertificate extends EditRecord
 {
+    use WithoutPageHeading;
+
     protected static string $resource = CertificateResource::class;
 
     protected function getHeaderActions(): array

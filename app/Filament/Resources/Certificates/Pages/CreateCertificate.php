@@ -112,6 +112,7 @@ class CreateCertificate extends CreateRecord
         ];
     }
 
+    /** Расчёт по прайсу: услуги пакета, затем доп. услуги; итог — за 1 и за всю группу. Стили — gf-quote в app-styles. */
     private function quoteTable(Get $get): HtmlString|string
     {
         $package = Package::find($get('package_id'));
@@ -119,20 +120,23 @@ class CreateCertificate extends CreateRecord
             return 'Выберите пакет на первом шаге.';
         }
         $quote = app(CertificateManager::class)->quote($package, array_values($get('extras') ?? []), Carbon::parse($get('sold_at') ?: today()));
-        $rows = collect($quote['lines'])->map(fn (array $line) => '<tr><td>'.e($line['name']).($line['from_package'] ? '' : ' <span style="opacity:.6">(доп.)</span>')
-            .'</td><td style="text-align:right">'.$line['quantity'].'</td><td style="text-align:right">'.Money::format($line['unit_price'])
-            .'</td><td style="text-align:right">'.Money::format($line['line_total']).'</td></tr>')->implode('');
-        $missing = $quote['missing'] ? '<p style="color:#dc2626">Нет цены на дату продажи: '.e(implode(', ', $quote['missing'])).'</p>' : '';
+        $line = fn (array $l) => '<tr><td>'.e($l['name']).'</td><td class="gf-num">'.$l['quantity'].'</td><td class="gf-num">'.Money::format($l['unit_price'])
+            .'</td><td class="gf-num">'.Money::format($l['line_total']).'</td></tr>';
+        $group = fn (string $title, $lines) => $lines->isEmpty() ? ''
+            : '<tr class="gf-quote-group"><td colspan="4">'.e($title).'</td></tr>'.$lines->map($line)->implode('');
+        $lines = collect($quote['lines']);
+        $body = $group('Пакет «'.$package->name.'»', $lines->where('from_package', true))
+            .$group('Доп. услуги', $lines->where('from_package', false));
 
         $count = self::count($get);
-        $total = $count > 1
-            ? '<tr><td colspan="3">За 1 сертификат</td><td style="text-align:right">'.Money::format($quote['total']).'</td></tr>'
-                .'<tr style="font-weight:600"><td colspan="3">Итого за '.$count.' шт.</td><td style="text-align:right">'.Money::format(Money::multiply($quote['total'], $count)).'</td></tr>'
-            : '<tr style="font-weight:600"><td colspan="3">Итого</td><td style="text-align:right">'.Money::format($quote['total']).'</td></tr>';
+        $foot = $count > 1
+            ? '<tr><td colspan="3">За 1 сертификат</td><td class="gf-num">'.Money::format($quote['total']).'</td></tr>'
+                .'<tr class="gf-quote-total"><td colspan="3">Итого за '.$count.' шт.</td><td class="gf-num">'.Money::format(Money::multiply($quote['total'], $count)).'</td></tr>'
+            : '<tr class="gf-quote-total"><td colspan="3">Итого</td><td class="gf-num">'.Money::format($quote['total']).'</td></tr>';
+        $missing = $quote['missing'] ? '<p class="gf-summary-warn">Нет цены на дату продажи: '.e(implode(', ', $quote['missing'])).'. Такие услуги не войдут в сертификат, пока не задана цена.</p>' : '';
 
-        return new HtmlString('<table style="width:100%;font-size:.875rem"><thead><tr style="text-align:left;opacity:.7"><th>Услуга</th><th style="text-align:right">Кол-во</th>'
-            .'<th style="text-align:right">Цена</th><th style="text-align:right">Сумма</th></tr></thead><tbody>'.$rows
-            .'</tbody><tfoot>'.$total.'</tfoot></table>'.$missing);
+        return new HtmlString('<div class="gf-quote"><table><thead><tr><th>Услуга</th><th class="gf-num">Кол-во</th><th class="gf-num">Цена</th><th class="gf-num">Сумма</th></tr></thead>'
+            .'<tbody>'.$body.'</tbody><tfoot>'.$foot.'</tfoot></table></div>'.$missing);
     }
 
     /** Сводка справа: ведёт итоговая сумма, ниже — пакет, срок, состав, заказчик. */
