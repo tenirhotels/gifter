@@ -8,6 +8,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
 use App\Filament\Support\RunsDomainActions;
+use App\Filament\Support\WithoutPageHeading;
 use App\Models\CertificateBatch;
 use App\Services\CertificateBatchManager;
 use App\Services\CertificateDocument;
@@ -25,6 +26,8 @@ use Illuminate\Support\Carbon;
 /** Группа сертификатов (платная или бесплатная): счёт, оплата, согласование и выпуск — для всех её сертификатов сразу. */
 class ViewCertificateBatch extends ViewRecord
 {
+    use WithoutPageHeading;
+
     protected static string $resource = CertificateBatchResource::class;
 
     public function getTitle(): string

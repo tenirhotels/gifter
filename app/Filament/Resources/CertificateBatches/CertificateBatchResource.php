@@ -36,6 +36,15 @@ class CertificateBatchResource extends Resource
 
     protected static ?string $breadcrumb = 'Группы сертификатов';
 
+    /** Включает название записи в строке навигации; само название — getRecordTitle(). */
+    protected static ?string $recordTitleAttribute = 'id';
+
+    /** «Группа №4» в строке навигации (крупного заголовка на странице нет). */
+    public static function getRecordTitle(?Model $record): string
+    {
+        return $record instanceof CertificateBatch ? $record->shortLabel() : static::getModelLabel();
+    }
+
     public static function getEloquentQuery(): Builder
     {
         return CertificateBatchPolicy::scopeVisible(parent::getEloquentQuery(), auth()->user());
@@ -65,6 +74,7 @@ class CertificateBatchResource extends Resource
     {
         return $schema->columns(3)->components([
             Section::make('Группа сертификатов')->columns(3)->columnSpan(2)->schema([
+                TextEntry::make('number')->label('Номер')->state(fn (CertificateBatch $record) => $record->shortLabel())->weight('bold'),
                 TextEntry::make('status')->label('Статус')->badge()->formatStateUsing(fn ($state, CertificateBatch $record) => $record->statusLabel()),
                 TextEntry::make('kind')->label('Тип')->badge()->formatStateUsing(fn ($state, CertificateBatch $record) => $record->kindLabel()),
                 TextEntry::make('quantity')->label('Сертификатов'),

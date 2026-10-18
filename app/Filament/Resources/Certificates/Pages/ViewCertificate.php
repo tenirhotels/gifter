@@ -11,6 +11,7 @@ use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Recipients\Schemas\RecipientForm;
 use App\Filament\Support\ContactFields;
 use App\Filament\Support\RunsDomainActions;
+use App\Filament\Support\WithoutPageHeading;
 use App\Models\Certificate;
 use App\Models\Recipient;
 use App\Services\AdminCorrections;
@@ -33,6 +34,8 @@ use Illuminate\Support\Carbon;
 
 class ViewCertificate extends ViewRecord
 {
+    use WithoutPageHeading;
+
     protected static string $resource = CertificateResource::class;
 
     public function getTitle(): string
