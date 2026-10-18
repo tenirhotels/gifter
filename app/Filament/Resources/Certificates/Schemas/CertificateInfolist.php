@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Certificates\Schemas;
 
 use App\Enums\Permission;
 use App\Models\Certificate;
+use App\Services\CertificateDocument;
 use App\Support\ContactMask;
 use App\Support\Money;
 use Filament\Infolists\Components\TextEntry;
@@ -41,6 +42,10 @@ class CertificateInfolist
                 TextEntry::make('package.name')->label('Пакет')->placeholder('—')
                     ->helperText(fn (Certificate $record) => $record->package?->validityLabel()),
                 TextEntry::make('notes')->label('Примечание')->placeholder('—'),
+                TextEntry::make('verify_url')->label('Ссылка проверки (QR)')->columnSpanFull()->copyable()
+                    ->state(fn (Certificate $record) => app(CertificateDocument::class)->verificationUrl($record))
+                    ->helperText('Её же содержит QR-код в PDF. Страница показывает только номер, статус, срок и пакет.')
+                    ->visible(fn (Certificate $record) => $record->isPrintable()),
                 TextEntry::make('cancellation_reason')->label('Причина аннулирования')->visible(fn (Certificate $record) => filled($record->cancellation_reason))->color('danger'),
             ]),
             Section::make('Деньги')->columnSpan(1)->schema([

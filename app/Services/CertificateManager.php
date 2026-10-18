@@ -14,6 +14,7 @@ use App\Models\Service;
 use App\Support\Money;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Жизненный цикл сертификата. Все изменения статуса, состава и сроков идут
@@ -69,6 +70,43 @@ class CertificateManager
 
             return $certificate->refresh();
         });
+    }
+
+    /**
+     * Предварительный расчёт до создания черновика (для мастера продажи):
+     * базовый состав пакета + доп. услуги по ценам на дату продажи.
+     *
+     * @param  list<array{service_id:int|string|null, quantity:int|string|null}>  $extras
+     * @return array{lines: list<array{name:string, quantity:int, unit_price:string, line_total:string, from_package:bool}>, total:string, missing: list<string>}
+     */
+    public function quote(Package $package, array $extras, Carbon $soldAt): array
+    {
+        $rows = $package->items()->with('service')->get()
+            ->map(fn ($item) => [$item->service, (int) $item->quantity, true])->all();
+        foreach ($extras as $extra) {
+            $service = Service::find($extra['service_id'] ?? null);
+            if ($service && (int) ($extra['quantity'] ?? 0) > 0) {
+                $rows[] = [$service, (int) $extra['quantity'], false];
+            }
+        }
+
+        $lines = [];
+        $missing = [];
+        $total = 0;
+        foreach ($rows as [$service, $quantity, $fromPackage]) {
+            try {
+                $price = $this->pricing->priceOn($service, $soldAt)->price;
+            } catch (DomainRuleViolation) {
+                $missing[] = $service->name;
+
+                continue;
+            }
+            $lineTotal = Money::multiply($price, $quantity);
+            $total += Money::toMinor($lineTotal);
+            $lines[] = ['name' => $service->name, 'quantity' => $quantity, 'unit_price' => (string) $price, 'line_total' => $lineTotal, 'from_package' => $fromPackage];
+        }
+
+        return ['lines' => $lines, 'total' => Money::fromMinor($total), 'missing' => $missing];
     }
 
     /**
@@ -229,7 +267,12 @@ class CertificateManager
                 throw new DomainRuleViolation('Срок действия уже истёк — исправьте даты перед выпуском.');
             }
 
-            $certificate->update(['status' => CertificateStatus::Active, 'issued_at' => now(), 'updated_by' => auth()->id()]);
+            $certificate->update([
+                'status' => CertificateStatus::Active,
+                'issued_at' => now(),
+                'verification_token' => $certificate->verification_token ?? Str::random(32),
+                'updated_by' => auth()->id(),
+            ]);
             $this->history->record($certificate, HistoryEvent::Issued, null,
                 ['status' => CertificateStatus::Draft->value], ['status' => CertificateStatus::Active->value]);
 

@@ -32,6 +32,9 @@ class PaymentManager
             if ($certificate->isComplimentary()) {
                 throw new DomainRuleViolation('Бесплатный сертификат не оплачивается.');
             }
+            if (Money::toMinor($certificate->total_amount) === 0) {
+                throw new DomainRuleViolation('В сертификате нет услуг — счёт выставлять не на что.');
+            }
             $outstanding = Money::toMinor($certificate->total_amount) - Money::toMinor($certificate->invoicedAmount());
             if ($outstanding <= 0) {
                 throw new DomainRuleViolation('На всю сумму сертификата счета уже выставлены.');

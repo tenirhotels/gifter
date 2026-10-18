@@ -11,6 +11,7 @@ use App\Filament\Support\RunsDomainActions;
 use App\Models\Certificate;
 use App\Models\Recipient;
 use App\Services\AdminCorrections;
+use App\Services\CertificateDocument;
 use App\Services\CertificateManager;
 use App\Services\RefundManager;
 use App\Support\Money;
@@ -53,6 +54,15 @@ class ViewCertificate extends ViewRecord
                 ->requiresConfirmation()
                 ->modalDescription('После выпуска состав и цены фиксируются окончательно.')
                 ->action(fn (Certificate $record, Action $action) => $this->run($action, fn () => $this->manager()->issue($record), 'Сертификат выпущен')),
+
+            Action::make('downloadPdf')->label('PDF')->icon('heroicon-o-arrow-down-tray')->color('gray')
+                ->visible(fn (Certificate $record) => $record->isPrintable())
+                ->action(function (Certificate $record) {
+                    $documents = app(CertificateDocument::class);
+                    $pdf = $documents->download($record);
+
+                    return response()->streamDownload(fn () => print ($pdf), $documents->filename($record), ['Content-Type' => 'application/pdf']);
+                }),
 
             $this->transitionAction('reserve', 'Отметить бронь', CertificateStatus::Active, CertificateStatus::Reserved, 'heroicon-o-calendar', Permission::ManageReservations),
             $this->transitionAction('checkIn', 'Заезд', CertificateStatus::Reserved, CertificateStatus::InUse, 'heroicon-o-arrow-right-end-on-rectangle', Permission::ManageReservations),

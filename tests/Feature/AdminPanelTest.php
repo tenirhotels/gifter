@@ -56,7 +56,7 @@ class AdminPanelTest extends TestCase
         $recipient = Recipient::factory()->create();
 
         Livewire::test(CreateCertificate::class)
-            ->fillForm(['package_id' => $this->emptyPackageId(), 'customer_id' => $customer->id, 'recipient_id' => $recipient->id])
+            ->fillForm(['package_id' => $this->emptyPackageId(), 'customer_id' => $customer->id, 'recipient_id' => $recipient->id, 'create_invoice' => false])
             ->call('create')
             ->assertHasNoFormErrors();
 

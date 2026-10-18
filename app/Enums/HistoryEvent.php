@@ -23,6 +23,7 @@ enum HistoryEvent: string implements HasLabel
     case RefundPaid = 'refund_paid';
     case ComplimentaryApproved = 'complimentary_approved';
     case Issued = 'issued';
+    case DocumentDownloaded = 'document_downloaded';
     case StatusChanged = 'status_changed';
     case ValidityChanged = 'validity_changed';
     case Cancelled = 'cancelled';
@@ -49,6 +50,7 @@ enum HistoryEvent: string implements HasLabel
             self::RefundPaid => 'Деньги возвращены',
             self::ComplimentaryApproved => 'Бесплатный согласован директором',
             self::Issued => 'Сертификат выпущен',
+            self::DocumentDownloaded => 'Скачан PDF сертификата',
             self::StatusChanged => 'Изменён статус',
             self::ValidityChanged => 'Изменён срок действия',
             self::Cancelled => 'Сертификат аннулирован',

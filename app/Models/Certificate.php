@@ -25,7 +25,7 @@ class Certificate extends Model
     protected $attributes = ['kind' => 'sale'];
 
     protected $fillable = [
-        'number', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'complimentary_approved_by', 'complimentary_approved_at', 'sold_at', 'valid_from',
+        'number', 'verification_token', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'complimentary_approved_by', 'complimentary_approved_at', 'sold_at', 'valid_from',
         'valid_until', 'total_amount', 'total_cost', 'currency', 'issued_at', 'cancelled_at', 'cancellation_reason',
         'notes', 'created_by', 'updated_by',
     ];
@@ -116,6 +116,13 @@ class Certificate extends Model
     public function hasPendingRefund(): bool
     {
         return $this->refunds()->where('status', RefundStatus::Requested)->exists();
+    }
+
+    /** Сертификат выпущен и ещё может быть использован — его документ можно выдать гостю. */
+    public function isPrintable(): bool
+    {
+        return in_array($this->status, [CertificateStatus::Active, CertificateStatus::Reserved, CertificateStatus::InUse], true)
+            && $this->verification_token !== null;
     }
 
     public function isDraft(): bool

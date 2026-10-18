@@ -13,6 +13,7 @@ use App\Models\Payment;
 use App\Models\Refund;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Исправление ошибок администратором: откат статуса сертификата, оплаты,
@@ -45,6 +46,7 @@ class AdminCorrections
                 $changes['issued_at'] = null;
             } elseif ($from === CertificateStatus::Draft) {
                 $changes['issued_at'] = now();
+                $changes['verification_token'] = $certificate->verification_token ?? Str::random(32);
             }
             $certificate->update($changes);
             $this->record($certificate, "Статус «{$from->getLabel()}» → «{$target->getLabel()}»", $reason,
