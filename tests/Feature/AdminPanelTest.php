@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\CertificateStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\Role;
 use App\Filament\Resources\Certificates\Pages\CreateCertificate;
 use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\Certificates\RelationManagers\ItemsRelationManager;
@@ -31,12 +32,12 @@ class AdminPanelTest extends TestCase
     {
         parent::setUp();
         Carbon::setTestNow('2026-10-18 12:00:00');
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
     }
 
     public function test_inactive_user_cannot_open_panel(): void
     {
-        $this->actingAs(User::factory()->create(['is_active' => false]));
+        $this->actingAs(User::factory()->create(['is_active' => false, 'roles' => [Role::SuperAdmin]]));
         $this->get('/admin')->assertForbidden();
     }
 

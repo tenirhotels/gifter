@@ -6,6 +6,7 @@ use App\Enums\CertificateStatus;
 use App\Enums\HistoryEvent;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Enums\Role;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\Certificate;
 use App\Models\Customer;
@@ -34,7 +35,7 @@ class CertificateLifecycleTest extends TestCase
     {
         parent::setUp();
         Carbon::setTestNow('2026-10-18 12:00:00');
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
         $this->certificates = app(CertificateManager::class);
         $this->payments = app(PaymentManager::class);
         $this->pricing = app(ServicePricing::class);
@@ -70,17 +71,18 @@ class CertificateLifecycleTest extends TestCase
     {
         $certificate = $this->draft();
 
-        $this->assertSame('GIF-2026-000001', $certificate->number);
+        $this->assertSame('GIF-000001', $certificate->number);
         $this->assertSame(CertificateStatus::Draft, $certificate->status);
         $this->assertSame('2026-10-18', $certificate->sold_at->toDateString());
         $this->assertSame('2027-10-18', $certificate->valid_until->toDateString());
         $this->assertSame(HistoryEvent::Created, $certificate->history()->first()->event);
-        $this->assertSame('GIF-2026-000002', $this->draft()->number);
+        $this->assertSame('GIF-000002', $this->draft()->number);
     }
 
-    public function test_number_sequence_restarts_each_year_by_sale_date(): void
+    public function test_yearly_pattern_restarts_sequence_by_sale_date(): void
     {
-        $this->draft();
+        config(['gifter.number.pattern' => '{PREFIX}-{YYYY}-{SEQ}']);
+        $this->assertSame('GIF-2026-000001', $this->draft()->number);
         $this->assertSame('GIF-2027-000001', $this->draft(['sold_at' => '2027-01-05'])->number);
     }
 

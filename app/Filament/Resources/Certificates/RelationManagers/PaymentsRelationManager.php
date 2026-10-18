@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Certificates\RelationManagers;
 
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\Certificate;
@@ -43,6 +44,7 @@ class PaymentsRelationManager extends RelationManager
             ->paginated(false)
             ->headerActions([
                 Action::make('invoice')->label('Выставить счёт')->icon('heroicon-o-document-text')
+                    ->authorize(Permission::ManagePayments)
                     ->visible(fn () => $this->certificate()->isDraft())
                     ->schema(fn () => [
                         Select::make('method')->label('Способ')->options(PaymentMethod::class)->required()->default(PaymentMethod::KaspiInvoice->value),
@@ -62,6 +64,7 @@ class PaymentsRelationManager extends RelationManager
             ])
             ->recordActions([
                 Action::make('markPaid')->label('Оплачен')->icon('heroicon-o-check')->color('success')
+                    ->authorize(Permission::ManagePayments)
                     ->visible(fn (Payment $record) => $record->status === PaymentStatus::Pending)
                     ->schema([DateTimePicker::make('paid_at')->label('Дата поступления')->default(now())->required()->maxDate(now())])
                     ->action(function (Payment $record, array $data, Action $action) {
@@ -69,6 +72,7 @@ class PaymentsRelationManager extends RelationManager
                         $this->refreshPage();
                     }),
                 Action::make('cancelPayment')->label('Отменить')->icon('heroicon-o-x-mark')->color('danger')
+                    ->authorize(Permission::ManagePayments)
                     ->visible(fn (Payment $record) => $record->status === PaymentStatus::Pending)
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->action(function (Payment $record, array $data, Action $action) {

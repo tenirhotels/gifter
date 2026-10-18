@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Certificates\Pages;
 
 use App\Enums\CertificateStatus;
+use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\Certificate;
@@ -30,20 +31,22 @@ class ViewCertificate extends ViewRecord
             EditAction::make()->label('Реквизиты')->visible(fn (Certificate $record) => $record->isDraft()),
 
             Action::make('issue')->label('Выпустить')->icon('heroicon-o-check-badge')->color('success')
+                ->authorize(Permission::IssueCertificates)
                 ->visible(fn (Certificate $record) => $record->isDraft())
                 ->requiresConfirmation()
                 ->modalDescription('После выпуска состав и цены фиксируются окончательно.')
                 ->action(fn (Certificate $record, Action $action) => $this->run($action, fn () => $this->manager()->issue($record), 'Сертификат выпущен')),
 
-            $this->transitionAction('reserve', 'Отметить бронь', CertificateStatus::Active, CertificateStatus::Reserved, 'heroicon-o-calendar'),
-            $this->transitionAction('checkIn', 'Заезд', CertificateStatus::Reserved, CertificateStatus::InUse, 'heroicon-o-arrow-right-end-on-rectangle'),
-            $this->transitionAction('redeem', 'Погасить', CertificateStatus::InUse, CertificateStatus::Used, 'heroicon-o-check-circle',
+            $this->transitionAction('reserve', 'Отметить бронь', CertificateStatus::Active, CertificateStatus::Reserved, 'heroicon-o-calendar', Permission::ManageReservations),
+            $this->transitionAction('checkIn', 'Заезд', CertificateStatus::Reserved, CertificateStatus::InUse, 'heroicon-o-arrow-right-end-on-rectangle', Permission::ManageReservations),
+            $this->transitionAction('redeem', 'Погасить', CertificateStatus::InUse, CertificateStatus::Used, 'heroicon-o-check-circle', Permission::RedeemCertificates,
                 'Сертификат погашается целиком, со всеми услугами. Отменить погашение нельзя.'),
 
             ActionGroup::make([
-                $this->transitionAction('release', 'Снять бронь', CertificateStatus::Reserved, CertificateStatus::Active, 'heroicon-o-arrow-uturn-left'),
+                $this->transitionAction('release', 'Снять бронь', CertificateStatus::Reserved, CertificateStatus::Active, 'heroicon-o-arrow-uturn-left', Permission::ManageReservations),
 
                 Action::make('changeValidity')->label('Изменить срок')->icon('heroicon-o-clock')
+                    ->authorize(Permission::ChangeValidity)
                     ->visible(fn (Certificate $record) => ! $record->isDraft() && in_array($record->status, [CertificateStatus::Active, CertificateStatus::Reserved], true))
                     ->fillForm(fn (Certificate $record) => ['valid_from' => $record->valid_from, 'valid_until' => $record->valid_until])
                     ->schema([
@@ -55,6 +58,7 @@ class ViewCertificate extends ViewRecord
                         ->changeValidity($record, Carbon::parse($data['valid_from']), Carbon::parse($data['valid_until']), $data['reason']), 'Срок изменён')),
 
                 Action::make('cancel')->label('Аннулировать')->icon('heroicon-o-no-symbol')->color('danger')
+                    ->authorize(Permission::CancelCertificates)
                     ->visible(fn (Certificate $record) => $record->status->canTransitionTo(CertificateStatus::Cancelled))
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->modalDescription('Сертификат не удаляется: он остаётся в реестре со статусом «Аннулирован».')
@@ -63,9 +67,10 @@ class ViewCertificate extends ViewRecord
         ];
     }
 
-    private function transitionAction(string $name, string $label, CertificateStatus $from, CertificateStatus $to, string $icon, ?string $warning = null): Action
+    private function transitionAction(string $name, string $label, CertificateStatus $from, CertificateStatus $to, string $icon, Permission $permission, ?string $warning = null): Action
     {
         return Action::make($name)->label($label)->icon($icon)
+            ->authorize($permission)
             ->visible(fn (Certificate $record) => $record->status === $from)
             ->requiresConfirmation()
             ->modalDescription($warning)

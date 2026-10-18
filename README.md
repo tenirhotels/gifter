@@ -12,7 +12,7 @@ cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
 php artisan migrate --seed        # демо-каталог: услуги, цены, пакет
-php artisan gifter:create-user    # первый пользователь; пароль вводится интерактивно
+php artisan gifter:create-user    # первый пользователь: пароль и роли вводятся интерактивно
 php artisan serve                 # панель: http://127.0.0.1:8000/admin
 ```
 
@@ -24,3 +24,4 @@ php artisan serve                 # панель: http://127.0.0.1:8000/admin
 
 - [Фаза 0 — аудит старого проекта](docs/phase-0-audit.md)
 - [Фаза 1 — ядро: решения, жизненный цикл, правила](docs/phase-1-core.md)
+- [Фаза 2 — пользователи, роли и матрица прав](docs/phase-2-rbac.md)

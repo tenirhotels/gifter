@@ -15,6 +15,7 @@ class UsersTable
             ->columns([
                 TextColumn::make('name')->label('Имя')->searchable()->sortable(),
                 TextColumn::make('email')->label('Email')->searchable(),
+                TextColumn::make('roles')->label('Роли')->badge(),
                 IconColumn::make('is_active')->label('Активен')->boolean(),
                 TextColumn::make('created_at')->label('Создан')->dateTime('d.m.Y')->sortable(),
             ])

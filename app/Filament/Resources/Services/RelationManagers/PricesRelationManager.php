@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Services\RelationManagers;
 
+use App\Enums\Permission;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\Service;
 use App\Services\ServicePricing;
@@ -34,6 +35,7 @@ class PricesRelationManager extends RelationManager
             ->defaultSort('valid_from', 'desc')
             ->headerActions([
                 Action::make('addPrice')->label('Новая цена')->icon('heroicon-o-plus')
+                    ->authorize(Permission::ManagePrices)
                     ->schema([
                         TextInput::make('price')->label('Цена, ₸')->numeric()->minValue(1)->required(),
                         DatePicker::make('valid_from')->label('Действует с')->required()->default(today()),

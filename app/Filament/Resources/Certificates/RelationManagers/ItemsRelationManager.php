@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Certificates\RelationManagers;
 
+use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\Certificate;
@@ -40,7 +41,7 @@ class ItemsRelationManager extends RelationManager
             ])
             ->paginated(false)
             ->headerActions([
-                Action::make('addItem')->label('Добавить услугу')->icon('heroicon-o-plus')->visible($editable)
+                Action::make('addItem')->label('Добавить услугу')->icon('heroicon-o-plus')->visible($editable)->authorize(Permission::ComposeDrafts)
                     ->schema([
                         Select::make('service_id')->label('Услуга')->required()->searchable()->preload()
                             ->options(fn () => Service::where('is_active', true)->orderBy('name')->pluck('name', 'id')),
@@ -51,7 +52,7 @@ class ItemsRelationManager extends RelationManager
                             ->addItem($this->certificate(), Service::findOrFail($data['service_id']), (int) $data['quantity']), 'Услуга добавлена');
                         $this->refreshPage();
                     }),
-                Action::make('applyPackage')->label('Добавить пакет')->icon('heroicon-o-squares-plus')->color('gray')->visible($editable)
+                Action::make('applyPackage')->label('Добавить пакет')->icon('heroicon-o-squares-plus')->color('gray')->visible($editable)->authorize(Permission::ComposeDrafts)
                     ->schema([
                         Select::make('package_id')->label('Пакет')->required()
                             ->options(fn () => Package::where('is_active', true)->orderBy('name')->pluck('name', 'id')),
@@ -63,7 +64,7 @@ class ItemsRelationManager extends RelationManager
                     }),
             ])
             ->recordActions([
-                Action::make('remove')->label('Убрать')->icon('heroicon-o-x-mark')->color('danger')->visible($editable)
+                Action::make('remove')->label('Убрать')->icon('heroicon-o-x-mark')->color('danger')->visible($editable)->authorize(Permission::ComposeDrafts)
                     ->requiresConfirmation()
                     ->action(function (CertificateItem $record, Action $action) {
                         RunsDomainActions::run($action, fn () => app(CertificateManager::class)->removeItem($record), 'Услуга убрана');

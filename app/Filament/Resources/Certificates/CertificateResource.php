@@ -39,11 +39,6 @@ class CertificateResource extends Resource
         return false;
     }
 
-    public static function canEdit(Model $record): bool
-    {
-        return $record->isDraft();
-    }
-
     public static function canDeleteAny(): bool
     {
         return false;
