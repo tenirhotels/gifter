@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
+use App\Enums\ComplimentaryPurpose;
 use App\Enums\PaymentMethod;
 use App\Enums\RefundStatus;
 use App\Enums\Role;
@@ -76,7 +76,7 @@ class FinanceAndComplimentaryTest extends TestCase
 
     public function test_complimentary_is_issued_without_payment_and_keeps_price_value(): void
     {
-        $certificate = $this->draft(['kind' => CertificateKind::Complimentary, 'complimentary_reason' => 'Блогер, коллаборация', 'customer_id' => null]);
+        $certificate = $this->draft(['package_id' => $this->complimentaryPackageId(), 'complimentary_reason' => 'Блогер, коллаборация', 'customer_id' => null]);
 
         app(CertificateManager::class)->approveComplimentary($certificate);
         app(CertificateManager::class)->issue($certificate);
@@ -89,12 +89,12 @@ class FinanceAndComplimentaryTest extends TestCase
     public function test_complimentary_requires_reason_and_cannot_be_invoiced(): void
     {
         try {
-            $this->draft(['kind' => CertificateKind::Complimentary]);
+            $this->draft(['package_id' => $this->complimentaryPackageId()]);
             $this->fail('Бесплатный без основания');
         } catch (DomainRuleViolation) {
         }
 
-        $certificate = $this->draft(['kind' => CertificateKind::Complimentary, 'complimentary_reason' => 'Розыгрыш']);
+        $certificate = $this->draft(['package_id' => $this->complimentaryPackageId(), 'complimentary_reason' => 'Розыгрыш']);
         $this->expectException(DomainRuleViolation::class);
         app(PaymentManager::class)->invoice($certificate, PaymentMethod::KaspiInvoice);
     }
@@ -105,19 +105,25 @@ class FinanceAndComplimentaryTest extends TestCase
         $this->draft(['customer_id' => null]);
     }
 
-    public function test_only_sales_manager_sees_kind_choice_on_create(): void
+    public function test_complimentary_packages_are_hidden_from_sales_and_drive_kind(): void
     {
         $recipient = Recipient::factory()->create();
+        $free = $this->complimentaryPackageId();
 
         $this->as(Role::Sales);
-        Livewire::test(CreateCertificate::class)->assertFormFieldHidden('kind');
+        Livewire::test(CreateCertificate::class)
+            ->fillForm(['package_id' => $free, 'recipient_id' => $recipient->id])
+            ->call('create')
+            ->assertHasFormErrors(['package_id']);
 
         $this->as(Role::SalesManager);
         Livewire::test(CreateCertificate::class)
-            ->fillForm(['package_id' => $this->emptyPackageId(), 'kind' => 'complimentary', 'complimentary_reason' => 'Партнёр', 'recipient_id' => $recipient->id])
+            ->fillForm(['package_id' => $free, 'complimentary_purpose' => 'blogger', 'complimentary_reason' => 'Обзор в Instagram', 'recipient_id' => $recipient->id])
             ->call('create')
             ->assertHasNoFormErrors();
-        $this->assertTrue(Certificate::firstOrFail()->isComplimentary());
+        $certificate = Certificate::firstOrFail();
+        $this->assertTrue($certificate->isComplimentary());
+        $this->assertSame(ComplimentaryPurpose::Blogger, $certificate->complimentary_purpose);
     }
 
     // --- Видимость продавца ---

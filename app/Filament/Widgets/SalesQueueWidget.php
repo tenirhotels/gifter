@@ -2,8 +2,10 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\BatchStatus;
 use App\Enums\RefundStatus;
 use App\Enums\Role;
+use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Refunds\RefundResource;
 use App\Filament\Support\RoleQueueWidget;
@@ -46,6 +48,8 @@ class SalesQueueWidget extends RoleQueueWidget
         if (auth()->user()->hasRole(Role::SalesManager)) {
             $stats[] = $this->counter('Бесплатные у директора', $q->complimentaryAwaitingApproval(),
                 $list(['awaiting_approval' => ['isActive' => true]]), 'info', 'ждут согласования');
+            $stats[] = $this->counter('Блоки к выпуску', $q->batches(BatchStatus::Approved),
+                CertificateBatchResource::getUrl('index', ['filters' => ['status' => ['value' => 'approved']]]), 'success', 'согласованы директором');
             $stats[] = $this->counter('Возвраты на согласовании', $q->refunds(RefundStatus::Requested),
                 RefundResource::getUrl('index', ['filters' => ['status' => ['value' => 'requested']]]), 'info', 'у Финансов');
         }

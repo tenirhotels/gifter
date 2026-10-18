@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ComplimentaryPurpose;
 use App\Enums\ValidityUnit;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\PreventsDeletion;
@@ -13,19 +14,27 @@ use Illuminate\Support\Carbon;
 /**
  * Продукт: срок действия и базовый состав сертификата. Задаёт директор по продажам.
  * Продавец выбирает пакет и может добавить доп. услуги; срок не меняет.
+ * Бесплатный пакет (маркетинг, блогеры, бартер) даёт бесплатные сертификаты:
+ * без оплаты, после согласования директором, в т. ч. блоками.
  * Изменение пакета на уже созданные сертификаты не влияет.
  */
 class Package extends Model
 {
     use Auditable, HasFactory, PreventsDeletion;
 
-    protected $attributes = ['is_active' => true, 'validity_value' => 2, 'validity_unit' => 'months'];
+    protected $attributes = ['is_active' => true, 'validity_value' => 2, 'validity_unit' => 'months', 'is_complimentary' => false];
 
-    protected $fillable = ['name', 'description', 'validity_value', 'validity_unit', 'is_active'];
+    protected $fillable = ['name', 'description', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean', 'validity_value' => 'integer', 'validity_unit' => ValidityUnit::class];
+        return [
+            'is_active' => 'boolean',
+            'validity_value' => 'integer',
+            'validity_unit' => ValidityUnit::class,
+            'is_complimentary' => 'boolean',
+            'complimentary_purpose' => ComplimentaryPurpose::class,
+        ];
     }
 
     /** Срок действия сертификата этого пакета, считая с даты продажи. */

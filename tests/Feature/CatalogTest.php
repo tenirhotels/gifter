@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Enums\ProviderType;
 use App\Enums\Role;
@@ -143,7 +142,7 @@ class CatalogTest extends TestCase
     {
         $dinner = $this->dinner();
         $this->as(Role::SalesManager);
-        $certificate = $this->draft(['kind' => CertificateKind::Complimentary, 'complimentary_reason' => 'Партнёр', 'customer_id' => null]);
+        $certificate = $this->draft(['package_id' => $this->complimentaryPackageId(), 'complimentary_reason' => 'Партнёр', 'customer_id' => null]);
         app(CertificateManager::class)->addItem($certificate, $dinner, 2);
 
         try {
@@ -173,7 +172,7 @@ class CatalogTest extends TestCase
 
     public function test_approved_complimentary_composition_cannot_change(): void
     {
-        $certificate = $this->draft(['kind' => CertificateKind::Complimentary, 'complimentary_reason' => 'Розыгрыш']);
+        $certificate = $this->draft(['package_id' => $this->complimentaryPackageId(), 'complimentary_reason' => 'Розыгрыш']);
         app(CertificateManager::class)->addItem($certificate, $this->dinner(), 1);
         app(CertificateManager::class)->approveComplimentary($certificate);
 

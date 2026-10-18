@@ -30,7 +30,7 @@ class DraftsWidget extends TableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn () => (new DashboardQueries(auth()->user()))->drafts()->with(['customer', 'package'])
+            ->query(fn () => (new DashboardQueries(auth()->user()))->drafts()->whereNull('batch_id')->with(['customer', 'package'])
                 ->withSum(['payments as paid_sum' => fn ($q) => $q->where('status', 'paid')], 'amount'))
             ->defaultSort('id', 'desc')
             ->paginated([5, 10, 25])->defaultPaginationPageOption(5)

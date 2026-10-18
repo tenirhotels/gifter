@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\CertificateKind;
 use App\Enums\PaymentMethod;
 use App\Enums\Role;
 use App\Filament\Widgets\AdminOverviewWidget;
@@ -119,7 +118,7 @@ class DashboardTest extends TestCase
         $paid = $this->draft();
         app(PaymentManager::class)->markPaid(app(PaymentManager::class)->invoice($paid, PaymentMethod::KaspiInvoice));
         $this->draft();
-        $gift = $this->draft(['kind' => CertificateKind::Complimentary, 'complimentary_reason' => 'Партнёр']);
+        $gift = $this->draft(['package_id' => $this->complimentaryPackageId(), 'complimentary_reason' => 'Партнёр']);
         app(CertificateManager::class)->approveComplimentary($gift);
 
         $this->assertEqualsCanonicalizing([$paid->id, $gift->id],
@@ -131,7 +130,7 @@ class DashboardTest extends TestCase
         $certificate = $this->draft();
         app(PaymentManager::class)->markPaid(app(PaymentManager::class)->invoice($certificate, PaymentMethod::KaspiInvoice));
         app(CertificateManager::class)->issue($certificate);
-        $this->draft(['kind' => CertificateKind::Complimentary, 'complimentary_reason' => 'Партнёр']);
+        $this->draft(['package_id' => $this->complimentaryPackageId(), 'complimentary_reason' => 'Партнёр']);
         Service::factory()->create(['name' => 'Без цены']);
 
         $q = new DashboardQueries(auth()->user());

@@ -20,14 +20,15 @@ class DatabaseSeeder extends Seeder
     public function run(ServicePricing $pricing): void
     {
         $providers = [];
+        // Реквизиты внешних поставщиков — вымышленные, с корректной контрольной цифрой.
         foreach ([
-            ['Служба размещения', ProviderType::Rooms],
-            ['Ресторан отеля', ProviderType::FoodBeverage],
-            ['SPA-центр отеля', ProviderType::OtherDepartment],
-            ['Канатная дорога', ProviderType::External],
-            ['Трансферная компания', ProviderType::External],
-        ] as [$name, $type]) {
-            $providers[$name] = Provider::firstOrCreate(['name' => $name], ['type' => $type]);
+            ['Служба размещения', ProviderType::Rooms, []],
+            ['Ресторан отеля', ProviderType::FoodBeverage, []],
+            ['SPA-центр отеля', ProviderType::OtherDepartment, []],
+            ['Канатная дорога', ProviderType::External, ['legal_form' => 'too', 'legal_name' => 'Канатная дорога (демо)', 'tax_id' => '000140002217']],
+            ['Трансферная компания', ProviderType::External, ['legal_form' => 'ip', 'legal_name' => 'Трансфер (демо)', 'tax_id' => '000140002217']],
+        ] as [$name, $type, $requisites]) {
+            $providers[$name] = Provider::firstOrCreate(['name' => $name], ['type' => $type] + $requisites);
         }
 
         $categories = [];
@@ -74,6 +75,16 @@ class DatabaseSeeder extends Seeder
         if (! $weekend->items()->exists()) {
             foreach ([['Проживание', 1], ['Завтрак', 2]] as $position => [$name, $quantity]) {
                 $weekend->items()->create(['service_id' => Service::where('name', $name)->value('id'), 'quantity' => $quantity, 'position' => $position]);
+            }
+        }
+
+        $blogger = Package::firstOrCreate(['name' => 'Блогер: ужин и SPA'], [
+            'description' => 'Бесплатный пакет для блогеров и бартера', 'validity_value' => 1, 'validity_unit' => 'months',
+            'is_complimentary' => true, 'complimentary_purpose' => 'blogger', 'is_active' => true,
+        ]);
+        if (! $blogger->items()->exists()) {
+            foreach ([['Ужин', 2], ['SPA', 2]] as $position => [$name, $quantity]) {
+                $blogger->items()->create(['service_id' => Service::where('name', $name)->value('id'), 'quantity' => $quantity, 'position' => $position]);
             }
         }
     }

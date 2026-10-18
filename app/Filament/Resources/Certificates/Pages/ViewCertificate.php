@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Certificates\Pages;
 
 use App\Enums\CertificateStatus;
 use App\Enums\Permission;
+use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Recipients\Schemas\RecipientForm;
 use App\Filament\Support\ContactFields;
@@ -39,9 +40,13 @@ class ViewCertificate extends ViewRecord
         return [
             EditAction::make()->label('Реквизиты')->visible(fn (Certificate $record) => $record->isDraft()),
 
+            Action::make('openBatch')->label(fn (Certificate $record) => 'Блок №'.$record->batch_id)->icon('heroicon-o-rectangle-stack')->color('gray')
+                ->visible(fn (Certificate $record) => $record->batch_id && auth()->user()?->can(Permission::ViewBatches))
+                ->url(fn (Certificate $record) => CertificateBatchResource::getUrl('view', ['record' => $record->batch_id])),
+
             Action::make('approveComplimentary')->label('Согласовать бесплатный')->icon('heroicon-o-hand-thumb-up')->color('success')
                 ->authorize(Permission::ApproveComplimentary)
-                ->visible(fn (Certificate $record) => $record->isDraft() && $record->isComplimentary() && ! $record->isComplimentaryApproved())
+                ->visible(fn (Certificate $record) => $record->isDraft() && $record->isComplimentary() && ! $record->isComplimentaryApproved() && ! $record->batch_id)
                 ->modalDescription(fn (Certificate $record) => 'Маркетинговый расход по себестоимости: '.Money::format($record->total_cost)
                     .($record->hasUnknownCost() ? ' (у части услуг себестоимость не указана)' : '').'. После согласования состав фиксируется.')
                 ->schema([Textarea::make('comment')->label('Комментарий')])
@@ -50,7 +55,7 @@ class ViewCertificate extends ViewRecord
 
             Action::make('issue')->label('Выпустить')->icon('heroicon-o-check-badge')->color('success')
                 ->authorize(Permission::IssueCertificates)
-                ->visible(fn (Certificate $record) => $record->isDraft() && (! $record->isComplimentary() || $record->isComplimentaryApproved()))
+                ->visible(fn (Certificate $record) => $record->isDraft() && ! $record->batch_id && (! $record->isComplimentary() || $record->isComplimentaryApproved()))
                 ->requiresConfirmation()
                 ->modalDescription('После выпуска состав и цены фиксируются окончательно.')
                 ->action(fn (Certificate $record, Action $action) => $this->run($action, fn () => $this->manager()->issue($record), 'Сертификат выпущен')),
@@ -103,7 +108,8 @@ class ViewCertificate extends ViewRecord
                 Action::make('cancel')->label('Аннулировать')->icon('heroicon-o-no-symbol')->color('danger')
                     ->authorize(Permission::CancelCertificates)
                     ->visible(fn (Certificate $record) => $record->status->canTransitionTo(CertificateStatus::Cancelled)
-                        && Money::toMinor($record->paidAmount()) === 0 && ! $record->hasPendingRefund())
+                        && Money::toMinor($record->paidAmount()) === 0 && ! $record->hasPendingRefund()
+                        && ! ($record->isDraft() && $record->batch_id))
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->modalDescription('Сертификат не удаляется: он остаётся в реестре со статусом «Аннулирован».')
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => $this->manager()->cancel($record, $data['reason']), 'Сертификат аннулирован')),

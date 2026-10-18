@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
+use App\Enums\ComplimentaryPurpose;
 use App\Enums\PaymentStatus;
 use App\Enums\RefundStatus;
 use App\Models\Concerns\PreventsDeletion;
@@ -25,7 +26,7 @@ class Certificate extends Model
     protected $attributes = ['kind' => 'sale'];
 
     protected $fillable = [
-        'number', 'verification_token', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'complimentary_approved_by', 'complimentary_approved_at', 'sold_at', 'valid_from',
+        'number', 'verification_token', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'complimentary_purpose', 'batch_id', 'complimentary_approved_by', 'complimentary_approved_at', 'sold_at', 'valid_from',
         'valid_until', 'total_amount', 'total_cost', 'currency', 'issued_at', 'cancelled_at', 'cancellation_reason',
         'notes', 'created_by', 'updated_by',
     ];
@@ -35,6 +36,7 @@ class Certificate extends Model
         return [
             'status' => CertificateStatus::class,
             'kind' => CertificateKind::class,
+            'complimentary_purpose' => ComplimentaryPurpose::class,
             'sold_at' => 'date',
             'valid_from' => 'date',
             'valid_until' => 'date',
@@ -84,6 +86,11 @@ class Certificate extends Model
     public function history(): HasMany
     {
         return $this->hasMany(CertificateHistory::class)->orderByDesc('id');
+    }
+
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(CertificateBatch::class, 'batch_id');
     }
 
     public function refunds(): HasMany

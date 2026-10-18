@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Certificates\Pages;
 
 use App\Enums\PaymentMethod;
-use App\Enums\Permission;
 use App\Exceptions\DomainRuleViolation;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Certificates\Schemas\CertificateForm;
@@ -45,7 +44,7 @@ class CreateCertificate extends CreateRecord
         return [
             Step::make('Продукт')->icon('heroicon-o-squares-2x2')->schema([
                 Grid::make(3)->schema(CertificateForm::productFields()),
-                Grid::make(2)->visible(fn () => auth()->user()?->can(Permission::CreateComplimentary))->schema(CertificateForm::kindFields()),
+                Grid::make(2)->visible(fn (Get $get) => CertificateForm::isComplimentary($get))->schema(CertificateForm::complimentaryFields()),
             ]),
             Step::make('Покупатель и получатель')->icon('heroicon-o-user')->columns(2)
                 ->schema([CertificateForm::customerField(), CertificateForm::recipientField()]),
@@ -61,7 +60,7 @@ class CreateCertificate extends CreateRecord
                 CertificateForm::notesField(),
             ]),
             Step::make('Счёт')->icon('heroicon-o-banknotes')
-                ->visible(fn (Get $get) => ! CertificateForm::isComplimentary($get('kind')))
+                ->visible(fn (Get $get) => ! CertificateForm::isComplimentary($get))
                 ->schema([
                     Toggle::make('create_invoice')->label('Сразу выставить счёт на всю сумму')->default(true)->live(),
                     Grid::make(2)->visible(fn (Get $get) => (bool) $get('create_invoice'))->schema([

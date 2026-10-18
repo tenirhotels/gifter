@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
+use App\Enums\ComplimentaryPurpose;
 use App\Enums\HistoryEvent;
 use App\Enums\PaymentStatus;
 use App\Exceptions\DomainRuleViolation;
@@ -32,7 +33,9 @@ class CertificateManager
      * Черновик по пакету (продукту). Срок действия считается из пакета от даты
      * продажи и вручную при создании не задаётся. Получатель может быть неизвестен.
      *
-     * @param  array{package_id:int, customer_id?:int|null, recipient_id?:int|null, kind?:CertificateKind|string, complimentary_reason?:string|null, sold_at?:string|Carbon|null, notes?:string|null}  $data
+     * Тип определяет пакет: из бесплатного пакета — бесплатный сертификат.
+     *
+     * @param  array{package_id:int, customer_id?:int|null, recipient_id?:int|null, complimentary_reason?:string|null, complimentary_purpose?:ComplimentaryPurpose|string|null, sold_at?:string|Carbon|null, notes?:string|null, batch_id?:int|null}  $data
      */
     public function createDraft(array $data): Certificate
     {
@@ -45,9 +48,9 @@ class CertificateManager
                 throw new DomainRuleViolation("Пакет «{$package->name}» не активен.");
             }
             $soldAt = Carbon::parse($data['sold_at'] ?? today())->startOfDay();
-            $kind = $data['kind'] ?? CertificateKind::Sale;
-            $kind = $kind instanceof CertificateKind ? $kind : CertificateKind::from($kind);
+            $kind = $package->is_complimentary ? CertificateKind::Complimentary : CertificateKind::Sale;
             $this->assertKind($kind, $data['customer_id'] ?? null, $data['complimentary_reason'] ?? null);
+            $purpose = $kind === CertificateKind::Complimentary ? $this->purpose($data['complimentary_purpose'] ?? null, $package) : null;
 
             $certificate = Certificate::create([
                 'number' => $this->numbers->next($soldAt),
@@ -57,6 +60,8 @@ class CertificateManager
                 'status' => CertificateStatus::Draft,
                 'kind' => $kind,
                 'complimentary_reason' => $kind === CertificateKind::Complimentary ? $data['complimentary_reason'] : null,
+                'complimentary_purpose' => $purpose,
+                'batch_id' => $data['batch_id'] ?? null,
                 'sold_at' => $soldAt,
                 'valid_from' => $soldAt,
                 'valid_until' => $package->validUntil($soldAt),
@@ -119,23 +124,31 @@ class CertificateManager
     {
         return $this->locked($certificate, function (Certificate $certificate) use ($data) {
             $this->assertDraft($certificate);
-            $data = array_intersect_key($data, array_flip(['customer_id', 'recipient_id', 'package_id', 'kind', 'complimentary_reason', 'sold_at', 'notes']));
+            $data = array_intersect_key($data, array_flip(['customer_id', 'recipient_id', 'package_id', 'complimentary_reason', 'complimentary_purpose', 'sold_at', 'notes']));
             $soldAtChanged = isset($data['sold_at']) && ! Carbon::parse($data['sold_at'])->isSameDay($certificate->sold_at);
-            $kindChanged = isset($data['kind']) && CertificateKind::from($data['kind'] instanceof CertificateKind ? $data['kind']->value : $data['kind']) !== $certificate->kind;
             $packageChanged = isset($data['package_id']) && (int) $data['package_id'] !== $certificate->package_id;
+            $newPackage = $packageChanged ? Package::findOrFail($data['package_id']) : null;
+            $kindChanged = $newPackage && $newPackage->is_complimentary !== $certificate->isComplimentary();
+            if ($certificate->batch_id && ($packageChanged || $soldAtChanged)) {
+                throw new DomainRuleViolation('Сертификат из блока: пакет и дату продажи меняют для всего блока.');
+            }
             if ($soldAtChanged || $kindChanged || $packageChanged) {
                 $this->assertNoActivePayments($certificate);
                 $this->assertNotApproved($certificate);
             }
-            $package = $packageChanged ? Package::findOrFail($data['package_id']) : $certificate->package;
+            $package = $newPackage ?? $certificate->package;
             if ($packageChanged && ! $package->is_active) {
                 throw new DomainRuleViolation("Пакет «{$package->name}» не активен.");
             }
 
             $before = $this->snapshot($certificate);
             $certificate->fill($data + ['updated_by' => auth()->id()]);
-            if (! $certificate->isComplimentary()) {
+            $certificate->kind = $package?->is_complimentary ? CertificateKind::Complimentary : CertificateKind::Sale;
+            if ($certificate->isComplimentary()) {
+                $certificate->complimentary_purpose = $this->purpose($certificate->complimentary_purpose, $package);
+            } else {
                 $certificate->complimentary_reason = null;
+                $certificate->complimentary_purpose = null;
             }
             if (($soldAtChanged || $packageChanged) && $package) {
                 $certificate->valid_from = $certificate->sold_at;
@@ -227,10 +240,11 @@ class CertificateManager
      * Согласование бесплатного сертификата директором по продажам.
      * После согласования состав и дата продажи фиксируются.
      */
-    public function approveComplimentary(Certificate $certificate, ?string $comment = null): Certificate
+    public function approveComplimentary(Certificate $certificate, ?string $comment = null, bool $viaBatch = false): Certificate
     {
-        return $this->locked($certificate, function (Certificate $certificate) use ($comment) {
+        return $this->locked($certificate, function (Certificate $certificate) use ($comment, $viaBatch) {
             $this->assertDraft($certificate);
+            $this->assertNotInBatch($certificate, $viaBatch);
             if (! $certificate->isComplimentary()) {
                 throw new DomainRuleViolation('Согласование нужно только для бесплатного сертификата.');
             }
@@ -249,10 +263,11 @@ class CertificateManager
     }
 
     /** Выпуск: черновик с составом, полностью оплаченный, становится активным. */
-    public function issue(Certificate $certificate): Certificate
+    public function issue(Certificate $certificate, bool $viaBatch = false): Certificate
     {
-        return $this->locked($certificate, function (Certificate $certificate) {
+        return $this->locked($certificate, function (Certificate $certificate) use ($viaBatch) {
             $this->assertDraft($certificate);
+            $this->assertNotInBatch($certificate, $viaBatch);
             if (! $certificate->items()->exists()) {
                 throw new DomainRuleViolation('Нельзя выпустить сертификат без услуг.');
             }
@@ -311,9 +326,12 @@ class CertificateManager
     }
 
     /** Аннулирование без денег. Оплаченный сертификат аннулируется через RefundManager. */
-    public function cancel(Certificate $certificate, string $reason): Certificate
+    public function cancel(Certificate $certificate, string $reason, bool $viaBatch = false): Certificate
     {
-        return $this->locked($certificate, function (Certificate $certificate) use ($reason) {
+        return $this->locked($certificate, function (Certificate $certificate) use ($reason, $viaBatch) {
+            if ($certificate->isDraft()) {
+                $this->assertNotInBatch($certificate, $viaBatch);
+            }
             $this->assertNoPendingRefund($certificate);
             if (trim($reason) === '') {
                 throw new DomainRuleViolation('Укажите причину аннулирования.');
@@ -461,10 +479,29 @@ class CertificateManager
         }
     }
 
+    /** Черновики блока согласуются, выпускаются и аннулируются только всем блоком. */
+    private function assertNotInBatch(Certificate $certificate, bool $viaBatch): void
+    {
+        if ($certificate->batch_id && ! $viaBatch) {
+            throw new DomainRuleViolation('Сертификат входит в блок — это действие выполняется для всего блока.');
+        }
+    }
+
+    private function purpose(ComplimentaryPurpose|string|null $purpose, ?Package $package): ComplimentaryPurpose
+    {
+        $purpose = $purpose instanceof ComplimentaryPurpose ? $purpose : ComplimentaryPurpose::tryFrom((string) $purpose);
+        $purpose ??= $package?->complimentary_purpose;
+        if (! $purpose) {
+            throw new DomainRuleViolation('Укажите цель бесплатного сертификата: маркетинг, блогеры или бартер.');
+        }
+
+        return $purpose;
+    }
+
     private function assertKind(CertificateKind $kind, ?int $customerId, ?string $reason): void
     {
         if ($kind === CertificateKind::Complimentary && trim((string) $reason) === '') {
-            throw new DomainRuleViolation('Для бесплатного сертификата укажите основание (маркетинговая цель).');
+            throw new DomainRuleViolation('Для бесплатного сертификата укажите основание (кому и зачем).');
         }
         if ($kind === CertificateKind::Sale && ! $customerId) {
             throw new DomainRuleViolation('Для продажи укажите покупателя.');
@@ -513,6 +550,7 @@ class CertificateManager
             'package_id' => $certificate->package_id,
             'kind' => $certificate->kind?->value,
             'complimentary_reason' => $certificate->complimentary_reason,
+            'complimentary_purpose' => $certificate->complimentary_purpose?->value,
             'recipient_id' => $certificate->recipient_id,
             'sold_at' => $certificate->sold_at?->toDateString(),
             'valid_from' => $certificate->valid_from?->toDateString(),

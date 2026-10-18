@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Certificates\Schemas;
 
-use App\Enums\CertificateKind;
+use App\Enums\ComplimentaryPurpose;
 use App\Enums\Permission;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
 use App\Filament\Resources\Recipients\Schemas\RecipientForm;
@@ -12,7 +12,6 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -20,7 +19,8 @@ use Filament\Schemas\Schema;
 use Illuminate\Support\Carbon;
 
 /**
- * Реквизиты черновика. Продукт — пакет: он задаёт базовый состав и срок действия.
+ * Реквизиты черновика. Продукт — пакет: он задаёт состав, срок действия и тип
+ * (бесплатный пакет даёт бесплатный сертификат).
  * Блоки полей общие для мастера продажи (CreateCertificate) и правки черновика.
  */
 class CertificateForm
@@ -29,7 +29,7 @@ class CertificateForm
     {
         return $schema->components([
             Section::make('Продукт')->columns(3)->schema(self::productFields()),
-            Section::make('Тип')->columns(2)->visible(fn () => auth()->user()?->can(Permission::CreateComplimentary))->schema(self::kindFields()),
+            Section::make('Бесплатный сертификат')->columns(2)->visible(fn (Get $get) => self::isComplimentary($get))->schema(self::complimentaryFields()),
             Section::make('Покупатель и получатель')->columns(2)->schema([self::customerField(), self::recipientField()]),
             self::notesField(),
         ]);
@@ -40,9 +40,12 @@ class CertificateForm
     {
         return [
             Select::make('package_id')->label('Пакет')->required()->live()
-                ->relationship('package', 'name', fn ($query) => $query->where('is_active', true))->preload()
-                ->getOptionLabelFromRecordUsing(fn (Package $record) => "{$record->name} — {$record->validityLabel()}")
-                ->helperText('Пакет задаёт базовый состав и срок действия.'),
+                ->relationship('package', 'name', fn ($query) => $query->where('is_active', true)
+                    ->when(! auth()->user()?->can(Permission::CreateComplimentary), fn ($q) => $q->where('is_complimentary', false))
+                    ->orderBy('is_complimentary')->orderBy('name'))
+                ->preload()
+                ->getOptionLabelFromRecordUsing(fn (Package $record) => "{$record->name} — {$record->validityLabel()}".($record->is_complimentary ? ' · бесплатный' : ''))
+                ->helperText('Пакет задаёт состав, срок действия и тип: бесплатный пакет даёт бесплатный сертификат.'),
             Placeholder::make('validity_preview')->label('Срок действия')
                 ->content(function (Get $get) {
                     $package = Package::find($get('package_id'));
@@ -60,16 +63,13 @@ class CertificateForm
     }
 
     /** @return list<Component> */
-    public static function kindFields(): array
+    public static function complimentaryFields(): array
     {
-        $complimentary = fn (Get $get): bool => self::isComplimentary($get('kind'));
-
         return [
-            ToggleButtons::make('kind')->label('Тип сертификата')->options(CertificateKind::class)->inline()
-                ->default(CertificateKind::Sale)->required()->live(),
-            Textarea::make('complimentary_reason')->label('Основание (маркетинговая цель)')
-                ->helperText('Бесплатный выпускается без оплаты после согласования директором; расход — маркетинговый.')
-                ->visible($complimentary)->required($complimentary),
+            Select::make('complimentary_purpose')->label('Цель')->options(ComplimentaryPurpose::class)->required()
+                ->default(fn (Get $get) => Package::find($get('package_id'))?->complimentary_purpose),
+            Textarea::make('complimentary_reason')->label('Основание (кому и зачем)')->required()
+                ->helperText('Выпускается без оплаты после согласования директором; расход — маркетинговый.'),
         ];
     }
 
@@ -79,8 +79,10 @@ class CertificateForm
             ->relationship('customer', 'full_name')->searchable(['last_name', 'first_name', 'company', 'bin'])->preload()
             ->getOptionLabelFromRecordUsing(fn (Customer $record) => $record->displayName())
             ->createOptionForm(CustomerForm::fields())
-            ->required(fn (Get $get): bool => ! self::isComplimentary($get('kind')))
-            ->helperText(fn (Get $get): ?string => self::isComplimentary($get('kind')) ? 'Для бесплатного — необязательно.' : 'Найдите по фамилии, компании или БИН, или создайте нового (+).');
+            ->required(fn (Get $get): bool => ! self::isComplimentary($get))
+            ->helperText(fn (Get $get): ?string => self::isComplimentary($get)
+                ? 'Для бесплатного — необязательно (например, партнёр по бартеру).'
+                : 'Найдите по фамилии, компании или БИН, или создайте нового (+).');
     }
 
     public static function recipientField(): Select
@@ -96,8 +98,9 @@ class CertificateForm
         return Textarea::make('notes')->label('Примечание')->columnSpanFull();
     }
 
-    public static function isComplimentary(mixed $kind): bool
+    /** Бесплатный ли сертификат — по выбранному пакету. */
+    public static function isComplimentary(Get $get): bool
     {
-        return ($kind instanceof CertificateKind ? $kind : CertificateKind::tryFrom((string) $kind)) === CertificateKind::Complimentary;
+        return (bool) Package::find($get('package_id'))?->is_complimentary;
     }
 }

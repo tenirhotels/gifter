@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LegalForm;
 use App\Enums\ProviderType;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\PreventsDeletion;
@@ -15,11 +16,26 @@ class Provider extends Model
 
     protected $attributes = ['is_active' => true];
 
-    protected $fillable = ['name', 'type', 'contact_person', 'phone', 'email', 'notes', 'is_active'];
+    protected $fillable = ['name', 'type', 'legal_form', 'legal_name', 'tax_id', 'contact_person', 'phone', 'email', 'notes', 'is_active'];
 
     protected function casts(): array
     {
-        return ['type' => ProviderType::class, 'is_active' => 'boolean'];
+        return ['type' => ProviderType::class, 'legal_form' => LegalForm::class, 'is_active' => 'boolean'];
+    }
+
+    public function isExternal(): bool
+    {
+        return $this->type === ProviderType::External;
+    }
+
+    /** «ТОО Канатная дорога, БИН 940140000385» — для документов и заявок. */
+    public function requisites(): ?string
+    {
+        if (! $this->isExternal() || ! $this->legal_form) {
+            return null;
+        }
+
+        return trim("{$this->legal_form->getLabel()} {$this->legal_name}").", {$this->legal_form->taxIdLabel()} {$this->tax_id}";
     }
 
     public function services(): HasMany

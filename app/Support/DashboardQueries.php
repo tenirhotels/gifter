@@ -2,12 +2,14 @@
 
 namespace App\Support;
 
+use App\Enums\BatchStatus;
 use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\RefundStatus;
 use App\Models\Certificate;
+use App\Models\CertificateBatch;
 use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\Service;
@@ -41,7 +43,7 @@ final class DashboardQueries
     /** Оплачены полностью (или согласованы как бесплатные), но не выпущены. */
     public function readyToIssue(): Builder
     {
-        return $this->drafts()->where(fn (Builder $q) => $q
+        return $this->drafts()->whereNull('batch_id')->where(fn (Builder $q) => $q
             ->where(fn (Builder $q) => $q->where('kind', CertificateKind::Complimentary)->whereNotNull('complimentary_approved_at'))
             ->orWhere(fn (Builder $q) => $q->where('kind', CertificateKind::Sale)->where('total_amount', '>', 0)
                 ->whereRaw('(select coalesce(sum(amount), 0) from payments where payments.certificate_id = certificates.id and payments.status = ?) >= certificates.total_amount', [PaymentStatus::Paid->value])));
@@ -59,9 +61,15 @@ final class DashboardQueries
             ->whereDate('valid_until', '<=', today()->addDays(self::EXPIRING_DAYS)->toDateString());
     }
 
+    /** Штучные бесплатные на согласовании (блоки считаются отдельно). */
     public function complimentaryAwaitingApproval(): Builder
     {
-        return $this->drafts()->where('kind', CertificateKind::Complimentary)->whereNull('complimentary_approved_at');
+        return $this->drafts()->where('kind', CertificateKind::Complimentary)->whereNull('complimentary_approved_at')->whereNull('batch_id');
+    }
+
+    public function batches(BatchStatus $status): Builder
+    {
+        return CertificateBatch::query()->where('status', $status);
     }
 
     /** Выпущенные в этом месяце (продажи, без бесплатных и аннулированных). */

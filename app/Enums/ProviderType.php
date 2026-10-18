@@ -4,6 +4,7 @@ namespace App\Enums;
 
 use Filament\Support\Contracts\HasLabel;
 
+/** Подписи только на русском; переводы — в отдельной фазе мультиязычности. */
 enum ProviderType: string implements HasLabel
 {
     case Rooms = 'rooms';
@@ -14,10 +15,10 @@ enum ProviderType: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Rooms => 'Rooms — Служба размещения',
-            self::FoodBeverage => 'F&B — Ресторанная служба',
-            self::OtherDepartment => 'Other Hotel Department — Другой отдел отеля',
-            self::External => 'External Provider — Внешний поставщик',
+            self::Rooms => 'Служба размещения',
+            self::FoodBeverage => 'Ресторанная служба',
+            self::OtherDepartment => 'Другой отдел отеля',
+            self::External => 'Внешний поставщик',
         };
     }
 }

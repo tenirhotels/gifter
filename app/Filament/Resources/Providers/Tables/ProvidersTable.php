@@ -17,6 +17,8 @@ class ProvidersTable
             ->columns([
                 TextColumn::make('name')->label('Название')->searchable()->sortable(),
                 TextColumn::make('type')->label('Тип')->badge(),
+                TextColumn::make('requisites')->label('Реквизиты')->state(fn ($record) => $record->requisites())->placeholder('—')
+                    ->searchable(['legal_name', 'tax_id']),
                 TextColumn::make('contact_person')->label('Контакт')->description(fn ($record) => $record->phone)->placeholder('—'),
                 TextColumn::make('services_count')->label('Услуг')->counts('services'),
                 IconColumn::make('is_active')->label('Активен')->boolean(),

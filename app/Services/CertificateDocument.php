@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\HistoryEvent;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\Certificate;
+use App\Models\CertificateBatch;
 use Barryvdh\DomPDF\Facade\Pdf;
 use chillerlan\QRCode\Output\QRMarkupSVG;
 use chillerlan\QRCode\QRCode;
@@ -47,11 +48,28 @@ class CertificateDocument
         $url = $this->verificationUrl($certificate);
 
         return Pdf::loadView('certificates.pdf', [
-            'certificate' => $certificate,
-            'qr' => $this->qrDataUri($url),
-            'verifyUrl' => $url,
+            'pages' => [['certificate' => $certificate, 'qr' => $this->qrDataUri($url), 'verifyUrl' => $url]],
             'hotel' => config('gifter.certificate'),
         ])->setPaper('a4')->output();
+    }
+
+    /** Один PDF на весь блок: по странице на сертификат. */
+    public function batchPdf(CertificateBatch $batch): string
+    {
+        $certificates = $batch->certificates()->with(['recipient', 'package', 'items'])->get()->filter->isPrintable()->values();
+        if ($certificates->isEmpty()) {
+            throw new DomainRuleViolation('В блоке нет выпущенных действующих сертификатов.');
+        }
+        $pages = $certificates->map(fn (Certificate $certificate) => [
+            'certificate' => $certificate,
+            'qr' => $this->qrDataUri($this->verificationUrl($certificate)),
+            'verifyUrl' => $this->verificationUrl($certificate),
+        ]);
+        foreach ($certificates as $certificate) {
+            $this->history->record($certificate, HistoryEvent::DocumentDownloaded, "В составе блока №{$batch->id}");
+        }
+
+        return Pdf::loadView('certificates.pdf', ['pages' => $pages, 'hotel' => config('gifter.certificate')])->setPaper('a4')->output();
     }
 
     /** Скачивание фиксируется в истории: видно, кто и когда выдал документ. */
