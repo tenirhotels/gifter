@@ -40,7 +40,7 @@ class CertificateBatchManager
     public function create(Package $package, int $quantity, array $data = []): CertificateBatch
     {
         if ($quantity < 2 || $quantity > self::MAX_QUANTITY) {
-            throw new DomainRuleViolation('В покупке — от 2 до '.self::MAX_QUANTITY.' сертификатов (один оформляется обычной продажей).');
+            throw new DomainRuleViolation('Вместе оформляется от 2 до '.self::MAX_QUANTITY.' сертификатов (один — обычным порядком).');
         }
         $complimentary = $package->is_complimentary;
         $reason = trim((string) ($data['complimentary_reason'] ?? ''));
@@ -135,10 +135,10 @@ class CertificateBatchManager
     {
         return $this->transition($batch, BatchStatus::Draft, function (CertificateBatch $batch) use ($comment) {
             if (! $batch->isComplimentary()) {
-                throw new DomainRuleViolation('Согласование нужно только бесплатной покупке.');
+                throw new DomainRuleViolation('Согласование нужно только бесплатной выдаче.');
             }
             foreach ($batch->certificates as $certificate) {
-                $this->certificates->approveComplimentary($certificate, trim("Покупка №{$batch->id}. ".($comment ?? '')), viaBatch: true);
+                $this->certificates->approveComplimentary($certificate, trim("{$batch->shortLabel()}. ".($comment ?? '')), viaBatch: true);
             }
             $batch->update(['status' => BatchStatus::Approved, 'approved_by' => auth()->id(), 'approved_at' => now()]);
         });
@@ -161,16 +161,16 @@ class CertificateBatchManager
     public function cancel(CertificateBatch $batch, string $reason): CertificateBatch
     {
         if (trim($reason) === '') {
-            throw new DomainRuleViolation('Укажите причину аннулирования покупки.');
+            throw new DomainRuleViolation('Укажите причину аннулирования.');
         }
 
         return DB::transaction(function () use ($batch, $reason) {
             $batch = CertificateBatch::query()->lockForUpdate()->findOrFail($batch->id);
             if (! in_array($batch->status, [BatchStatus::Draft, BatchStatus::Approved], true)) {
-                throw new DomainRuleViolation("Покупку в статусе «{$batch->status->getLabel()}» аннулировать нельзя.");
+                throw new DomainRuleViolation("{$batch->shortLabel()} в статусе «{$batch->statusLabel()}» аннулировать нельзя.");
             }
             foreach ($batch->certificates as $certificate) {
-                $this->certificates->cancel($certificate, "Покупка №{$batch->id}: {$reason}", viaBatch: true);
+                $this->certificates->cancel($certificate, "{$batch->shortLabel()}: {$reason}", viaBatch: true);
             }
             $batch->update(['status' => BatchStatus::Cancelled]);
 

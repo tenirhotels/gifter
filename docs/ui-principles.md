@@ -23,4 +23,4 @@ Gifter — рабочее B2B-приложение для служб отеля,
 - `app/Providers/Filament/AdminPanelProvider.php` — ширина, SPA, предупреждение о несохранённых данных, транзакции, `Ctrl+K`, локальные аватары.
 - `app/Providers/AppServiceProvider.php` — общие настройки таблиц.
 - `app/Enums/*Status.php` — цвета статусов в одном месте.
-- `app/Filament/Widgets/` — главная по ролям: только то, что требует действия.
+- `app/Filament/Widgets/` — главная по ролям: только то, что требует действия. Плитки — через `RoleQueueWidget::counter()` / `metric()` (иконка обязательна), стили — `resources/views/filament/dashboard-styles.blade.php`.

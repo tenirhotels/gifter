@@ -33,7 +33,7 @@ use Illuminate\Support\HtmlString;
 
 /**
  * Мастер продажи: пакет и количество → покупатель и получатель → доп. услуги и итог → счёт.
- * Количество > 1 — покупка (CertificateBatchManager): общий состав, один счёт, выпуск вместе.
+ * Количество > 1 — покупка или бесплатная выдача (CertificateBatchManager): общий состав, один счёт, выпуск вместе.
  * Всё создаётся одной транзакцией: при ошибке не остаётся «полу-черновика».
  */
 class CreateCertificate extends CreateRecord
@@ -52,7 +52,7 @@ class CreateCertificate extends CreateRecord
                 Grid::make(3)->schema([
                     TextInput::make('certificate_count')->label('Количество сертификатов')->integer()
                         ->minValue(1)->maxValue(CertificateBatchManager::MAX_QUANTITY)->default(1)->required()->live(onBlur: true)
-                        ->helperText('Больше 1 — одна покупка: общий счёт, получатели у каждого свои.'),
+                        ->helperText('Больше 1 — оформляются вместе: общий счёт (для платных), получатели у каждого свои.'),
                 ]),
                 Grid::make(2)->visible(fn (Get $get) => CertificateForm::isComplimentary($get))->schema([
                     ...CertificateForm::complimentaryFields(),
@@ -64,7 +64,7 @@ class CreateCertificate extends CreateRecord
                     CertificateForm::customerField(),
                     CertificateForm::recipientField()->hidden(fn (Get $get) => self::count($get) > 1),
                     Placeholder::make('recipients_hint')->label('Получатели')->visible(fn (Get $get) => self::count($get) > 1)
-                        ->content('У каждого сертификата покупки свой получатель — укажите их после оформления.'),
+                        ->content('У каждого сертификата свой получатель — укажите их после оформления.'),
                 ]),
             Step::make('Состав и стоимость')->icon('heroicon-o-list-bullet')->schema([
                 Repeater::make('extras')->label('Доп. услуги к пакету')->addActionLabel('Добавить доп. услугу')
@@ -145,7 +145,7 @@ class CreateCertificate extends CreateRecord
         }
     }
 
-    /** Несколько сертификатов — покупка: общие состав, счёт и выпуск. */
+    /** Несколько сертификатов — покупка (платные) или бесплатная выдача: общие состав, счёт и выпуск. */
     private function createPurchase(array $data): Model
     {
         $batches = app(CertificateBatchManager::class);
@@ -163,7 +163,7 @@ class CreateCertificate extends CreateRecord
 
     protected function getCreatedNotificationTitle(): ?string
     {
-        return $this->purchase ? "Оформлена покупка №{$this->purchase->id}: {$this->purchase->quantity} сертификатов" : 'Сертификат оформлен';
+        return $this->purchase ? "Оформлено: {$this->purchase->shortLabel()}, {$this->purchase->quantity} сертификатов" : 'Сертификат оформлен';
     }
 
     protected function getRedirectUrl(): string

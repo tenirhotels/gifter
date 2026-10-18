@@ -138,7 +138,7 @@ class CertificateManager
             $kindChanged = $newPackage && $newPackage->is_complimentary !== $certificate->isComplimentary();
             $customerChanged = array_key_exists('customer_id', $data) && (int) $data['customer_id'] !== (int) $certificate->customer_id;
             if ($certificate->batch_id && ($packageChanged || $soldAtChanged || $customerChanged)) {
-                throw new DomainRuleViolation('Сертификат входит в покупку: пакет, покупатель и дата продажи у всех её сертификатов общие.');
+                throw new DomainRuleViolation('Сертификат входит в '.$certificate->batch->term('acc').': пакет, покупатель и дата продажи у всех её сертификатов общие.');
             }
             if ($soldAtChanged || $kindChanged || $packageChanged) {
                 $this->assertNoActivePayments($certificate);
@@ -501,7 +501,7 @@ class CertificateManager
     private function assertNotInBatch(Certificate $certificate, bool $viaBatch): void
     {
         if ($certificate->batch_id && ! $viaBatch) {
-            throw new DomainRuleViolation('Сертификат входит в покупку — это действие выполняется на странице покупки для всех её сертификатов.');
+            throw new DomainRuleViolation('Сертификат входит в '.$certificate->batch->term('acc').' — это действие выполняется на странице '.$certificate->batch->term('gen').' для всех её сертификатов.');
         }
     }
 

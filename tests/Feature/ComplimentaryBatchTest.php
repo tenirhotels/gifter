@@ -13,6 +13,7 @@ use App\Filament\Resources\CertificateBatches\Pages\ViewCertificateBatch;
 use App\Filament\Resources\Certificates\Pages\CreateCertificate;
 use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\Providers\Pages\CreateProvider;
+use App\Filament\Widgets\DirectorQueueWidget;
 use App\Models\CertificateBatch;
 use App\Models\Customer;
 use App\Models\Package;
@@ -127,12 +128,17 @@ class ComplimentaryBatchTest extends TestCase
         $this->assertSame('Ждёт согласования директора', $batch->statusLabel());
 
         Livewire::test(ViewCertificateBatch::class, ['record' => $batch->id])
+            ->assertSee('Бесплатная выдача №'.$batch->id)->assertDontSee('Покупка №')
             ->assertActionHidden('approveBatch')
             ->assertActionHidden('issueBatch')
             ->assertActionHidden('invoiceBatch');
 
         $this->as(Role::SalesDirector);
-        $this->assertSame(1, (new DashboardQueries(auth()->user()))->purchasesAwaitingApproval()->count());
+        $queries = new DashboardQueries(auth()->user());
+        $this->assertSame([1, 5], [$queries->freeIssuesAwaitingApproval()->count(), $queries->complimentaryAwaitingApproval()->count()]);
+        Livewire::test(DirectorQueueWidget::class)->assertSee('Бесплатные сертификаты ждут согласования')->assertSee('бесплатных выдач: 1')
+            ->assertDontSee('покупк');
+        $this->assertSame('Бесплатная выдача №'.$batch->id, $batch->shortLabel());
         Livewire::test(ViewCertificateBatch::class, ['record' => $batch->id])->callAction('approveBatch', ['comment' => 'Ок']);
         $this->assertSame(BatchStatus::Approved, $batch->refresh()->status);
 

@@ -61,25 +61,33 @@ final class DashboardQueries
             ->whereDate('valid_until', '<=', today()->addDays(self::EXPIRING_DAYS)->toDateString());
     }
 
-    /** Штучные бесплатные на согласовании (покупки считаются отдельно). */
+    /** Бесплатные сертификаты на согласовании — штучные и из бесплатных выдач. */
     public function complimentaryAwaitingApproval(): Builder
     {
-        return $this->drafts()->where('kind', CertificateKind::Complimentary)->whereNull('complimentary_approved_at')->whereNull('batch_id');
+        return $this->drafts()->where('kind', CertificateKind::Complimentary)->whereNull('complimentary_approved_at');
     }
 
-    public function purchases(): Builder
+    /** Покупки и бесплатные выдачи (несколько сертификатов вместе), видимые пользователю. */
+    public function batches(): Builder
     {
         return CertificateBatchPolicy::scopeVisible(CertificateBatch::query(), $this->user);
     }
 
-    public function purchasesAwaitingApproval(): Builder
+    public function freeIssuesAwaitingApproval(): Builder
     {
-        return $this->purchases()->awaitingApproval();
+        return $this->batches()->awaitingApproval();
     }
 
+    /** Платные покупки, оплаченные полностью, — к выпуску. */
     public function purchasesReadyToIssue(): Builder
     {
-        return $this->purchases()->readyToIssue();
+        return $this->batches()->readyToIssue()->where('kind', CertificateKind::Sale);
+    }
+
+    /** Бесплатные выдачи, согласованные директором, — к выпуску. */
+    public function freeIssuesReadyToIssue(): Builder
+    {
+        return $this->batches()->readyToIssue()->where('kind', CertificateKind::Complimentary);
     }
 
     /** Выпущенные в этом месяце (продажи, без бесплатных и аннулированных). */

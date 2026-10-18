@@ -28,11 +28,11 @@ class CertificateBatchResource extends Resource
 
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static ?string $modelLabel = 'покупка';
+    protected static ?string $modelLabel = 'покупка или выдача';
 
-    protected static ?string $pluralModelLabel = 'Покупки';
+    protected static ?string $pluralModelLabel = 'Покупки и бесплатные выдачи';
 
-    protected static ?string $breadcrumb = 'Покупки';
+    protected static ?string $breadcrumb = 'Покупки и выдачи';
 
     public static function getEloquentQuery(): Builder
     {
@@ -62,7 +62,7 @@ class CertificateBatchResource extends Resource
     public static function infolist(Schema $schema): Schema
     {
         return $schema->columns(3)->components([
-            Section::make('Покупка')->columns(3)->columnSpan(2)->schema([
+            Section::make(fn (CertificateBatch $record) => $record->term(capital: true))->columns(3)->columnSpan(2)->schema([
                 TextEntry::make('status')->label('Статус')->badge()->formatStateUsing(fn ($state, CertificateBatch $record) => $record->statusLabel()),
                 TextEntry::make('kind')->label('Тип')->badge(),
                 TextEntry::make('quantity')->label('Сертификатов'),
@@ -105,7 +105,7 @@ class CertificateBatchResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('id')->label('Покупка')->formatStateUsing(fn ($state) => "№{$state}"),
+                TextColumn::make('id')->label('Номер')->formatStateUsing(fn ($state, CertificateBatch $record) => $record->shortLabel()),
                 TextColumn::make('status')->label('Статус')->badge()->formatStateUsing(fn ($state, CertificateBatch $record) => $record->statusLabel()),
                 TextColumn::make('package.name')->label('Пакет'),
                 TextColumn::make('quantity')->label('Шт.'),

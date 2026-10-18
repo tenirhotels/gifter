@@ -24,7 +24,7 @@ class DraftsWidget extends TableWidget
     {
         $user = auth()->user();
 
-        return (bool) $user?->hasRole(Role::Sales, Role::SalesManager) && (new DashboardQueries($user))->drafts()->exists();
+        return (bool) $user?->hasRole(Role::Sales, Role::SalesManager) && (new DashboardQueries($user))->drafts()->whereNull('batch_id')->exists();
     }
 
     public function table(Table $table): Table

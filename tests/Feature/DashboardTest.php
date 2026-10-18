@@ -142,7 +142,7 @@ class DashboardTest extends TestCase
         $this->as(Role::Finance);
         Livewire::test(FinanceQueueWidget::class)->assertSee('Ждут сверки')->assertSee('10 000 ₸');
         $this->as(Role::SalesDirector);
-        Livewire::test(DirectorQueueWidget::class)->assertSee('Бесплатные ждут согласования')->assertSee('Услуги без цены на сегодня');
+        Livewire::test(DirectorQueueWidget::class)->assertSee('Бесплатные сертификаты ждут согласования')->assertSee('Услуги без цены на сегодня');
     }
 
     public function test_expiring_filter_link_works(): void

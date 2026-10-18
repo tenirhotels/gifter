@@ -9,13 +9,10 @@ use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Refunds\RefundResource;
 use App\Filament\Support\RoleQueueWidget;
 use App\Support\Money;
-use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class SalesQueueWidget extends RoleQueueWidget
 {
     protected static ?int $sort = 1;
-
-    protected int|array|null $columns = ['default' => 2, 'md' => 3, 'xl' => 6];
 
     protected static function roles(): array
     {
@@ -27,6 +24,11 @@ class SalesQueueWidget extends RoleQueueWidget
         return auth()->user()->hasRole(Role::SalesManager) ? 'Продажи — все сертификаты' : 'Мои продажи';
     }
 
+    protected function headingIcon(): string
+    {
+        return 'heroicon-o-shopping-bag';
+    }
+
     protected function getStats(): array
     {
         $q = $this->q();
@@ -34,26 +36,27 @@ class SalesQueueWidget extends RoleQueueWidget
         $sold = $q->soldThisMonth();
 
         $stats = [
-            $this->counter('Ждут оплаты', $q->awaitingPayment(), $list(['status' => ['values' => ['draft']]]), 'warning', 'выставлен счёт, денег нет'),
-            $this->counter('Готовы к выпуску', $q->readyToIssue(), $list(['status' => ['values' => ['draft']]]), 'success', 'оплачены — нажмите «Выпустить»'),
-            $this->counter('Без получателя', $q->withoutRecipient(), $list(['no_recipient' => ['isActive' => true]]), 'warning', 'нужен для брони'),
-            $this->counter('Истекают ≤ 14 дней', $q->expiringSoon(), $list(['expiring' => ['isActive' => true]]), 'danger', 'напомнить гостю'),
-            $this->counter('Черновики', $q->drafts(), $list(['status' => ['values' => ['draft']]]), 'gray'),
-            Stat::make('Продано в этом месяце', (clone $sold)->count())
-                ->description(Money::format((clone $sold)->sum('total_amount')))
-                ->color('gray'),
+            $this->counter('Ждут оплаты', $q->awaitingPayment(), $list(['status' => ['values' => ['draft']]]), 'warning', 'выставлен счёт, денег нет', 'heroicon-o-clock'),
+            $this->counter('Готовы к выпуску', $q->readyToIssue(), $list(['status' => ['values' => ['draft']]]), 'success', 'оплачены — нажмите «Выпустить»', 'heroicon-o-check-badge'),
+            $this->counter('Без получателя', $q->withoutRecipient(), $list(['no_recipient' => ['isActive' => true]]), 'warning', 'нужен для брони', 'heroicon-o-user-plus'),
+            $this->counter('Истекают ≤ 14 дней', $q->expiringSoon(), $list(['expiring' => ['isActive' => true]]), 'danger', 'напомнить гостю', 'heroicon-o-exclamation-triangle'),
+            $this->counter('Черновики', $q->drafts(), $list(['status' => ['values' => ['draft']]]), 'gray', 'не выпущены', 'heroicon-o-pencil-square'),
+            $this->metric('Продано в этом месяце', (clone $sold)->count(), Money::format((clone $sold)->sum('total_amount')), 'heroicon-o-chart-bar'),
         ];
 
+        $batches = fn (string $filter) => CertificateBatchResource::getUrl('index', ['filters' => [$filter => ['isActive' => true]]]);
         if ($q->purchasesReadyToIssue()->exists()) {
-            $stats[] = $this->counter('Покупки к выпуску', $q->purchasesReadyToIssue(),
-                CertificateBatchResource::getUrl('index', ['filters' => ['ready' => ['isActive' => true]]]), 'success', 'оплачены или согласованы');
+            $stats[] = $this->counter('Покупки к выпуску', $q->purchasesReadyToIssue(), $batches('ready'), 'success', 'оплачены полностью', 'heroicon-o-rectangle-stack');
         }
 
         if (auth()->user()->hasRole(Role::SalesManager)) {
+            if ($q->freeIssuesReadyToIssue()->exists()) {
+                $stats[] = $this->counter('Бесплатные выдачи к выпуску', $q->freeIssuesReadyToIssue(), $batches('ready'), 'success', 'согласованы директором', 'heroicon-o-gift');
+            }
             $stats[] = $this->counter('Бесплатные у директора', $q->complimentaryAwaitingApproval(),
-                $list(['awaiting_approval' => ['isActive' => true]]), 'info', 'ждут согласования');
+                $list(['awaiting_approval' => ['isActive' => true]]), 'info', 'ждут согласования', 'heroicon-o-hand-raised');
             $stats[] = $this->counter('Возвраты на согласовании', $q->refunds(RefundStatus::Requested),
-                RefundResource::getUrl('index', ['filters' => ['status' => ['value' => 'requested']]]), 'info', 'у Финансов');
+                RefundResource::getUrl('index', ['filters' => ['status' => ['value' => 'requested']]]), 'info', 'у Финансов', 'heroicon-o-receipt-refund');
         }
 
         return $stats;

@@ -13,10 +13,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Покупка: несколько сертификатов одного пакета в одной продаже — платных
- * (один счёт на всю сумму, разложенный по сертификатам) или бесплатных
- * (согласование директором). Черновики оформляются, оплачиваются и выпускаются
- * всей покупкой; после выпуска каждый сертификат живёт отдельно.
+ * Несколько сертификатов одного пакета, оформленных вместе. Платные — «покупка»
+ * (один счёт на всю сумму, разложенный по сертификатам), бесплатные — «бесплатная
+ * выдача» (согласование директором; покупкой не называется). Черновики оформляются,
+ * оплачиваются и выпускаются вместе; после выпуска каждый сертификат живёт отдельно.
  */
 class CertificateBatch extends Model
 {
@@ -76,10 +76,30 @@ class CertificateBatch extends Model
         return $this->hasMany(Payment::class, 'batch_id');
     }
 
+    public const TERMS = [
+        'nom' => ['покупка', 'бесплатная выдача'],
+        'acc' => ['покупку', 'бесплатную выдачу'],
+        'gen' => ['покупки', 'бесплатной выдачи'],
+    ];
+
+    /** Название по типу и падежу: «покупка» / «бесплатная выдача». */
+    public function term(string $case = 'nom', bool $capital = false): string
+    {
+        $term = self::TERMS[$case][$this->isComplimentary() ? 1 : 0];
+
+        return $capital ? mb_strtoupper(mb_substr($term, 0, 1)).mb_substr($term, 1) : $term;
+    }
+
+    /** «Покупка №3» / «Бесплатная выдача №4». */
+    public function shortLabel(): string
+    {
+        return $this->term(capital: true).' №'.$this->id;
+    }
+
     /** «Покупка №3 · Романтический уикенд × 2» (бесплатная — с целью). */
     public function label(): string
     {
-        return "Покупка №{$this->id} · {$this->package?->name} × {$this->quantity}"
+        return "{$this->shortLabel()} · {$this->package?->name} × {$this->quantity}"
             .($this->isComplimentary() && $this->purpose ? " · {$this->purpose->getLabel()}" : '');
     }
 
@@ -88,7 +108,7 @@ class CertificateBatch extends Model
         return $this->status->labelFor($this->kind);
     }
 
-    /** Бесплатные покупки, которые ждут решения директора. */
+    /** Бесплатные выдачи, которые ждут решения директора. */
     public function scopeAwaitingApproval(Builder $query): Builder
     {
         return $query->where('status', BatchStatus::Draft)->where('kind', CertificateKind::Complimentary);

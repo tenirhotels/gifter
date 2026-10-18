@@ -22,7 +22,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Carbon;
 
-/** Покупка: счёт, оплата, согласование и выпуск — для всех её сертификатов сразу. */
+/** Покупка или бесплатная выдача: счёт, оплата, согласование и выпуск — для всех её сертификатов сразу. */
 class ViewCertificateBatch extends ViewRecord
 {
     protected static string $resource = CertificateBatchResource::class;
@@ -46,7 +46,7 @@ class ViewCertificateBatch extends ViewRecord
                     .'. Маркетинговый расход по себестоимости: '.Money::format($record->certificates()->sum('total_cost')).'.')
                 ->schema([Textarea::make('comment')->label('Комментарий')])
                 ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action,
-                    fn () => app(CertificateBatchManager::class)->approve($record, $data['comment'] ?? null), 'Покупка согласована')),
+                    fn () => app(CertificateBatchManager::class)->approve($record, $data['comment'] ?? null), 'Бесплатная выдача согласована')),
 
             Action::make('invoiceBatch')->label('Выставить счёт')->icon('heroicon-o-document-text')
                 ->authorize(Permission::ManagePayments)
@@ -75,16 +75,16 @@ class ViewCertificateBatch extends ViewRecord
                 // Платную — только когда оплачен каждый сертификат (кнопка не показывается раньше времени).
                 ->visible(fn (CertificateBatch $record) => CertificateBatch::query()->whereKey($record->getKey())->readyToIssue()->exists())
                 ->requiresConfirmation()
-                ->modalDescription(fn (CertificateBatch $record) => "Будут выпущены все {$record->quantity} сертификатов покупки.")
+                ->modalDescription(fn (CertificateBatch $record) => "Будут выпущены все {$record->quantity} сертификатов: {$record->shortLabel()}.")
                 ->action(fn (CertificateBatch $record, Action $action) => $this->run($action,
-                    fn () => app(CertificateBatchManager::class)->issue($record), 'Покупка выпущена')),
+                    fn () => app(CertificateBatchManager::class)->issue($record), 'Сертификаты выпущены')),
 
             Action::make('downloadBatchPdf')->label('PDF всех')->icon('heroicon-o-arrow-down-tray')->color('gray')
                 ->visible(fn (CertificateBatch $record) => $record->status === BatchStatus::Issued)
                 ->action(function (CertificateBatch $record) {
                     $pdf = app(CertificateDocument::class)->batchPdf($record);
 
-                    return response()->streamDownload(fn () => print ($pdf), "purchase-{$record->id}.pdf", ['Content-Type' => 'application/pdf']);
+                    return response()->streamDownload(fn () => print ($pdf), ($record->isComplimentary() ? 'free' : 'purchase')."-{$record->id}.pdf", ['Content-Type' => 'application/pdf']);
                 }),
 
             ActionGroup::make([
@@ -100,12 +100,12 @@ class ViewCertificateBatch extends ViewRecord
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action,
                         fn () => app(CertificateBatchManager::class)->cancelInvoice($record, $data['reason']), 'Счёт отменён')),
-                Action::make('cancelBatch')->label('Аннулировать покупку')->icon('heroicon-o-no-symbol')->color('danger')
+                Action::make('cancelBatch')->label(fn (CertificateBatch $record) => 'Аннулировать '.$record->term('acc'))->icon('heroicon-o-no-symbol')->color('danger')
                     ->authorize(fn (CertificateBatch $record) => auth()->user()->can($record->isComplimentary() ? Permission::CreateComplimentary : Permission::CancelCertificates))
                     ->visible(fn (CertificateBatch $record) => in_array($record->status, [BatchStatus::Draft, BatchStatus::Approved], true))
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action,
-                        fn () => app(CertificateBatchManager::class)->cancel($record, $data['reason']), 'Покупка аннулирована')),
+                        fn () => app(CertificateBatchManager::class)->cancel($record, $data['reason']), 'Сертификаты аннулированы')),
             ])->label('Ещё')->button()->color('gray'),
         ];
     }
