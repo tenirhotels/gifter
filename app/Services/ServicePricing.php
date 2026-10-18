@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\Permission;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\Service;
 use App\Models\ServicePrice;
@@ -63,8 +64,8 @@ class ServicePricing
     }
 
     /**
-     * Исправить версию цены — только в день её добавления и пока она не попала
-     * в сертификаты. Более старые версии не меняются: только новая версия.
+     * Исправить версию цены — в день её добавления и пока она не попала
+     * в сертификаты (администратор — любую неиспользованную). Иначе — новая версия.
      */
     public function updatePrice(ServicePrice $version, string $price, Carbon $validFrom, ?Carbon $validUntil = null, ?string $cost = null): ServicePrice
     {
@@ -105,9 +106,14 @@ class ServicePricing
         });
     }
 
+    /** Сегодняшнюю версию — директор; любую неиспользованную — администратор (исправление ошибок). */
     public function isEditable(ServicePrice $version): bool
     {
-        return $version->created_at?->isToday() && ! $version->certificateItems()->exists();
+        if ($version->certificateItems()->exists()) {
+            return false;
+        }
+
+        return $version->created_at?->isToday() || (bool) auth()->user()?->can(Permission::AdminCorrections);
     }
 
     private function overlapsOthers(Service $service, Carbon $from, ?Carbon $until, ?int $exceptId = null): bool

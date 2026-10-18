@@ -10,6 +10,7 @@ use App\Filament\Support\ContactFields;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\Certificate;
 use App\Models\Recipient;
+use App\Services\AdminCorrections;
 use App\Services\CertificateManager;
 use App\Services\RefundManager;
 use App\Support\Money;
@@ -111,6 +112,25 @@ class ViewCertificate extends ViewRecord
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => app(RefundManager::class)
                         ->request($record, (string) $data['amount'], $data['reason']), 'Запрос на возврат отправлен Финансам')),
             ])->label('Ещё')->button()->color('gray'),
+
+            ActionGroup::make([
+                Action::make('adminSetStatus')->label('Исправить статус')->icon('heroicon-o-wrench-screwdriver')
+                    ->authorize(Permission::AdminCorrections)
+                    ->modalDescription('Для исправления ошибок: обычные правила переходов не действуют. Прежняя история сохраняется, исправление записывается отдельно.')
+                    ->schema([
+                        Select::make('status')->label('Новый статус')->options(CertificateStatus::class)->required(),
+                        Textarea::make('reason')->label('Причина')->required(),
+                    ])
+                    ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => app(AdminCorrections::class)
+                        ->setStatus($record, $data['status'] instanceof CertificateStatus ? $data['status'] : CertificateStatus::from($data['status']), $data['reason']), 'Статус исправлен')),
+                Action::make('adminRevokeApproval')->label('Отозвать согласование бесплатного')->icon('heroicon-o-hand-thumb-down')
+                    ->authorize(Permission::AdminCorrections)
+                    ->visible(fn (Certificate $record) => $record->isDraft() && $record->isComplimentaryApproved())
+                    ->schema([Textarea::make('reason')->label('Причина')->required()])
+                    ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => app(AdminCorrections::class)
+                        ->revokeComplimentaryApproval($record, $data['reason']), 'Согласование отозвано')),
+            ])->label('Исправление')->icon('heroicon-o-wrench-screwdriver')->button()->color('danger')
+                ->visible(fn () => auth()->user()?->can(Permission::AdminCorrections)),
         ];
     }
 

@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
+use App\Filament\Support\PaymentCorrectionActions;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\Payment;
 use App\Services\PaymentManager;
@@ -116,6 +117,7 @@ class PaymentResource extends Resource
                     ->requiresConfirmation()
                     ->action(fn (Payment $record, Action $action) => RunsDomainActions::run($action,
                         fn () => app(PaymentManager::class)->reconcile($record), 'Оплата сверена')),
+                ...PaymentCorrectionActions::make(),
             ])
             ->toolbarActions([
                 BulkAction::make('reconcileSelected')->label('Сверить выбранные')->icon('heroicon-o-document-check')

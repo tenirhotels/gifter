@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Certificates\RelationManagers;
 use App\Enums\CertificateStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Enums\RefundStatus;
 use App\Models\CertificateHistory;
 use App\Models\Customer;
 use App\Models\Package;
@@ -39,6 +40,7 @@ class HistoryRelationManager extends RelationManager
         'valid_from' => 'действует с', 'valid_until' => 'действует по', 'notes' => 'примечание', 'package_id' => 'пакет',
         'method' => 'способ', 'amount' => 'сумма', 'invoice_number' => '№ счёта', 'paid_at' => 'оплачен',
         'service' => 'услуга', 'quantity' => 'кол-во', 'unit_price' => 'цена', 'line_total' => 'сумма',
+        'refund_status' => 'возврат', 'reconciled' => 'сверено',
     ];
 
     private static function changes(CertificateHistory $record): ?string
@@ -62,6 +64,8 @@ class HistoryRelationManager extends RelationManager
     {
         return match (true) {
             $value === null || $value === '' => '—',
+            $key === 'refund_status' => RefundStatus::tryFrom($value)?->getLabel() ?? (string) $value,
+            $key === 'reconciled' => $value ? 'да' : 'нет',
             $key === 'status' => CertificateStatus::tryFrom($value)?->getLabel() ?? PaymentStatus::tryFrom($value)?->getLabel() ?? (string) $value,
             $key === 'method' => PaymentMethod::tryFrom($value)?->getLabel() ?? (string) $value,
             in_array($key, ['amount', 'unit_price', 'line_total'], true) => Money::format($value),

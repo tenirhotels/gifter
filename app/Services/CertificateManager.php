@@ -136,9 +136,13 @@ class CertificateManager
         });
     }
 
+    /** Убрать доп. услугу. Услуги пакета не убираются — смысл пакета в его составе. */
     public function removeItem(CertificateItem $item): void
     {
         $this->locked($item->certificate, function (Certificate $certificate) use ($item) {
+            if ($item->from_package) {
+                throw new DomainRuleViolation('Услуги пакета не убираются: пакет продаётся целиком. Можно сменить пакет или убрать доп. услугу.');
+            }
             $this->assertCompositionEditable($certificate);
             $snapshot = $this->itemSnapshot($item);
             $item->delete();

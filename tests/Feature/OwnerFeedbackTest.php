@@ -169,26 +169,29 @@ class OwnerFeedbackTest extends TestCase
         $this->assertSame('40000.00', (string) $certificate->total_amount);
     }
 
-    public function test_sales_removes_only_extras_manager_removes_package_items(): void
+    public function test_package_items_cannot_be_removed_by_anyone(): void
     {
         $this->as(Role::Sales);
         $certificate = $this->draft();
         $extra = app(CertificateManager::class)->addItem($certificate, $this->spa, 1);
         $base = $certificate->items()->where('from_package', true)->first();
 
-        Livewire::test(ItemsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
-            ->assertActionHidden(TestAction::make('remove')->table($base))
-            ->assertActionVisible(TestAction::make('remove')->table($extra));
+        foreach ([Role::Sales, Role::SalesManager, Role::SuperAdmin] as $role) {
+            $this->as($role);
+            Livewire::test(ItemsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
+                ->assertActionHidden(TestAction::make('remove')->table($base))
+                ->assertActionVisible(TestAction::make('remove')->table($extra));
+        }
 
-        $this->as(Role::SalesManager);
-        Livewire::test(ItemsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
-            ->assertActionVisible(TestAction::make('remove')->table($base));
+        $this->expectException(DomainRuleViolation::class);
+        app(CertificateManager::class)->removeItem($base);
     }
 
     // 5. Исправление цены в день добавления
 
     public function test_price_added_today_can_be_fixed_until_used(): void
     {
+        $this->as(Role::SalesDirector);
         $service = Service::factory()->create();
         $old = app(ServicePricing::class)->addPrice($service, '10000', Carbon::parse('2026-01-01'));
         Carbon::setTestNow('2026-10-20 10:00:00');

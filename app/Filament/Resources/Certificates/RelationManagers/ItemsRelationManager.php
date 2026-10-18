@@ -29,7 +29,7 @@ class ItemsRelationManager extends RelationManager
         $editable = fn (): bool => $this->certificate()->isDraft() && ! $this->certificate()->isComplimentaryApproved();
 
         return $table
-            ->description('Сертификат погашается только целиком: услуги по отдельности не гасятся и не обмениваются на деньги.')
+            ->description('Услуги пакета неизменны — это и есть продукт. Доп. услуги можно добавлять и убирать в черновике. Сертификат погашается только целиком.')
             ->columns([
                 TextColumn::make('service_name_snapshot')->label('Услуга')
                     ->description(fn (CertificateItem $record) => $record->from_package ? 'из пакета' : 'доп. услуга'),
@@ -61,8 +61,9 @@ class ItemsRelationManager extends RelationManager
                     }),
             ])
             ->recordActions([
-                Action::make('remove')->label('Убрать')->icon('heroicon-o-x-mark')->color('danger')->visible($editable)
-                    ->authorize(fn (CertificateItem $record) => auth()->user()->can($record->from_package ? Permission::RemovePackageItems : Permission::ComposeDrafts))
+                Action::make('remove')->label('Убрать')->icon('heroicon-o-x-mark')->color('danger')
+                    ->visible(fn (CertificateItem $record) => $editable() && ! $record->from_package)
+                    ->authorize(Permission::ComposeDrafts)
                     ->requiresConfirmation()
                     ->action(function (CertificateItem $record, Action $action) {
                         RunsDomainActions::run($action, fn () => app(CertificateManager::class)->removeItem($record), 'Услуга убрана');

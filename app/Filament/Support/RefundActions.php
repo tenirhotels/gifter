@@ -5,6 +5,7 @@ namespace App\Filament\Support;
 use App\Enums\Permission;
 use App\Enums\RefundStatus;
 use App\Models\Refund;
+use App\Services\AdminCorrections;
 use App\Services\RefundManager;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DateTimePicker;
@@ -48,6 +49,15 @@ final class RefundActions
                 ->action(function (Refund $record, array $data, Action $action) use ($after) {
                     RunsDomainActions::run($action, fn () => app(RefundManager::class)
                         ->markPaid($record, Carbon::parse($data['paid_at']), $data['reference'] ?? null), 'Выплата отмечена');
+                    $after();
+                }),
+            Action::make('adminReopenRefund')->label('Вернуть на согласование')->icon('heroicon-o-arrow-uturn-left')->color('danger')
+                ->authorize(Permission::AdminCorrections)
+                ->visible(fn (Refund $record) => $record->status !== RefundStatus::Requested)
+                ->modalDescription('Исправление ошибочного решения. Если возврат был согласован, сертификату вернётся прежний статус.')
+                ->schema([Textarea::make('reason')->label('Причина')->required()])
+                ->action(function (Refund $record, array $data, Action $action) use ($after) {
+                    RunsDomainActions::run($action, fn () => app(AdminCorrections::class)->reopenRefund($record, $data['reason']), 'Запрос возвращён на согласование');
                     $after();
                 }),
         ];

@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
+use App\Filament\Support\PaymentCorrectionActions;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\Certificate;
 use App\Models\Payment;
@@ -98,6 +99,7 @@ class PaymentsRelationManager extends RelationManager
                         RunsDomainActions::run($action, fn () => app(PaymentManager::class)->cancel($record, $data['reason']), 'Счёт отменён');
                         $this->refreshPage();
                     }),
+                ...PaymentCorrectionActions::make(fn () => $this->refreshPage()),
             ]);
     }
 
