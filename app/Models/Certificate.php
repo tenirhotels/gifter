@@ -104,6 +104,18 @@ class Certificate extends Model
         return $this->belongsTo(User::class, 'sold_by');
     }
 
+    /**
+     * Сколько ночей проживания даёт сертификат: услуги «ночь» в составе — пакета и доп. ночи.
+     * null — проживания в составе нет (сверка по ночам не применяется).
+     */
+    public function nightsIncluded(): ?int
+    {
+        $nights = $this->items()->get()->filter(fn (CertificateItem $item) => str_starts_with(mb_strtolower(trim((string) $item->unit_snapshot)), 'ноч'))
+            ->sum('quantity');
+
+        return $nights > 0 ? (int) $nights : null;
+    }
+
     public function reservationExceptions(): HasMany
     {
         return $this->hasMany(ReservationException::class);

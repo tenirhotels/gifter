@@ -56,8 +56,8 @@ class ReservationManager
      * затем с заказчиком сертификата; при несовпадении показываются только имя и первая буква фамилии.
      * Отменённая бронь не подходит. `fresh` — без кеша (для сохранения).
      *
-     * Сверка (`checks`): имя гостя; даты (заезд в срок сертификата — иначе бронь не принимается; выезд не позже
-     * конца срока); тариф «Сертификат» (название задаётся в настройках PMS). Расхождение — причина обязательна,
+     * Сверка (`checks`): имя гостя; заезд в срок сертификата (иначе бронь не принимается); число ночей не больше
+     * ночей в составе сертификата (ночи пакета + доп. ночи; выезд = заезд + ночи); тариф «Сертификат» (название задаётся в настройках PMS). Расхождение — причина обязательна,
      * бронь уходит на проверку Финансам.
      *
      * @return array{booking: PmsBooking, guest: string, match: NameMatch, checks: list<array{key: string, ok: bool, text: string}>}
@@ -101,17 +101,23 @@ class ReservationManager
     private function pmsChecks(Certificate $certificate, PmsBooking $booking, NameMatch $match): array
     {
         $arrivalOk = ! $booking->arrival->lt($certificate->valid_from) && ! $booking->arrival->gt($certificate->valid_until);
-        $departureOk = ! $booking->departure->gt($certificate->valid_until->copy()->addDay());
+        // Ночи по сертификату: ночи пакета и доп. ночи в составе. Больше — расхождение; меньше — не расхождение.
+        $included = $certificate->nightsIncluded();
+        $nights = (int) $booking->arrival->diffInDays($booking->departure);
+        $nightsOk = $included === null || $nights <= $included;
         $checks = [
             ['key' => 'name', 'ok' => $match !== NameMatch::Mismatch, 'text' => $match === NameMatch::Mismatch
                 ? 'Имя гостя не совпадает ни с получателем, ни с заказчиком' : $match->getLabel()],
             ['key' => 'arrival', 'ok' => $arrivalOk, 'text' => $arrivalOk
                 ? 'Заезд '.$booking->arrival->format('d.m.Y').' — в сроке сертификата (до '.$certificate->valid_until->format('d.m.Y').')'
                 : 'Заезд '.$booking->arrival->format('d.m.Y').' вне срока сертификата ('.$certificate->valid_from->format('d.m.Y').' — '.$certificate->valid_until->format('d.m.Y').')'],
-            ['key' => 'departure', 'ok' => $departureOk, 'text' => $departureOk
-                ? 'Выезд '.$booking->departure->format('d.m.Y').' — в рамках срока'
-                : 'Выезд '.$booking->departure->format('d.m.Y').' позже конца срока сертификата ('.$certificate->valid_until->format('d.m.Y').')'],
         ];
+        if ($included !== null) {
+            $word = fn (int $n) => $n.' '.($n % 10 === 1 && $n % 100 !== 11 ? 'ночь' : (in_array($n % 10, [2, 3, 4], true) && ! in_array($n % 100, [12, 13, 14], true) ? 'ночи' : 'ночей'));
+            $checks[] = ['key' => 'nights', 'ok' => $nightsOk, 'text' => $nightsOk
+                ? 'В брони '.$word($nights).' ('.$booking->arrival->format('d.m').'–'.$booking->departure->format('d.m').') — в рамках сертификата (до '.$word($included).')'
+                : 'В брони '.$word($nights).' ('.$booking->arrival->format('d.m').'–'.$booking->departure->format('d.m').'), а сертификат даёт '.$word($included).' (с учётом доп. ночей)'];
+        }
         $plan = trim((string) PmsSetting::current()->certificate_rate_plan);
         if ($plan !== '') {
             $planOk = $booking->allStaysOnRatePlan($plan);

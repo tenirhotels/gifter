@@ -56,16 +56,16 @@ class PmsIntegrationTest extends TestCase
             return is_callable($answer) ? $answer() : $answer;
         });
         $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
-        $service = Service::factory()->create(['name' => 'Проживание']);
+        $service = Service::factory()->create(['name' => 'Проживание', 'unit' => 'ночь']);
         app(ServicePricing::class)->addPrice($service, '100000', Carbon::parse('2026-01-01'));
         $package = Package::create(['name' => 'Уикенд', 'validity_value' => 12, 'validity_unit' => 'months']);
-        $package->items()->create(['service_id' => $service->id, 'quantity' => 1]);
+        $package->items()->create(['service_id' => $service->id, 'quantity' => 2]);
         $manager = app(CertificateManager::class);
         $draft = $manager->createDraft([
             'package_id' => $package->id, 'customer_id' => Customer::factory()->create(['last_name' => 'Сидоров', 'first_name' => 'Пётр'])->id,
             'recipient_id' => Recipient::factory()->create(['last_name' => 'Иванова', 'first_name' => 'Анна'])->id,
         ]);
-        DB::table('payments')->insert(['certificate_id' => $draft->id, 'method' => 'kaspi_invoice', 'status' => 'paid', 'amount' => 100000, 'currency' => 'KZT', 'invoiced_at' => now(), 'paid_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('payments')->insert(['certificate_id' => $draft->id, 'method' => 'kaspi_invoice', 'status' => 'paid', 'amount' => 200000, 'currency' => 'KZT', 'invoiced_at' => now(), 'paid_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
         $this->certificate = $manager->issue($draft->refresh());
     }
 
@@ -405,28 +405,76 @@ class PmsIntegrationTest extends TestCase
         $this->assertSame(CertificateStatus::Reserved, $this->certificate->refresh()->status);
     }
 
-    public function test_dates_arrival_outside_validity_is_blocked_departure_beyond_needs_reason(): void
+    public function test_arrival_outside_validity_is_blocked(): void
     {
         $this->enable();
-        $manager = app(ReservationManager::class);
         $validUntil = $this->certificate->valid_until;
-
         $this->next = Http::response($this->booking(['roomStays' => [['stayDates' => ['arrivalDateTime' => $validUntil->copy()->addDays(5)->format('Y-m-d').'T14:00', 'departureDateTime' => $validUntil->copy()->addDays(6)->format('Y-m-d').'T12:00']]]]));
+
         try {
-            $manager->save($this->certificate, ['booking_number' => 'D-1', 'note' => 'очень надо']);
+            app(ReservationManager::class)->save($this->certificate, ['booking_number' => 'D-1', 'note' => 'очень надо']);
             $this->fail('Заезд после конца срока');
         } catch (DomainRuleViolation $e) {
             $this->assertStringContainsString('в пределах срока', $e->getMessage());
         }
+    }
 
-        $this->next = Http::response($this->booking(['roomStays' => [['stayDates' => ['arrivalDateTime' => $validUntil->copy()->format('Y-m-d').'T14:00', 'departureDateTime' => $validUntil->copy()->addDays(3)->format('Y-m-d').'T12:00']]]]));
+    public function test_nights_in_booking_are_checked_against_certificate_nights_including_extra_nights(): void
+    {
+        $this->enable();
+        $manager = app(ReservationManager::class);
+        $stay = fn (string $from, string $to) => $this->booking(['roomStays' => [['stayDates' => ['arrivalDateTime' => "{$from}T14:00", 'departureDateTime' => "{$to}T12:00"]]]]);
+        $nightsCheck = fn (Certificate $c, string $number) => collect($manager->resolveFromPms($c, $number)['checks'])->firstWhere('key', 'nights');
+
+        // Сертификат на 2 ночи: 2 ночи и меньше — в рамках; 3 — расхождение.
+        $this->assertSame(2, $this->certificate->nightsIncluded());
+        $this->next = Http::response($stay('2026-10-20', '2026-10-22'));
+        $this->assertTrue($nightsCheck($this->certificate, 'N-2')['ok']);
+        $this->next = Http::response($stay('2026-10-20', '2026-10-21'));
+        $this->assertTrue($nightsCheck($this->certificate, 'N-1')['ok'], 'Меньше ночей — не расхождение');
+        $this->next = Http::response($stay('2026-10-20', '2026-10-23'));
+        $check = $nightsCheck($this->certificate, 'N-3');
+        $this->assertFalse($check['ok']);
+        $this->assertStringContainsString('В брони 3 ночи', $check['text']);
+        $this->assertStringContainsString('даёт 2 ночи', $check['text']);
+
         try {
-            $manager->save($this->certificate, ['booking_number' => 'D-2']);
-            $this->fail('Выезд позже срока без причины');
+            $manager->save($this->certificate, ['booking_number' => 'N-3']);
+            $this->fail('Больше ночей, чем в сертификате, без причины');
         } catch (DomainRuleViolation $e) {
-            $this->assertStringContainsString('позже конца срока', $e->getMessage());
+            $this->assertStringContainsString('даёт 2 ночи', $e->getMessage());
         }
-        $manager->save($this->certificate, ['booking_number' => 'D-2', 'note' => 'Продление согласовано']);
-        $this->assertSame(CertificateStatus::Reserved, $this->certificate->refresh()->status);
+        $manager->save($this->certificate, ['booking_number' => 'N-3', 'note' => 'Гость докупает ночь']);
+        $this->assertNotNull($this->certificate->refresh()->reservation_review_status);
+        $this->assertStringContainsString('Расхождения: В брони 3 ночи', (string) $this->certificate->reservation_note);
+    }
+
+    public function test_extra_night_service_raises_the_limit_and_certificate_without_nights_skips_the_check(): void
+    {
+        $this->enable();
+        $night = Service::factory()->create(['name' => 'Доп. ночь', 'unit' => 'ночь']);
+        app(ServicePricing::class)->addPrice($night, '50000', Carbon::parse('2026-01-01'));
+        $package = Package::create(['name' => 'Одна ночь', 'validity_value' => 12, 'validity_unit' => 'months']);
+        $package->items()->create(['service_id' => $night->id, 'quantity' => 1]);
+        $manager = app(CertificateManager::class);
+        $draft = $manager->createDraft(['package_id' => $package->id, 'customer_id' => Customer::factory()->create()->id, 'recipient_id' => Recipient::factory()->create(['last_name' => 'Иванова', 'first_name' => 'Анна'])->id]);
+        $this->next = Http::response($this->booking(['roomStays' => [['stayDates' => ['arrivalDateTime' => '2026-10-20T14:00', 'departureDateTime' => '2026-10-22T12:00']]]]));
+        $reservations = app(ReservationManager::class);
+
+        $this->assertSame(1, $draft->nightsIncluded());
+        $this->assertFalse(collect($reservations->resolveFromPms($draft, 'E-1')['checks'])->firstWhere('key', 'nights')['ok'], '1 ночь в сертификате, в брони 2');
+
+        $manager->addItem($draft, $night, 1);
+        $this->assertSame(2, $draft->nightsIncluded());
+        Cache::flush();
+        $this->assertTrue(collect($reservations->resolveFromPms($draft->refresh(), 'E-1')['checks'])->firstWhere('key', 'nights')['ok'], '1 ночь + доп. ночь = 2 ночи максимум');
+
+        $dinner = Service::factory()->create(['name' => 'Ужин', 'unit' => 'шт']);
+        app(ServicePricing::class)->addPrice($dinner, '10000', Carbon::parse('2026-01-01'));
+        $noNights = Package::create(['name' => 'Ужин', 'validity_value' => 12, 'validity_unit' => 'months']);
+        $noNights->items()->create(['service_id' => $dinner->id, 'quantity' => 1]);
+        $d2 = $manager->createDraft(['package_id' => $noNights->id, 'customer_id' => Customer::factory()->create()->id, 'recipient_id' => Recipient::factory()->create(['last_name' => 'Иванова', 'first_name' => 'Анна'])->id]);
+        $this->assertNull($d2->nightsIncluded());
+        $this->assertNull(collect($reservations->resolveFromPms($d2, 'E-1')['checks'])->firstWhere('key', 'nights'), 'Нет проживания в составе — ночи не сверяются');
     }
 }
