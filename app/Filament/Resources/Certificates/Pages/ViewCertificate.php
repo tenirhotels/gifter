@@ -111,7 +111,7 @@ class ViewCertificate extends ViewRecord
             Action::make('setSeller')->label('Продавец')->icon('heroicon-o-user-circle')->color('gray')
                 ->authorize(Permission::AssignSeller)
                 ->visible(fn (Certificate $record) => $record->isDraft() && ! $record->isComplimentary() && ! $record->batch_id)
-                ->modalDescription('Комиссия за погашение достанется выбранному продавцу. После выпуска продавец закрепляется навсегда.')
+                ->modalDescription('Комиссия после использования сертификата достанется выбранному продавцу. После выпуска продавец закрепляется навсегда.')
                 ->fillForm(fn (Certificate $record) => ['seller' => $record->sold_by])
                 ->schema([Select::make('seller')->label('Продавец')->required()->searchable()->options(fn () => User::sellerOptions())])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
@@ -177,11 +177,11 @@ class ViewCertificate extends ViewRecord
             $this->reservationAction('reserve', 'Отметить бронь', [CertificateStatus::Active]),
             $this->checkInAction(),
             // Решение 27.10.2026: погасить можно и с невыполненными заявками — они закроются как отменённые.
-            $this->transitionAction('redeem', 'Погасить', CertificateStatus::InUse, CertificateStatus::Used, 'heroicon-o-check-circle', Permission::RedeemCertificates,
+            $this->transitionAction('redeem', 'Отметить использованным', CertificateStatus::InUse, CertificateStatus::Used, 'heroicon-o-check-circle', Permission::RedeemCertificates,
                 function (Certificate $record) {
                     $open = $record->fulfillments()->whereIn('status', FulfillmentStatus::open())->with('item')->get();
 
-                    return 'Сертификат погашается целиком, со всеми услугами. Отменить погашение нельзя.'
+                    return 'Сертификат используется целиком, со всеми услугами. Отменить отметку «Использован» нельзя.'
                         .($record->reservation_review_status === ReservationReview::Pending ? ' Бронь ещё на проверке Финансов.' : '')
                         .($open->isEmpty() ? '' : ' Внимание: не выполнены '.$open->map(fn ($f) => "{$f->serviceLabel()} ({$f->status->getLabel()})")->implode(', ')
                             .' — эти заявки закроются как отменённые.');
@@ -225,7 +225,7 @@ class ViewCertificate extends ViewRecord
                     ->authorize(Permission::ReviewReservations)
                     ->visible(fn (Certificate $record) => in_array($record->reservation_review_status, [ReservationReview::Pending, ReservationReview::Approved], true)
                         && ! $record->status->isFinal())
-                    ->modalDescription(fn (Certificate $record) => self::reviewSummary($record).' Пока спор не снят, погасить сертификат нельзя.')
+                    ->modalDescription(fn (Certificate $record) => self::reviewSummary($record).' Пока спор не снят, отметить сертификат использованным нельзя.')
                     ->schema([Textarea::make('comment')->label('Что не так')->required()])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                         fn () => app(ReservationManager::class)->dispute($record, $data['comment']), 'Бронь оспорена')),

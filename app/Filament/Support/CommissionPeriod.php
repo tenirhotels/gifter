@@ -28,9 +28,9 @@ class CommissionPeriod
     /** Фильтр по дате погашения; `$column` — столбец с датой начисления, `$relation` — связь, если таблица не комиссий. */
     public static function filter(string $column = 'earned_at', ?string $relation = null): Filter
     {
-        return Filter::make('period')->label('Период погашения')
+        return Filter::make('period')->label('Период использования')
             ->schema([
-                Select::make('preset')->label('Месяц погашения')->options(['this' => 'Этот месяц', 'last' => 'Прошлый месяц'])->placeholder('Свой период'),
+                Select::make('preset')->label('Месяц использования')->options(['this' => 'Этот месяц', 'last' => 'Прошлый месяц'])->placeholder('Свой период'),
                 DatePicker::make('from')->label('С')->native(false)->displayFormat('d.m.Y'),
                 DatePicker::make('until')->label('По')->native(false)->displayFormat('d.m.Y'),
             ])
@@ -43,7 +43,7 @@ class CommissionPeriod
             ->indicateUsing(function (array $data): ?string {
                 [$from, $to] = self::range($data);
 
-                return $from || $to ? 'Погашено: '.($from ? Carbon::parse($from)->format('d.m.Y') : '…').' – '.($to ? Carbon::parse($to)->format('d.m.Y') : '…') : null;
+                return $from || $to ? 'Использовано: '.($from ? Carbon::parse($from)->format('d.m.Y') : '…').' – '.($to ? Carbon::parse($to)->format('d.m.Y') : '…') : null;
             });
     }
 }

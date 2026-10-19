@@ -84,7 +84,7 @@ final class FulfillmentActions
                 ->authorize(Permission::ManageFulfillments)
                 ->visible(fn (ServiceFulfillment $record) => $record->certificate?->status === CertificateStatus::InUse
                     && in_array($record->status, [FulfillmentStatus::Requested, FulfillmentStatus::Scheduled, FulfillmentStatus::Confirmed], true))
-                ->modalDescription('Отмечает, что услуга оказана гостю. Сертификат при этом не гасится — он погашается только целиком.')
+                ->modalDescription('Отмечает, что услуга оказана гостю. Сертификат при этом не закрывается — он используется только целиком.')
                 ->schema([Textarea::make('note')->label('Комментарий')])
                 ->action(fn (ServiceFulfillment $record, array $data, Action $action) => $run($action,
                     fn () => $manager()->complete($record, $data['note'] ?? null), 'Услуга выполнена')),

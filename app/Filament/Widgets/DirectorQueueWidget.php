@@ -49,7 +49,7 @@ class DirectorQueueWidget extends RoleQueueWidget
             $this->counter('Брони по исключению', ReservationException::query()->where('status', 'pending'), ReservationExceptions::getUrl(), 'warning',
                 'истёкшие сертификаты — нужно ваше решение', 'heroicon-o-calendar-days'),
             $this->metric('Комиссии на согласовании', Money::format(Money::fromMinor(collect(app(CommissionManager::class)->summary())->sum('to_approve_minor'))),
-                'начислены за погашенные сертификаты', 'heroicon-o-receipt-percent')->url(Commissions::getUrl()),
+                'начислены за использованные сертификаты', 'heroicon-o-receipt-percent')->url(Commissions::getUrl()),
             $this->counter('Услуги без цены на сегодня', $q->servicesWithoutPrice(), ServiceResource::getUrl('index'), 'danger', 'не продаются', 'heroicon-o-tag'),
             $this->counter('Услуги без себестоимости', $q->servicesWithoutCost(), ServiceResource::getUrl('index'), 'warning', 'маржа неполная', 'heroicon-o-calculator'),
         ];

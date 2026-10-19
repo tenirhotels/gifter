@@ -23,7 +23,7 @@ class FulfillmentsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->description('Подготовка услуг, которым нужна заявка поставщику. Заявки появляются при отметке брони. Выполнение услуги — не погашение: сертификат гасится только целиком.')
+            ->description('Подготовка услуг, которым нужна заявка поставщику. Заявки появляются при отметке брони. Выполнение услуги — не использование сертификата: он используется только целиком.')
             ->modifyQueryUsing(fn ($query) => $query->with(['item', 'provider', 'certificate.recipient', 'updater']))
             ->columns(FulfillmentActions::columns())
             ->recordActions(FulfillmentActions::make(fn () => $this->redirect(CertificateResource::getUrl('view', ['record' => $this->getOwnerRecord()]))))

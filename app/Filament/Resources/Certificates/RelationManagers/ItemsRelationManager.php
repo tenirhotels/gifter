@@ -31,7 +31,7 @@ class ItemsRelationManager extends RelationManager
         $editable = fn (): bool => $this->certificate()->isDraft() && ! $this->certificate()->isComplimentaryApproved() && ! $this->certificate()->batch_id;
 
         return $table
-            ->description('Услуги пакета неизменны — это и есть продукт. Доп. услуги можно добавлять и убирать в черновике; в бесплатном сертификате доп. услуга может быть платной — её оплачивает заказчик. Сертификат погашается только целиком.')
+            ->description('Услуги пакета неизменны — это и есть продукт. Доп. услуги можно добавлять и убирать в черновике; в бесплатном сертификате доп. услуга может быть платной — её оплачивает заказчик. Сертификат используется только целиком.')
             ->columns([
                 TextColumn::make('service_name_snapshot')->label('Услуга')
                     ->description(fn (CertificateItem $record) => $record->from_package ? 'из пакета' : 'доп. услуга'),

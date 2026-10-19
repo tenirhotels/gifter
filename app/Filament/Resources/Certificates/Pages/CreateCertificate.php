@@ -75,11 +75,11 @@ class CreateCertificate extends CreateRecord
                         ->minValue(1)->maxValue(CertificateBatchManager::MAX_QUANTITY)->default(1)->required()->live(onBlur: true)
                         ->helperText('Больше 1 — группа: общий счёт для платных, получатель у каждого свой.'),
                     $soldAt,
-                    // Комиссия за погашение — продавцу; по умолчанию тот, кто оформляет. Другого назначает менеджер продаж.
+                    // Комиссия после использования — продавцу; по умолчанию тот, кто оформляет. Другого назначает менеджер продаж.
                     Select::make('sold_by')->label('Продавец')->options(fn () => User::sellerOptions())->default(fn () => auth()->id())
                         ->searchable()
                         ->visible(fn (Get $get) => auth()->user()?->can(Permission::AssignSeller) && ! CertificateForm::isComplimentary($get))
-                        ->helperText('Получит комиссию, когда сертификат будет погашен.'),
+                        ->helperText('Получит комиссию, когда сертификат будет использован.'),
                 ]),
                 Grid::make(2)->visible(fn (Get $get) => CertificateForm::isComplimentary($get))->schema([
                     ...CertificateForm::complimentaryFields(),

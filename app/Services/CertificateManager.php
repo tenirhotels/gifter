@@ -442,7 +442,7 @@ class CertificateManager
                 }
             }
             if ($target === CertificateStatus::Used && $certificate->reservation_review_status === ReservationReview::Disputed) {
-                throw new DomainRuleViolation('Бронь оспорена Финансами — погасить сертификат нельзя, пока спор не снят.');
+                throw new DomainRuleViolation('Бронь оспорена Финансами — отметить сертификат использованным нельзя, пока спор не снят.');
             }
 
             $certificate->update(['status' => $target, 'updated_by' => auth()->id()]);

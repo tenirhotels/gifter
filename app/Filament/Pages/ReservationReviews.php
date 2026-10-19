@@ -91,7 +91,7 @@ class ReservationReviews extends Page implements HasTable
                     ->authorize(Permission::ReviewReservations)
                     ->visible(fn (Certificate $record) => in_array($record->reservation_review_status, [ReservationReview::Pending, ReservationReview::Approved], true)
                         && ! $record->status->isFinal())
-                    ->modalDescription('Пока спор не снят, сертификат нельзя погасить.')
+                    ->modalDescription('Пока спор не снят, сертификат нельзя отметить использованным.')
                     ->schema([Textarea::make('comment')->label('Что не так')->required()])
                     ->action(fn (Certificate $record, array $data, Action $action) => RunsDomainActions::run($action,
                         fn () => $manager()->dispute($record, $data['comment']), 'Бронь оспорена')),

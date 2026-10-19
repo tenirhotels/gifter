@@ -129,7 +129,7 @@ class ArrivalSyncTest extends TestCase
 
         $this->assertSame(1, $stats['redeemed']);
         $this->assertSame(CertificateStatus::Used, $certificate->refresh()->status);
-        $this->assertTrue($certificate->history()->where('description', 'like', '%Погашен автоматически%')->exists());
+        $this->assertTrue($certificate->history()->where('description', 'like', '%Отмечен использованным автоматически%')->exists());
     }
 
     public function test_hub_cancelled_booking_is_not_redeemed(): void

@@ -201,7 +201,7 @@ class FulfillmentTest extends TestCase
 
         $this->assertSame(CertificateStatus::Used, $certificate->refresh()->status);
         $this->assertSame(2, $certificate->fulfillments()->where('status', FulfillmentStatus::Cancelled)
-            ->where('cancellation_reason', 'Сертификат погашен, услуга не выполнена')->count());
+            ->where('cancellation_reason', 'Сертификат использован, услуга не выполнена')->count());
     }
 
     public function test_refund_cancels_open_requests(): void

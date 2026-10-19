@@ -76,8 +76,8 @@ class Commissions extends Page implements HasTable
                 TextColumn::make('name')->label('Продавец')->searchable()->weight('bold'),
                 TextColumn::make('sold')->label('Продано')->state(fn (User $record) => $this->row($record->id)['sold'])
                     ->description(fn (User $record) => $money($this->row($record->id)['sales_minor'])),
-                TextColumn::make('redeemed')->label('Погашено')->state(fn (User $record) => $this->row($record->id)['redeemed']),
-                TextColumn::make('not_redeemed')->label('Не погашено')->state(fn (User $record) => $this->row($record->id)['not_redeemed'])
+                TextColumn::make('redeemed')->label('Использовано')->state(fn (User $record) => $this->row($record->id)['redeemed']),
+                TextColumn::make('not_redeemed')->label('Не использовано')->state(fn (User $record) => $this->row($record->id)['not_redeemed'])
                     ->description(fn (User $record) => ($r = $this->row($record->id))['expired'] ? "истекло: {$r['expired']}" : null),
                 TextColumn::make('no_reservation')->label('Без брони')->state(fn (User $record) => $this->row($record->id)['no_reservation'])
                     ->color(fn (User $record) => $this->row($record->id)['no_reservation'] > 0 ? 'warning' : null),

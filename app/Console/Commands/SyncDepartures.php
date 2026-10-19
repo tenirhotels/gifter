@@ -13,12 +13,12 @@ class SyncDepartures extends Command
 {
     protected $signature = 'gifter:sync-departures';
 
-    protected $description = 'Погасить сертификаты после выезда гостя по данным PMS';
+    protected $description = 'Отметить сертификаты использованными после выезда гостя по данным PMS';
 
     public function handle(ArrivalSync $sync): int
     {
         $stats = $sync->syncDepartures();
-        $this->info("Проверено: {$stats['checked']}, погашено: {$stats['redeemed']}, расхождений: {$stats['discrepancies']}, с невыполненными услугами: {$stats['open_services']}, PMS недоступна: {$stats['unavailable']}.");
+        $this->info("Проверено: {$stats['checked']}, использовано: {$stats['redeemed']}, расхождений: {$stats['discrepancies']}, с невыполненными услугами: {$stats['open_services']}, PMS недоступна: {$stats['unavailable']}.");
 
         return self::SUCCESS;
     }

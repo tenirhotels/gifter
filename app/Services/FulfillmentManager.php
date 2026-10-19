@@ -40,7 +40,7 @@ class FulfillmentManager
         }
         $this->cancelOpen($certificate, $reason ?? match ($certificate->status) {
             CertificateStatus::Active => 'Бронь снята',
-            CertificateStatus::Used => 'Сертификат погашен, услуга не выполнена',
+            CertificateStatus::Used => 'Сертификат использован, услуга не выполнена',
             CertificateStatus::Expired => 'Срок действия сертификата истёк',
             CertificateStatus::Cancelled => 'Сертификат аннулирован',
             default => "Статус сертификата: {$certificate->status->getLabel()}",

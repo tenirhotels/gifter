@@ -79,7 +79,7 @@ class ReservationExceptions extends Page implements HasTable
                 Action::make('approve')->label('Согласовать')->icon('heroicon-o-hand-thumb-up')->color('success')
                     ->authorize(Permission::ApproveReservationException)
                     ->visible(fn (ReservationException $record) => $record->status === ExceptionStatus::Pending)
-                    ->modalDescription('Сертификат вернётся в работу до даты выезда, бронь привяжется; комиссия продавца начислится при погашении.')
+                    ->modalDescription('Сертификат вернётся в работу до даты выезда, бронь привяжется; комиссия продавца начислится при использовании сертификата.')
                     ->schema([Textarea::make('comment')->label('Комментарий')])
                     ->action(fn (ReservationException $record, array $data, Action $action) => RunsDomainActions::run($action,
                         fn () => $manager()->approve($record, $data['comment'] ?? null), 'Исключение согласовано')),
