@@ -2,12 +2,14 @@
 
 namespace App\Support;
 
+use App\Enums\ArrivalReadinessLevel;
 use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Enums\FulfillmentStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\RefundStatus;
+use App\Enums\ReservationReview;
 use App\Models\Certificate;
 use App\Models\CertificateBatch;
 use App\Models\Payment;
@@ -90,6 +92,29 @@ final class DashboardQueries
     public function freeIssuesReadyToIssue(): Builder
     {
         return $this->batches()->readyToIssue()->where('kind', CertificateKind::Complimentary);
+    }
+
+    /** Забронированные с заездом сегодня. */
+    public function arrivalsToday(): Builder
+    {
+        return $this->certificates()->where('status', CertificateStatus::Reserved)->whereDate('arrival_date', today()->toDateString());
+    }
+
+    /** Заезды в ближайшие 7 дней, которые «Требуют действия» или «Исключение». */
+    public function arrivalsNeedingAttention(): Builder
+    {
+        $base = fn () => $this->certificates()->where('status', CertificateStatus::Reserved)
+            ->whereBetween('arrival_date', [today()->toDateString(), today()->addDays(6)->toDateString()]);
+        $ids = ArrivalReadiness::scope($base(), ArrivalReadinessLevel::Action)->pluck('id')
+            ->merge(ArrivalReadiness::scope($base(), ArrivalReadinessLevel::Exception)->pluck('id'));
+
+        return $this->certificates()->whereKey($ids->all());
+    }
+
+    /** Брони на проверке Финансов. */
+    public function reservationsUnderReview(): Builder
+    {
+        return $this->certificates()->where('reservation_review_status', ReservationReview::Pending);
     }
 
     /** Заявки на исполнение по видимым сертификатам. */

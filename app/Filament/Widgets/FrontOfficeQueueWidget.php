@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Enums\CertificateStatus;
 use App\Enums\FulfillmentStatus;
 use App\Enums\Role;
+use App\Filament\Pages\UpcomingArrivals;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Fulfillments\ServiceFulfillmentResource;
 use App\Filament\Support\RoleQueueWidget;
@@ -31,7 +32,11 @@ class FrontOfficeQueueWidget extends RoleQueueWidget
         $list = fn (array $filters) => CertificateResource::getUrl('index', ['filters' => $filters]);
         $queue = fn (array $filters) => ServiceFulfillmentResource::getUrl('index', ['filters' => $filters]);
 
+        $arrivals = fn (array $filters) => UpcomingArrivals::getUrl(['filters' => $filters]);
+
         return [
+            $this->counter('Заезды сегодня', $q->arrivalsToday(), $arrivals(['period' => ['value' => 'today']]), 'info', 'по броням', 'heroicon-o-arrow-right-end-on-rectangle'),
+            $this->counter('Заезды: нужно внимание', $q->arrivalsNeedingAttention(), $arrivals(['period' => ['value' => '7']]), 'danger', 'ближайшие 7 дней', 'heroicon-o-exclamation-circle'),
             $this->counter('Заявки ждут отправки', $q->fulfillments()->where('status', FulfillmentStatus::Pending),
                 $queue(['status' => ['values' => ['pending']]]), 'warning', 'отправить поставщику', 'heroicon-o-paper-airplane'),
             $this->counter('Ждут подтверждения', $q->fulfillmentsAwaitingConfirmation(),

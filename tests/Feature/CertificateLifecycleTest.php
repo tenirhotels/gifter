@@ -168,7 +168,7 @@ class CertificateLifecycleTest extends TestCase
         $this->assertSame(CertificateStatus::Active, $certificate->status);
         $this->assertNotNull($certificate->issued_at);
 
-        $this->certificates->transition($certificate, CertificateStatus::Reserved);
+        $this->reserve($certificate);
         $this->certificates->transition($certificate, CertificateStatus::InUse);
         $this->certificates->transition($certificate, CertificateStatus::Used);
 

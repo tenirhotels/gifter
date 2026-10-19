@@ -206,7 +206,7 @@ class FinanceAndComplimentaryTest extends TestCase
         $refund = app(RefundManager::class)->request($certificate, '50000', 'Гость не сможет приехать, согласовано с ГМ');
 
         try {
-            app(CertificateManager::class)->transition($certificate, CertificateStatus::Reserved);
+            $this->reserve($certificate);
             $this->fail('Сертификат не заблокирован');
         } catch (DomainRuleViolation) {
         }
@@ -229,7 +229,7 @@ class FinanceAndComplimentaryTest extends TestCase
         app(RefundManager::class)->reject($refund, 'Не основание для возврата');
 
         $this->assertSame(CertificateStatus::Active, $certificate->refresh()->status);
-        app(CertificateManager::class)->transition($certificate, CertificateStatus::Reserved);
+        $this->reserve($certificate);
         $this->assertSame(CertificateStatus::Reserved, $certificate->refresh()->status);
     }
 

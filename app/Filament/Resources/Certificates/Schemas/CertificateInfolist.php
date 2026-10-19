@@ -67,6 +67,24 @@ class CertificateInfolist
                     ->helperText(fn (Certificate $record) => $record->created_at?->format('d.m.Y H:i')),
                 TextEntry::make('issued_at')->label('Выпущен')->dateTime('d.m.Y H:i')->placeholder('ещё не выпущен'),
             ]),
+            // Бронь (фаза 6): номер PMS, гость, даты, сверка имени и проверка Финансов.
+            Section::make('Бронь')->icon('heroicon-o-calendar-days')->columns(4)->columnSpanFull()
+                ->visible(fn (Certificate $record) => $record->hasReservation())
+                ->schema([
+                    TextEntry::make('pms_booking_number')->label('Номер брони PMS')->weight('bold')->copyable(),
+                    TextEntry::make('stay')->label('Проживание')
+                        ->state(fn (Certificate $record) => $record->arrival_date?->format('d.m.Y').' — '.$record->departure_date?->format('d.m.Y'))
+                        ->helperText(fn (Certificate $record) => $record->arrival_date ? $record->arrival_date->diffInDays($record->departure_date).' ноч.' : null),
+                    TextEntry::make('booking_guest_name')->label('Гость в брони')
+                        ->helperText(fn (Certificate $record) => $record->name_match?->getLabel()),
+                    TextEntry::make('reservation_review_status')->label('Проверка Финансов')->badge()
+                        ->visible(fn (Certificate $record) => $record->reservation_review_status !== null)
+                        ->helperText(fn (Certificate $record) => collect([
+                            $record->reservationReviewer?->name, $record->reservation_reviewed_at?->format('d.m.Y H:i'), $record->reservation_review_comment,
+                        ])->filter()->implode(' · ') ?: null),
+                    TextEntry::make('reservation_note')->label('Причина / комментарий')->columnSpanFull()
+                        ->visible(fn (Certificate $record) => filled($record->reservation_note)),
+                ]),
         ]);
     }
 

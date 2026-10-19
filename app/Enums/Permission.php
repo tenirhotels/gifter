@@ -44,6 +44,8 @@ enum Permission: string
     case ViewPaymentRegister = 'payments.register';
     case RequestRefunds = 'refunds.request';
     case ApproveRefunds = 'refunds.approve';
+    /** Проверка броней с несовпадением имени или в последние дни срока (фаза 6). */
+    case ReviewReservations = 'reservations.review';
 
     // Каталог
     case ViewCatalog = 'catalog.view';
@@ -76,7 +78,7 @@ enum Permission: string
             // Решение 27.10.2026: заявки ведут Front Office и менеджер продаж.
             self::ManageFulfillments => [Role::FrontOffice, Role::SalesManager],
             self::ReceivePayments => [...$sales, Role::Finance],
-            self::ReceiveBankTransfers, self::ReconcilePayments, self::ApproveRefunds => [Role::Finance],
+            self::ReceiveBankTransfers, self::ReconcilePayments, self::ApproveRefunds, self::ReviewReservations => [Role::Finance],
             self::ViewPaymentRegister => [Role::Finance],
             self::ViewCatalog => [...$sales, Role::SalesDirector],
             self::ManageCatalog, self::ManagePrices, self::ApproveComplimentary => [Role::SalesDirector],

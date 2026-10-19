@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\CertificateStatus;
 use App\Enums\HistoryEvent;
 use App\Enums\PaymentMethod;
 use App\Enums\Role;
@@ -109,7 +108,7 @@ class OwnerFeedbackTest extends TestCase
         $this->assertNull($certificate->recipient_id);
 
         try {
-            app(CertificateManager::class)->transition($certificate, CertificateStatus::Reserved);
+            $this->reserve($certificate);
             $this->fail('Бронь без получателя');
         } catch (DomainRuleViolation) {
         }

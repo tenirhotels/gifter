@@ -5,8 +5,10 @@ namespace App\Models;
 use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Enums\ComplimentaryPurpose;
+use App\Enums\NameMatch;
 use App\Enums\PaymentStatus;
 use App\Enums\RefundStatus;
+use App\Enums\ReservationReview;
 use App\Models\Concerns\PreventsDeletion;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -29,6 +31,8 @@ class Certificate extends Model
         'number', 'verification_token', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'complimentary_purpose', 'batch_id', 'complimentary_approved_by', 'complimentary_approved_at', 'sold_at', 'valid_from',
         'valid_until', 'custom_validity', 'total_amount', 'total_cost', 'currency', 'issued_at', 'cancelled_at', 'cancellation_reason',
         'notes', 'created_by', 'updated_by',
+        'pms_booking_number', 'booking_guest_name', 'arrival_date', 'departure_date', 'name_match', 'reservation_note',
+        'reservation_review_status', 'reservation_reviewed_by', 'reservation_reviewed_at', 'reservation_review_comment',
     ];
 
     protected function casts(): array
@@ -46,6 +50,11 @@ class Certificate extends Model
             'complimentary_approved_at' => 'datetime',
             'issued_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'arrival_date' => 'date',
+            'departure_date' => 'date',
+            'name_match' => NameMatch::class,
+            'reservation_review_status' => ReservationReview::class,
+            'reservation_reviewed_at' => 'datetime',
         ];
     }
 
@@ -137,6 +146,26 @@ class Certificate extends Model
     {
         return in_array($this->status, [CertificateStatus::Active, CertificateStatus::Reserved, CertificateStatus::InUse], true)
             && $this->verification_token !== null;
+    }
+
+    public function hasReservation(): bool
+    {
+        return $this->pms_booking_number !== null;
+    }
+
+    /** «№ 12345 · 20.10–22.10.2026 · Иванов Иван». */
+    public function reservationLabel(): ?string
+    {
+        if (! $this->hasReservation()) {
+            return null;
+        }
+
+        return "№ {$this->pms_booking_number} · {$this->arrival_date->format('d.m')}–{$this->departure_date->format('d.m.Y')} · {$this->booking_guest_name}";
+    }
+
+    public function reservationReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reservation_reviewed_by');
     }
 
     public function isDraft(): bool

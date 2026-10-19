@@ -60,8 +60,9 @@ class AdminCorrectionsTest extends TestCase
     public function test_admin_reverts_mistaken_redemption_and_history_is_kept(): void
     {
         $certificate = $this->issued();
-        foreach ([CertificateStatus::Reserved, CertificateStatus::InUse, CertificateStatus::Used] as $status) {
-            app(CertificateManager::class)->transition($certificate, $status);
+        $this->reserve($certificate);
+        foreach ([CertificateStatus::InUse, CertificateStatus::Used] as $status) {
+            app(CertificateManager::class)->transition($certificate->refresh(), $status);
         }
         $historyBefore = $certificate->history()->count();
 
@@ -124,7 +125,7 @@ class AdminCorrectionsTest extends TestCase
     public function test_admin_reopens_approved_refund_and_certificate_status_returns(): void
     {
         $certificate = $this->issued();
-        app(CertificateManager::class)->transition($certificate, CertificateStatus::Reserved);
+        $this->reserve($certificate);
         $refund = app(RefundManager::class)->request($certificate, '20000', 'Просьба гостя');
         app(RefundManager::class)->approve($refund);
         $this->assertSame(CertificateStatus::Cancelled, $certificate->refresh()->status);

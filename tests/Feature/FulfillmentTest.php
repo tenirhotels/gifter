@@ -23,6 +23,7 @@ use App\Services\CertificateManager;
 use App\Services\FulfillmentManager;
 use App\Services\PaymentManager;
 use App\Services\RefundManager;
+use App\Services\ReservationManager;
 use App\Services\ServicePricing;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -81,7 +82,7 @@ class FulfillmentTest extends TestCase
 
     private function reserved(): Certificate
     {
-        return app(CertificateManager::class)->transition($this->active(), CertificateStatus::Reserved);
+        return $this->reserve($this->active());
     }
 
     private function dinner(Certificate $certificate): ServiceFulfillment
@@ -94,7 +95,7 @@ class FulfillmentTest extends TestCase
         $certificate = $this->active();
         $this->assertSame(0, ServiceFulfillment::count(), 'До брони заявок нет');
 
-        app(CertificateManager::class)->transition($certificate, CertificateStatus::Reserved);
+        $this->reserve($certificate);
 
         $this->assertSame(['Ужин', 'Канатка'], $certificate->fulfillments()->with('item')->orderBy('id')->get()
             ->map(fn ($f) => $f->item->service_name_snapshot)->all());
@@ -177,11 +178,11 @@ class FulfillmentTest extends TestCase
         $certificate = $this->reserved();
         $certificates = app(CertificateManager::class);
 
-        $certificates->transition($certificate, CertificateStatus::Active, 'Гость перенёс');
+        app(ReservationManager::class)->release($certificate, 'Гость перенёс');
         $this->assertSame(0, $certificate->fulfillments()->whereIn('status', FulfillmentStatus::open())->count());
         $this->assertSame('Бронь снята', $this->dinner($certificate)->cancellation_reason);
 
-        $certificates->transition($certificate->refresh(), CertificateStatus::Reserved);
+        $this->reserve($certificate->refresh());
         $this->assertSame(2, $certificate->fulfillments()->where('status', FulfillmentStatus::Pending)->count());
         $this->assertSame(4, $certificate->fulfillments()->count(), 'Старые заявки не удаляются');
     }

@@ -7,6 +7,7 @@ use App\Enums\CertificateStatus;
 use App\Enums\ComplimentaryPurpose;
 use App\Enums\HistoryEvent;
 use App\Enums\PaymentStatus;
+use App\Enums\ReservationReview;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\Certificate;
 use App\Models\CertificateItem;
@@ -244,6 +245,10 @@ class CertificateManager
             if ($certificate->status->isFinal() || $certificate->status === CertificateStatus::InUse) {
                 throw new DomainRuleViolation("Получателя сертификата в статусе «{$certificate->status->getLabel()}» изменить нельзя.");
             }
+            // Имя гостя в брони сверено с получателем — подменить получателя после брони нельзя.
+            if ($certificate->status === CertificateStatus::Reserved && $certificate->recipient_id !== $recipientId) {
+                throw new DomainRuleViolation('Сертификат забронирован: получателя можно сменить только после снятия брони.');
+            }
             if ($certificate->recipient_id === $recipientId) {
                 return $certificate;
             }
@@ -332,8 +337,20 @@ class CertificateManager
             if (! $from->canTransitionTo($target)) {
                 throw new DomainRuleViolation("Переход «{$from->getLabel()}» → «{$target->getLabel()}» недопустим.");
             }
-            if ($target === CertificateStatus::Reserved && ! $certificate->recipient_id) {
-                throw new DomainRuleViolation('Для брони укажите получателя (гостя).');
+            // Бронь — с номером брони PMS, датами и сверкой имени (ReservationManager).
+            if ($target === CertificateStatus::Reserved || ($from === CertificateStatus::Reserved && $target === CertificateStatus::Active)) {
+                throw new DomainRuleViolation('Бронь отмечается и снимается действиями «Отметить бронь» / «Снять бронь».');
+            }
+            if ($target === CertificateStatus::InUse) {
+                if (! $certificate->hasReservation()) {
+                    throw new DomainRuleViolation('Заезд — только по брони с номером PMS.');
+                }
+                if ($certificate->arrival_date->gt(today()->addDay())) {
+                    throw new DomainRuleViolation('Заезд по брони — с '.$certificate->arrival_date->format('d.m.Y').'.');
+                }
+            }
+            if ($target === CertificateStatus::Used && $certificate->reservation_review_status === ReservationReview::Disputed) {
+                throw new DomainRuleViolation('Бронь оспорена Финансами — погасить сертификат нельзя, пока спор не снят.');
             }
 
             $certificate->update(['status' => $target, 'updated_by' => auth()->id()]);

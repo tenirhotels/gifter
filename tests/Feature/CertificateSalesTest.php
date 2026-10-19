@@ -157,7 +157,7 @@ class CertificateSalesTest extends TestCase
             ->assertSee($certificate->number)->assertSee('Действителен')->assertSee('18.12.2026')
             ->assertDontSee('Смирнова')->assertDontSee('300 000');
 
-        app(CertificateManager::class)->transition($certificate, CertificateStatus::Reserved);
+        $this->reserve($certificate);
         app(CertificateManager::class)->transition($certificate, CertificateStatus::InUse);
         app(CertificateManager::class)->transition($certificate, CertificateStatus::Used);
         $this->get("/v/{$certificate->verification_token}")->assertOk()->assertSee('Использован');

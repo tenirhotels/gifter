@@ -63,4 +63,9 @@
     .gf-quote tfoot td { border-top: 1px solid var(--gf-line); border-bottom: 0; color: var(--gray-500); }
     .gf-quote tfoot .gf-quote-total td { color: var(--gray-950); font-weight: 600; font-size: 1rem; }
     .dark .gf-quote tfoot .gf-quote-total td { color: var(--color-white); }
+
+    /* 4) Ближайшие заезды: услуги с точкой статуса (зелёная — готово, жёлтая — нужно действие). */
+    .gf-arrival-service { display: flex; align-items: baseline; gap: .375rem; font-size: .8125rem; line-height: 1.25rem; }
+    .gf-arrival-service .gf-dot { flex: none; width: .5rem; height: .5rem; border-radius: 9999px; background: var(--warning-500); transform: translateY(-1px); }
+    .gf-arrival-service[data-ok="1"] .gf-dot { background: var(--success-500); }
 </style>

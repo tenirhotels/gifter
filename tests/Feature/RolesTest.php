@@ -153,7 +153,9 @@ class RolesTest extends TestCase
         $certificate = $this->issued();
         $this->as(Role::FrontOffice);
 
-        Livewire::test(ViewCertificate::class, ['record' => $certificate->id])->callAction('reserve');
+        Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
+            ->callAction('reserve', ['booking_number' => 'PMS-1', 'arrival' => today()->toDateString(), 'departure' => today()->addDays(2)->toDateString()])
+            ->assertHasNoActionErrors();
         Livewire::test(ViewCertificate::class, ['record' => $certificate->id])->callAction('checkIn');
         Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
             ->assertActionHidden('cancel')
