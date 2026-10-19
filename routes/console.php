@@ -12,3 +12,8 @@ Schedule::command('backup:monitor')->dailyAt('07:00');
 Schedule::command('gifter:backup-mail')->weeklyOn(1, '02:00');
 
 Schedule::command('gifter:security-check')->dailyAt('06:50');
+
+// Брони по PMS в день заезда (мало запросов): утром — расхождения, в 16:00 (заселение в 15:30) и вечером — заселились ли.
+foreach (config('gifter.pms.arrival_check_times') as $slot => $time) {
+    Schedule::command("gifter:sync-arrivals --slot={$slot}")->dailyAt($time)->withoutOverlapping();
+}

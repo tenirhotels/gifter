@@ -72,6 +72,18 @@ class ReservationManager
         if (! $booking->arrival || ! $booking->departure) {
             throw new PmsException("В брони № {$number} нет дат проживания — обратитесь в бронирование.");
         }
+
+        return $this->evaluate($certificate, $booking);
+    }
+
+    /**
+     * Сверка уже полученной брони PMS с сертификатом (без запроса): гость, имя, проверки.
+     *
+     * @return array{booking: PmsBooking, guest: string, match: NameMatch, checks: list<array{key: string, ok: bool, text: string}>}
+     */
+    public function evaluate(Certificate $certificate, PmsBooking $booking): array
+    {
+        $number = $booking->number;
         $certificate->loadMissing(['recipient', 'customer']);
         $best = null;
         foreach ($booking->guests as $i => $person) {

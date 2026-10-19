@@ -22,6 +22,7 @@ final class PmsBooking
         public readonly array $guests,
         public readonly array $stayRatePlans,
         public readonly array $ratePlanNames,
+        public readonly array $stayStatuses,
         public readonly int $roomCount,
         public readonly bool $stale,
         public readonly ?int $dataAgeMinutes,
@@ -49,6 +50,15 @@ final class PmsBooking
         return true;
     }
 
+    /**
+     * Все действующие комнаты заселены (или уже выехали) по данным PMS. Статус комнаты отдаёт только Hotel Hub
+     * (`roomStays[].hub.status`); прямой Exely его не даёт — тогда всегда false и заезд отмечает сотрудник.
+     */
+    public function checkedIn(): bool
+    {
+        return $this->stayStatuses !== [] && collect($this->stayStatuses)->every(fn ($status) => in_array($status, ['checked_in', 'checked_out'], true));
+    }
+
     /** Названия тарифов брони — для сообщения. */
     public function ratePlanLabel(): string
     {
@@ -74,6 +84,7 @@ final class PmsBooking
             ->unique(fn (array $p) => $p['last'].'|'.$p['first'])->values()->all();
         // Тарифы по каждой действующей комнате: [[названия и коды], …].
         $ratePlanNames = $active->flatMap(fn (array $s) => collect($s['ratePlans'] ?? [])->pluck('name'))->filter()->map(fn ($n) => (string) $n)->unique()->values()->all();
+        $stayStatuses = $active->map(fn (array $s) => $s['hub']['status'] ?? null)->all();
         $stayRatePlans = $active->map(fn (array $s) => collect($s['ratePlans'] ?? [])
             ->flatMap(fn (array $r) => [(string) ($r['name'] ?? ''), (string) ($r['id'] ?? '')])->filter()->values()->all())->values()->all();
 
@@ -85,6 +96,7 @@ final class PmsBooking
             guests: $guests,
             stayRatePlans: $stayRatePlans,
             ratePlanNames: $ratePlanNames,
+            stayStatuses: $stayStatuses,
             roomCount: $active->count(),
             stale: (bool) ($json['hub']['stale'] ?? false),
             dataAgeMinutes: isset($json['hub']['data_age_minutes']) ? (int) $json['hub']['data_age_minutes'] : null,

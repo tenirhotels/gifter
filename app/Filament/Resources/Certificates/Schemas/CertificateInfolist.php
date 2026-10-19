@@ -87,7 +87,15 @@ class CertificateInfolist
                     TextEntry::make('pms_booking_number')->label('Номер брони PMS')->weight('bold')->copyable()
                         ->helperText(fn (Certificate $record) => $record->pms_verified_at
                             ? 'Подтверждена по PMS '.$record->pms_verified_at->format('d.m.Y H:i').($record->pms_data_age_minutes ? " (данным PMS {$record->pms_data_age_minutes} мин)" : '')
-                            : 'Внесена вручную, не подтверждена по PMS'),
+                            : 'Внесена вручную, не подтверждена по PMS')
+                        ->belowContent(fn (Certificate $record) => $record->pms_checked_at
+                            ? 'Проверка PMS '.$record->pms_checked_at->format('d.m.Y H:i').match ($record->pms_check_status) {
+                                'ok' => ': без изменений',
+                                'changed' => ': обновлено по PMS — '.$record->pms_check_note,
+                                'cancelled', 'discrepancy' => ': расхождение — '.$record->pms_check_note,
+                                'unavailable' => ': PMS недоступна',
+                                default => '',
+                            } : null),
                     TextEntry::make('stay')->label('Проживание')
                         ->state(fn (Certificate $record) => $record->arrival_date?->format('d.m.Y').' — '.$record->departure_date?->format('d.m.Y'))
                         ->helperText(fn (Certificate $record) => $record->arrival_date ? $record->arrival_date->diffInDays($record->departure_date).' ноч.' : null),

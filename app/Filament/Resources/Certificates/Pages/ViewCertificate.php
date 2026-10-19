@@ -18,6 +18,7 @@ use App\Models\Certificate;
 use App\Models\Recipient;
 use App\Models\User;
 use App\Services\AdminCorrections;
+use App\Services\ArrivalSync;
 use App\Services\CertificateDocument;
 use App\Services\CertificateManager;
 use App\Services\PaymentManager;
@@ -173,7 +174,7 @@ class ViewCertificate extends ViewRecord
                 }),
 
             $this->reservationAction('reserve', 'Отметить бронь', [CertificateStatus::Active]),
-            $this->transitionAction('checkIn', 'Заезд', CertificateStatus::Reserved, CertificateStatus::InUse, 'heroicon-o-arrow-right-end-on-rectangle', Permission::ManageReservations),
+            $this->checkInAction(),
             // Решение 27.10.2026: погасить можно и с невыполненными заявками — они закроются как отменённые.
             $this->transitionAction('redeem', 'Погасить', CertificateStatus::InUse, CertificateStatus::Used, 'heroicon-o-check-circle', Permission::RedeemCertificates,
                 function (Certificate $record) {
@@ -396,6 +397,29 @@ class ViewCertificate extends ViewRecord
             ->schema([Textarea::make('reason')->label('Комментарий')])
             ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                 fn () => $this->manager()->transition($record, $to, $data['reason'] ?? null), "Статус: {$to->getLabel()}"));
+    }
+
+    /**
+     * Заезд. Бронь подтверждена по PMS — Gifter повторно запрашивает PMS и отмечает заезд сам (без комментария);
+     * расхождение — заезд не отмечается, бронь уходит на проверку Финансам. Иначе — отметка вручную.
+     */
+    private function checkInAction(): Action
+    {
+        $viaPms = fn (Certificate $record): bool => app(ArrivalSync::class)->applies($record);
+
+        return Action::make('checkIn')->label('Заезд')->icon('heroicon-o-arrow-right-end-on-rectangle')
+            ->authorize(Permission::ManageReservations)
+            ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Reserved)
+            ->requiresConfirmation()
+            ->modalDescription(fn (Certificate $record) => $viaPms($record)
+                ? 'Gifter запросит бронь № '.$record->pms_booking_number.' в PMS, убедится, что она не изменилась, и отметит заезд. Вводить ничего не нужно.'
+                : null)
+            ->schema(fn (Certificate $record) => $viaPms($record) ? [] : [Textarea::make('reason')->label('Комментарий')])
+            ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
+                fn () => $viaPms($record)
+                    ? app(ArrivalSync::class)->checkIn($record)
+                    : $this->manager()->transition($record, CertificateStatus::InUse, $data['reason'] ?? null),
+                'Статус: '.CertificateStatus::InUse->getLabel()));
     }
 
     private function run(Action $action, callable $callback, string $success): void
