@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 
 use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\password;
@@ -59,6 +60,7 @@ class CreateUser extends Command
         User::create(['name' => $name, 'email' => $email, 'password' => $password, 'is_active' => true, 'roles' => $roles]);
         $this->info("Пользователь {$email} создан.");
         $this->warn("Пароль (показывается один раз, смените после входа): {$password}");
+        $this->twoFactorNotice();
 
         return self::SUCCESS;
     }
@@ -67,14 +69,21 @@ class CreateUser extends Command
     {
         $name = text('Имя', required: true);
         $email = text('Email', required: true, validate: fn ($value) => Validator::make(['email' => $value], ['email' => 'email|unique:users,email'])->errors()->first('email') ?: null);
-        $password = password('Пароль (не короче 10 символов)', required: true, validate: fn ($value) => mb_strlen($value) < 10 ? 'Слишком короткий пароль.' : null);
+        $password = password('Пароль (от 12 символов, буквы и цифры)', required: true,
+            validate: fn ($value) => Validator::make(['password' => $value], ['password' => Password::default()])->errors()->first('password') ?: null);
 
         $roles = multiselect('Роли', collect(Role::cases())->mapWithKeys(fn (Role $role) => [$role->value => $role->getLabel()])->all(),
             default: User::query()->exists() ? [] : [Role::SuperAdmin->value], required: true);
 
         User::create(['name' => $name, 'email' => $email, 'password' => $password, 'is_active' => true, 'roles' => $roles]);
         $this->info("Пользователь {$email} создан.");
+        $this->twoFactorNotice();
 
         return self::SUCCESS;
+    }
+
+    private function twoFactorNotice(): void
+    {
+        $this->line('При первом входе нужно настроить двухфакторный вход: приложение Google Authenticator или аналог, затем сохранить коды восстановления.');
     }
 }

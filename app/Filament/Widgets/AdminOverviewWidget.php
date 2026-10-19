@@ -5,11 +5,14 @@ namespace App\Filament\Widgets;
 use App\Enums\CertificateStatus;
 use App\Enums\RefundStatus;
 use App\Enums\Role;
+use App\Filament\Pages\Security;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Payments\PaymentResource;
 use App\Filament\Resources\Refunds\RefundResource;
 use App\Filament\Support\RoleQueueWidget;
+use App\Services\SecurityAudit;
 use App\Support\Money;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class AdminOverviewWidget extends RoleQueueWidget
 {
@@ -41,6 +44,17 @@ class AdminOverviewWidget extends RoleQueueWidget
             $this->counter('Бесплатные у директора', $q->complimentaryAwaitingApproval(), $list(['awaiting_approval' => ['isActive' => true]]), 'info', 'ждут согласования', 'heroicon-o-hand-raised'),
             $this->counter('Оплаты ждут сверки', $q->paymentsToReconcile(), PaymentResource::getUrl('index'), 'warning', 'у Финансов', 'heroicon-o-document-check'),
             $this->counter('Возвраты на согласовании', $q->refunds(RefundStatus::Requested), RefundResource::getUrl('index', ['filters' => ['status' => ['value' => 'requested']]]), 'danger', 'у Финансов', 'heroicon-o-receipt-refund'),
+            $this->problemsTile(),
         ];
+    }
+
+    private function problemsTile(): Stat
+    {
+        $problems = Security::problems();
+        $checked = app(SecurityAudit::class)->lastResult() !== null;
+
+        return $this->tile(Stat::make('Безопасность', $checked ? $problems : '—')
+            ->description($checked ? ($problems ? 'ошибок в настройках' : 'критичных ошибок нет') : 'проверка не запускалась')
+            ->url(Security::getUrl()), 'heroicon-o-lock-closed', $problems ? 'danger' : 'zero', $problems > 0);
     }
 }

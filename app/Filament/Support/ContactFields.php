@@ -10,6 +10,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Component;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -41,8 +42,10 @@ final class ContactFields
     public static function maskedColumns(): array
     {
         return [
-            TextColumn::make('phone')->label('Телефон')->formatStateUsing(fn ($state) => ContactMask::phone($state))->searchable(),
-            TextColumn::make('email')->label('Email')->formatStateUsing(fn ($state) => ContactMask::email($state))->searchable()->toggleable(),
+            // Контакты в базе зашифрованы: поиск — по полному номеру или email (через хеш, см. HasEncryptedContacts).
+            TextColumn::make('phone')->label('Телефон')->formatStateUsing(fn ($state) => ContactMask::phone($state))
+                ->searchable(query: fn (Builder $query, string $search) => $query->whereContact($search)),
+            TextColumn::make('email')->label('Email')->formatStateUsing(fn ($state) => ContactMask::email($state))->toggleable(),
         ];
     }
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CustomerType;
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasEncryptedContacts;
 use App\Models\Concerns\HasPersonName;
 use App\Models\Concerns\PreventsDeletion;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Customer extends Model
 {
-    use Auditable, HasFactory, HasPersonName, PreventsDeletion;
+    use Auditable, HasEncryptedContacts, HasFactory, HasPersonName, PreventsDeletion;
 
     protected $attributes = ['type' => 'individual'];
 

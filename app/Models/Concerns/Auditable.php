@@ -15,7 +15,7 @@ trait Auditable
 
         static::updated(function ($model) {
             $changed = array_keys($model->getChanges());
-            $changed = array_diff($changed, ['updated_at', 'remember_token']);
+            $changed = array_diff($changed, ['updated_at', 'remember_token', 'app_authentication_secret', 'app_authentication_recovery_codes']);
             if ($changed === []) {
                 return;
             }
@@ -30,7 +30,10 @@ trait Auditable
     /** @param array<string, mixed> $attributes */
     protected function auditAttributes(array $attributes): array
     {
-        $attributes = array_diff_key($attributes, array_flip(['password', 'remember_token']));
+        $attributes = array_diff_key($attributes, array_flip(['password', 'remember_token', 'app_authentication_secret', 'app_authentication_recovery_codes']));
+        if (method_exists($this, 'maskContactsForAudit')) {
+            $attributes = $this->maskContactsForAudit($attributes);
+        }
 
         return array_map(fn ($value) => $value instanceof \BackedEnum ? $value->value : $value, $attributes);
     }

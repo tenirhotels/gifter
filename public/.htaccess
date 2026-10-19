@@ -5,6 +5,10 @@
 
     RewriteEngine On
 
+    # Служебные файлы не отдаются, даже если окажутся в public/ (.env, .git, бэкапы, база)
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
+    RewriteRule \.(sqlite|sql|zip|bak|log|env)$ - [F,L,NC]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

@@ -68,4 +68,27 @@
     .gf-arrival-service { display: flex; align-items: baseline; gap: .375rem; font-size: .8125rem; line-height: 1.25rem; }
     .gf-arrival-service .gf-dot { flex: none; width: .5rem; height: .5rem; border-radius: 9999px; background: var(--warning-500); transform: translateY(-1px); }
     .gf-arrival-service[data-ok="1"] .gf-dot { background: var(--success-500); }
+
+    /* 5) Безопасность: проверки (ошибки сверху), справа — бэкап и 2FA. */
+    .gf-security { display: grid; gap: 1.5rem; align-items: start; }
+    @media (min-width: 1024px) { .gf-security { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
+    .gf-security-side { display: grid; gap: 1.5rem; }
+    .gf-security-value { font-size: 1rem; font-weight: 600; color: var(--gray-950); }
+    .dark .gf-security-value { color: var(--color-white); }
+    .gf-security-muted { margin-top: .25rem; font-size: .8125rem; color: var(--gray-500); }
+    .gf-checks { width: 100%; border-collapse: collapse; font-size: .875rem; line-height: 1.25rem; }
+    .gf-checks td { padding: .5rem .75rem .5rem 0; vertical-align: top; border-bottom: 1px solid color-mix(in oklab, var(--gray-950) 8%, transparent); }
+    .dark .gf-checks td { border-color: color-mix(in oklab, white 10%, transparent); }
+    .gf-checks tr:last-child td { border-bottom: 0; }
+    .gf-checks-status { width: 6.5rem; }
+    .gf-checks-name { width: 40%; font-weight: 500; color: var(--gray-950); }
+    .dark .gf-checks-name { color: var(--color-white); }
+    .gf-checks-hint { color: var(--gray-500); }
+    .gf-checks-badge { display: inline-block; padding: .0625rem .5rem; border-radius: .375rem; font-size: .75rem; font-weight: 500;
+        color: var(--success-700); background: color-mix(in oklab, var(--success-500) 12%, transparent); }
+    .gf-checks [data-status="warn"] .gf-checks-badge { color: var(--warning-700); background: color-mix(in oklab, var(--warning-500) 15%, transparent); }
+    .gf-checks [data-status="fail"] .gf-checks-badge { color: var(--danger-700); background: color-mix(in oklab, var(--danger-500) 12%, transparent); }
+    .dark .gf-checks-badge { color: var(--success-400); }
+    .dark .gf-checks [data-status="warn"] .gf-checks-badge { color: var(--warning-400); }
+    .dark .gf-checks [data-status="fail"] .gf-checks-badge { color: var(--danger-400); }
 </style>

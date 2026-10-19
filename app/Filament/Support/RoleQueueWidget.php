@@ -57,7 +57,7 @@ abstract class RoleQueueWidget extends StatsOverviewWidget
         return $this->tile(Stat::make($label, $value)->description($hint), $icon, 'metric', false);
     }
 
-    private function tile(Stat $stat, string $icon, string $tone, bool $active): Stat
+    protected function tile(Stat $stat, string $icon, string $tone, bool $active): Stat
     {
         return $stat->icon($icon)
             ->color(in_array($tone, ['metric', 'zero'], true) ? 'gray' : $tone)

@@ -124,7 +124,7 @@ class AdminPanelTest extends TestCase
     public function test_demo_users_are_created_for_every_role_locally(): void
     {
         $this->artisan('gifter:demo-users')
-            ->expectsQuestion('Общий пароль для тестовых пользователей (не короче 10 символов)', 'local-test-pass')
+            ->expectsQuestion('Общий пароль для тестовых пользователей (от 12 символов, буквы и цифры)', 'local-test-pass-1')
             ->assertSuccessful();
 
         $this->assertSame(Role::Sales, User::where('email', 'sales@gifter.local')->first()->roles->first());

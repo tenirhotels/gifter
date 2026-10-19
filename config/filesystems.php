@@ -38,6 +38,14 @@ return [
             'report' => false,
         ],
 
+        // Резервные копии базы (зашифрованные zip), вне public/.
+        'backups' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/backups'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

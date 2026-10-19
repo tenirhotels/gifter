@@ -24,6 +24,7 @@ class CustomersTable
             ])
             ->filters([SelectFilter::make('type')->label('Тип')->options(CustomerType::class)])
             ->recordActions([ContactFields::revealAction(label: 'Контакты'), EditAction::make()])
+            ->searchPlaceholder('ФИО, компания, БИН полный телефон или email')
             ->defaultSort('last_name');
     }
 }

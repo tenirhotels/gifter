@@ -7,6 +7,7 @@ use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rules\Password;
 
 class UserForm
 {
@@ -16,7 +17,7 @@ class UserForm
             TextInput::make('name')->label('Имя')->required()->maxLength(255),
             TextInput::make('email')->label('Email')->email()->required()->unique(ignoreRecord: true)->maxLength(255),
             TextInput::make('password')->label('Пароль')->password()->revealable()
-                ->minLength(10)
+                ->rule(Password::default())
                 ->required(fn (string $operation): bool => $operation === 'create')
                 ->dehydrated(fn (?string $state): bool => filled($state))
                 ->helperText(fn (string $operation): ?string => $operation === 'edit' ? 'Оставьте пустым, чтобы не менять.' : null),

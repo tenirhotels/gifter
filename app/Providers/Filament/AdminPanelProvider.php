@@ -2,7 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\EditProfile;
 use App\Filament\Support\InitialsAvatarProvider;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -30,6 +32,11 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            // Двухфакторный вход обязателен всем: без настроенного приложения в панель не попасть.
+            ->profile(EditProfile::class, isSimple: false)
+            ->multiFactorAuthentication([
+                AppAuthentication::make()->brandName('Gifter')->recoverable(),
+            ], isRequired: fn (): bool => config('gifter.security.require_two_factor') || ! app()->isLocal())
             ->brandName('Gifter')
             ->colors([
                 'primary' => Color::Amber,

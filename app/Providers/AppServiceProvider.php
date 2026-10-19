@@ -10,6 +10,7 @@ use Filament\Tables\Table;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
+
+        // Пароли: от 12 символов, буквы и цифры. Проверка по базам утечек не включена:
+        // на shared-хостинге исходящие запросы к внешним сервисам могут быть закрыты.
+        Password::defaults(fn () => Password::min(12)->letters()->numbers());
 
         // Таблицы: плотные, с чередованием строк, по 25 записей — для операционной работы.
         Table::configureUsing(fn (Table $table) => $table

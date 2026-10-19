@@ -8,6 +8,8 @@ use App\Exceptions\DomainRuleViolation;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\PreventsDeletion;
 use Database\Factories\UserFactory;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Casts\AsEnumCollection;
@@ -15,7 +17,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery
 {
     /** @use HasFactory<UserFactory> */
     use Auditable, HasFactory, Notifiable, PreventsDeletion;
@@ -39,6 +41,8 @@ class User extends Authenticatable implements FilamentUser
     protected $hidden = [
         'password',
         'remember_token',
+        'app_authentication_secret',
+        'app_authentication_recovery_codes',
     ];
 
     /**
@@ -51,6 +55,8 @@ class User extends Authenticatable implements FilamentUser
             'password' => 'hashed',
             'is_active' => 'boolean',
             'roles' => AsEnumCollection::of(Role::class),
+            'app_authentication_secret' => 'encrypted',
+            'app_authentication_recovery_codes' => 'encrypted:array',
         ];
     }
 
@@ -87,5 +93,43 @@ class User extends Authenticatable implements FilamentUser
     public function hasPermission(Permission $permission): bool
     {
         return $this->is_active && ($this->isSuperAdmin() || $this->hasRole(...$permission->roles()));
+    }
+
+    // Двухфакторный вход (обязателен всем): приложение-аутентификатор и коды восстановления.
+
+    public function getAppAuthenticationSecret(): ?string
+    {
+        return $this->app_authentication_secret;
+    }
+
+    public function saveAppAuthenticationSecret(#[\SensitiveParameter] ?string $secret): void
+    {
+        $wasEnabled = $this->hasTwoFactor();
+        $this->app_authentication_secret = $secret;
+        $this->save();
+        if ($wasEnabled !== $this->hasTwoFactor()) {
+            AuditLog::record($this->hasTwoFactor() ? 'two_factor_enabled' : 'two_factor_disabled', $this, null, null);
+        }
+    }
+
+    public function getAppAuthenticationHolderName(): string
+    {
+        return $this->email;
+    }
+
+    public function getAppAuthenticationRecoveryCodes(): ?array
+    {
+        return $this->app_authentication_recovery_codes;
+    }
+
+    public function saveAppAuthenticationRecoveryCodes(#[\SensitiveParameter] ?array $codes): void
+    {
+        $this->app_authentication_recovery_codes = $codes;
+        $this->save();
+    }
+
+    public function hasTwoFactor(): bool
+    {
+        return filled($this->app_authentication_secret);
     }
 }

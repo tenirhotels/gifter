@@ -18,6 +18,7 @@ class RecipientsTable
                 TextColumn::make('certificates_count')->label('Сертификатов')->counts('certificates')->sortable(),
             ])
             ->recordActions([ContactFields::revealAction(label: 'Контакты'), EditAction::make()])
+            ->searchPlaceholder('ФИО, полный телефон или email')
             ->defaultSort('last_name');
     }
 }
