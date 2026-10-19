@@ -17,11 +17,11 @@ class LocaleTest extends TestCase
     {
         $user = User::factory()->create(['roles' => [Role::Sales]]);
 
-        $this->actingAs($user)->from('/admin')->get('/locale/kk')->assertRedirect('/admin');
+        $this->actingAs($user)->from('/admin')->post('/locale/kk')->assertRedirect('/admin');
 
         $this->assertSame('kk', $user->refresh()->locale);
         $this->assertSame('kk', session('locale'));
-        $this->get('/locale/de')->assertNotFound();
+        $this->post('/locale/de')->assertNotFound();
     }
 
     public function test_interface_follows_user_language(): void

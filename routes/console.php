@@ -10,7 +10,10 @@ Schedule::command('backup:clean')->dailyAt('01:20');
 Schedule::command('backup:run --only-db')->dailyAt('01:30');
 Schedule::command('backup:monitor')->dailyAt('07:00');
 Schedule::command('gifter:backup-mail')->weeklyOn(1, '02:00');
+Schedule::command('gifter:backup-mail')->monthlyOn(1, '02:30');
+Schedule::command('gifter:backup-verify')->weeklyOn(0, '03:30');
 
+Schedule::command('gifter:heartbeat')->everyMinute();
 Schedule::command('gifter:security-check')->dailyAt('06:50');
 
 // Брони по PMS в день заезда (мало запросов): утром — расхождения, в 16:00 (заселение в 15:30) и вечером — заселились ли.

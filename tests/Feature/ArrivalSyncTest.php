@@ -22,6 +22,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
@@ -144,6 +145,23 @@ class ArrivalSyncTest extends TestCase
         $this->assertSame(0, $stats['no_show']);
         $this->assertSame(CertificateStatus::Reserved, $certificate->refresh()->status);
         $this->assertSame(ReservationReview::Pending, $certificate->reservation_review_status);
+    }
+
+    public function test_same_booking_cannot_be_attached_in_parallel(): void
+    {
+        $certificate = $this->reserved();
+        config(['gifter.pms.booking_lock_wait' => 0]);
+        $lock = Cache::lock('gifter:booking:20261020-9305-662', 20);
+        $this->assertTrue($lock->get());
+
+        try {
+            app(ReservationManager::class)->save($certificate, ['booking_number' => '20261020-9305-662']);
+            $this->fail('Параллельная привязка той же брони');
+        } catch (DomainRuleViolation $e) {
+            $this->assertStringContainsString('привязывает другой сотрудник', $e->getMessage());
+        } finally {
+            $lock->release();
+        }
     }
 
     public function test_hub_checked_out_redeems_automatically(): void

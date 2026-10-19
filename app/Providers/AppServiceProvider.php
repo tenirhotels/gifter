@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\Permission;
 use App\Models\User;
+use App\Support\TrustedProxies;
 use Filament\Actions\Action as BaseAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -11,6 +12,7 @@ use Filament\Schemas\Components\Component as SchemaComponent;
 use Filament\Tables\Columns\Column;
 use Filament\Tables\Filters\BaseFilter;
 use Filament\Tables\Table;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -25,6 +27,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Каким прокси доверять заголовки X-Forwarded-* (настройка TRUSTED_PROXIES; по умолчанию как раньше).
+        TrustProxies::at(TrustedProxies::resolve(config('gifter.security.trusted_proxies')));
+
         // На рабочем сервере — только HTTPS.
         if ($this->app->environment('production')) {
             URL::forceScheme('https');

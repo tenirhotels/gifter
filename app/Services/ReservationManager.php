@@ -161,7 +161,7 @@ class ReservationManager
             return $this->saveLocked($certificate, $data);
         }
         try {
-            return Cache::lock('gifter:booking:'.$number, 20)->block(10, fn () => $this->saveLocked($certificate, $data));
+            return Cache::lock('gifter:booking:'.$number, 20)->block((int) config('gifter.pms.booking_lock_wait', 10), fn () => $this->saveLocked($certificate, $data));
         } catch (LockTimeoutException) {
             throw new DomainRuleViolation('Эту бронь сейчас привязывает другой сотрудник — повторите через несколько секунд.');
         }

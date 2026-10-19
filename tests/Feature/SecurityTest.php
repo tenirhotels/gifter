@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Console\Commands\BackupVerify;
+use App\Console\Commands\Heartbeat;
 use App\Enums\Role;
 use App\Exceptions\DomainRuleViolation;
 use App\Filament\Auth\EditProfile;
@@ -19,6 +21,7 @@ use App\Services\SecurityAudit;
 use App\Services\UserSecurity;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -168,8 +171,11 @@ class SecurityTest extends TestCase
             'session.secure' => true, 'session.encrypt' => true, 'logging.channels.single.level' => 'warning',
             'gifter.security.contact_hash_key' => 'fictional-hash-key-for-tests', 'backup.backup.password' => 'fictional-archive-pass',
             'gifter.backup.mail_to' => 'owner@example.test', 'gifter.require_payment_reconciled' => true, 'gifter.require_price_approval' => true,
+            'gifter.security.trusted_proxies' => 'cloudflare', 'gifter.monitoring.error_mail_to' => 'owner@example.test',
         ]);
 
+        Cache::forever(Heartbeat::KEY, now()->timestamp);
+        Cache::forever(BackupVerify::KEY, ['at' => now()->toIso8601String(), 'ok' => true, 'error' => null]);
         $results = app(SecurityAudit::class)->run();
 
         // Тесты идут на SQLite — это единственное, что проверка должна отметить.

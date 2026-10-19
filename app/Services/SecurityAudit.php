@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Console\Commands\BackupVerify;
+use App\Console\Commands\Heartbeat;
 use App\Models\User;
 use App\Support\Backups;
+use App\Support\TrustedProxies;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -52,6 +55,16 @@ class SecurityAudit
         $add('Часовой пояс отеля (Asia/Almaty)', config('app.timezone') === 'Asia/Almaty', 'APP_TIMEZONE=Asia/Almaty: иначе сроки сертификатов и расписание проверок сдвигаются.');
         $add('Выплата и выпуск: оплата подтверждается Финансами', (bool) config('gifter.require_payment_reconciled'), 'Уберите GIFTER_REQUIRE_PAYMENT_RECONCILED=false из .env: продавец сам отмечает оплату.', false);
         $add('Цены директора подтверждает администратор', (bool) config('gifter.require_price_approval'), 'Уберите GIFTER_REQUIRE_PRICE_APPROVAL=false из .env.', false);
+        $add('Доверенные прокси ограничены (Cloudflare)', TrustedProxies::isRestricted(config('gifter.security.trusted_proxies')),
+            'TRUSTED_PROXIES=cloudflare: иначе заголовок X-Forwarded-For можно подделать (обход ограничения попыток входа).', false);
+        $add('Письма об ошибках сервера', filled(config('gifter.monitoring.error_mail_to')), 'ERROR_MAIL_TO — почта, куда придёт письмо о необработанной ошибке.', false);
+        if ($production) {
+            $beat = (int) Cache::get(Heartbeat::KEY, 0);
+            $add('Планировщик работает (cron каждую минуту)', $beat > now()->subMinutes(10)->timestamp, 'Нет метки планировщика за 10 минут: проверьте задачу «php artisan schedule:run» в Plesk.');
+        }
+        $verified = Cache::get(BackupVerify::KEY);
+        $add('Копия базы проверена (открывается, дамп читается)', ($verified['ok'] ?? false) && now()->parse($verified['at'])->gt(now()->subDays(10)),
+            $verified && ! $verified['ok'] ? 'Последняя проверка: '.$verified['error'] : 'Проверка раз в неделю (gifter:backup-verify) ещё не выполнялась.', false);
         $add('Папка storage доступна для записи', is_writable(storage_path('framework')) && is_writable(storage_path('logs')),
             'Права на storage/ и bootstrap/cache — запись для пользователя сайта.');
 

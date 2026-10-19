@@ -13,4 +13,4 @@ Route::get('/v/{token}', VerifyCertificateController::class)
     ->name('certificates.verify');
 
 // Язык интерфейса: ru, kk, en.
-Route::get('/locale/{locale}', LocaleController::class)->name('locale.switch');
+Route::post('/locale/{locale}', LocaleController::class)->name('locale.switch');

@@ -78,6 +78,7 @@ class PmsSettings extends Page
                     PmsSetting::EXELY => 'Exely напрямую — Read Reservation API (client_id и client_secret)',
                 ])->default(PmsSetting::HUB)->live()->required(),
                 TextInput::make('base_url')->label(fn (Get $get) => $isExely($get) ? 'Адрес Exely' : 'Адрес хаба')->url()->maxLength(255)
+                    ->rule(fn () => app()->isProduction() ? 'starts_with:https://' : 'nullable')
                     ->placeholder(fn (Get $get) => $isExely($get) ? PmsSetting::EXELY_DEFAULT_URL : 'https://hub.example.com')
                     ->helperText(fn (Get $get) => $isExely($get) ? 'Можно оставить пустым — используется '.PmsSetting::EXELY_DEFAULT_URL.'.' : 'Без «/v1/…»: путь /v1/properties/{код}/bookings/{номер} добавляется автоматически.'),
                 TextInput::make('property_code')->label(fn (Get $get) => $isExely($get) ? 'Идентификатор отеля в Exely (propertyId)' : 'Код отеля')->maxLength(64),

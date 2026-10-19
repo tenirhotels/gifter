@@ -42,6 +42,8 @@ return [
         // (APP_ENV=local); на рабочем сервере он обязателен всегда.
         // Не более стольких разных клиентов в день, чьи контакты сотрудник может открыть (0 — без ограничения; администратор не ограничен).
         'reveal_daily_limit' => (int) env('GIFTER_REVEAL_DAILY_LIMIT', 30),
+        // Доверенные прокси: пусто — любые (как раньше), `cloudflare` — только Cloudflare и внутренние адреса, или список сетей через запятую.
+        'trusted_proxies' => env('TRUSTED_PROXIES'),
         'require_two_factor' => env('GIFTER_REQUIRE_2FA', true),
     ],
 
@@ -53,6 +55,13 @@ return [
         'arrival_recheck_minutes' => 120,
         // Автопогашение после выезда (gifter:sync-departures): выезд в отеле до 12:00.
         'departure_check_time' => '14:00',
+        // Сколько секунд ждать, пока другой сотрудник привязывает ту же бронь.
+        'booking_lock_wait' => 10,
+    ],
+
+    'monitoring' => [
+        // Почта для писем о необработанных ошибках сервера (без данных клиентов). Пусто — не отправлять.
+        'error_mail_to' => env('ERROR_MAIL_TO'),
     ],
 
     'backup' => [

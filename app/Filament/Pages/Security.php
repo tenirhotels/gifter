@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Console\Commands\Heartbeat;
 use App\Enums\Permission;
 use App\Filament\Support\TranslatesPageLabels;
 use App\Models\AuditLog;
@@ -13,6 +14,7 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Number;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use UnitEnum;
@@ -59,7 +61,11 @@ class Security extends Page
     /** Сколько критичных ошибок нашла последняя проверка. */
     public static function problems(): int
     {
-        return collect(app(SecurityAudit::class)->lastResult()['results'] ?? [])->where('status', SecurityAudit::FAIL)->count();
+        $failed = collect(app(SecurityAudit::class)->lastResult()['results'] ?? [])->where('status', SecurityAudit::FAIL)->count();
+        // Планировщик не ждёт ночной проверки: устаревшая метка — ошибка сразу.
+        $stale = app()->environment('production') && (int) Cache::get(Heartbeat::KEY, 0) < now()->subMinutes(10)->timestamp;
+
+        return $failed + ($stale ? 1 : 0);
     }
 
     /** Быстрые проверки — при каждом открытии, чтобы итог не расходился с текущим состоянием. */
