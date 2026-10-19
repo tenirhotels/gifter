@@ -40,6 +40,8 @@ return [
         'arrival_check_times' => ['morning' => '08:00', 'afternoon' => '16:00', 'evening' => '19:00'],
         // Бронь, проверенную недавно (в том числе кнопкой «Заезд»), повторно не запрашиваем.
         'arrival_recheck_minutes' => 120,
+        // Автопогашение после выезда (gifter:sync-departures): выезд в отеле до 12:00.
+        'departure_check_time' => '14:00',
     ],
 
     'backup' => [

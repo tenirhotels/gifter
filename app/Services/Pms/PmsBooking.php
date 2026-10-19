@@ -76,6 +76,12 @@ final class PmsBooking
         return $this->stayStatuses !== [] && collect($this->stayStatuses)->every(fn ($status) => in_array($status, ['checked_in', 'checked_out'], true));
     }
 
+    /** Все действующие комнаты выехали по данным PMS (только Hotel Hub, `roomStays[].hub.status` = checked_out). */
+    public function checkedOut(): bool
+    {
+        return $this->stayStatuses !== [] && collect($this->stayStatuses)->every(fn ($status) => $status === 'checked_out');
+    }
+
     /** Названия тарифов брони — для сообщения. */
     public function ratePlanLabel(): string
     {

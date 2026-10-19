@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Enums\CertificateStatus;
+use App\Enums\FulfillmentStatus;
 use App\Enums\HistoryEvent;
 use App\Enums\ReservationReview;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\Certificate;
+use App\Models\PmsSetting;
 use App\Services\Pms\PmsBooking;
 use App\Services\Pms\PmsClient;
 use App\Services\Pms\PmsException;
@@ -167,6 +169,78 @@ class ArrivalSync
             $entered ? $stats['checked_in']++ : null;
             if (in_array($certificate->refresh()->pms_check_status, [self::CANCELLED, self::DISCREPANCY], true)) {
                 $stats['discrepancies']++;
+            }
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Автопогашение после выезда (решение владельца 19.10.2026). Hotel Hub: гашение по `checked_out` из PMS.
+     * Прямой Exely статуса выезда не отдаёт: на следующий день после запланированного выезда бронь сверяется
+     * с PMS (не отменена, даты не изменились) и выезд считается состоявшимся. Расхождение — на проверку Финансам.
+     * С невыполненными заявками по услугам сертификат не гасится — его гасит сотрудник («нужно внимание»).
+     * Один запрос на номер брони; уже решённые и недавно проверенные пропускаются.
+     *
+     * @return array{checked: int, redeemed: int, discrepancies: int, unavailable: int, open_services: int}
+     */
+    public function syncDepartures(): array
+    {
+        $stats = ['checked' => 0, 'redeemed' => 0, 'discrepancies' => 0, 'unavailable' => 0, 'open_services' => 0];
+        if (! PmsClient::make()->isActive()) {
+            return $stats;
+        }
+
+        $hub = ! PmsSetting::current()->isExely();
+        $recheck = now()->subMinutes((int) config('gifter.pms.arrival_recheck_minutes', 120));
+        $query = Certificate::query()->where('status', CertificateStatus::InUse)->whereNotNull('pms_verified_at')->whereNotNull('pms_booking_number')
+            ->whereDate('departure_date', $hub ? '<=' : '<', today()->toDateString())
+            ->where(fn ($q) => $q->whereNull('pms_check_status')->orWhereNotIn('pms_check_status', [self::CANCELLED, self::DISCREPANCY]))
+            ->where(fn ($q) => $q->whereNull('reservation_review_status')->orWhere('reservation_review_status', '!=', ReservationReview::Disputed))
+            ->where(fn ($q) => $q->whereNull('pms_checked_at')->orWhere('pms_checked_at', '<', $recheck));
+
+        $bookings = [];
+        $client = PmsClient::make();
+        foreach ($query->orderBy('id')->get() as $certificate) {
+            $number = (string) $certificate->pms_booking_number;
+            if (! array_key_exists($number, $bookings)) {
+                try {
+                    $bookings[$number] = $client->find($number);
+                    usleep(250_000); // не чаще 4 запросов в секунду
+                } catch (PmsException $e) {
+                    $bookings[$number] = $e;
+                }
+            }
+            $booking = $bookings[$number];
+            $stats['checked']++;
+            if ($booking instanceof PmsException) {
+                $certificate->forceFill(['pms_checked_at' => now(), 'pms_check_status' => self::UNAVAILABLE, 'pms_check_note' => $booking->getMessage()])->save();
+                $stats['unavailable']++;
+
+                continue;
+            }
+            $result = $this->inspect($certificate, $booking);
+            if (in_array($result['status'], [self::CANCELLED, self::DISCREPANCY], true)) {
+                $stats['discrepancies']++;
+
+                continue;
+            }
+            // Даты в PMS могли сдвинуться (продлили проживание) — выезд ещё не состоялся.
+            $departed = $hub ? $booking->checkedOut() : $certificate->departure_date->lt(today());
+            if (! $departed) {
+                continue;
+            }
+            if ($certificate->fulfillments()->whereIn('status', FulfillmentStatus::open())->exists()) {
+                $stats['open_services']++;
+
+                continue;
+            }
+            try {
+                $this->certificates->transition($certificate, CertificateStatus::Used,
+                    $hub ? 'Погашен автоматически: выезд по данным PMS' : 'Погашен автоматически: день после планового выезда, бронь сверена по PMS');
+                $stats['redeemed']++;
+            } catch (DomainRuleViolation) {
+                // Спор, возврат на рассмотрении и т. п. — оставляем сотруднику.
             }
         }
 

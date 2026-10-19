@@ -17,3 +17,6 @@ Schedule::command('gifter:security-check')->dailyAt('06:50');
 foreach (config('gifter.pms.arrival_check_times') as $slot => $time) {
     Schedule::command("gifter:sync-arrivals --slot={$slot}")->dailyAt($time)->withoutOverlapping();
 }
+
+// Автопогашение после выезда (Hub — checked_out, Exely — на следующий день после выезда): раз в день после выезда гостей.
+Schedule::command('gifter:sync-departures')->dailyAt(config('gifter.pms.departure_check_time'))->withoutOverlapping();

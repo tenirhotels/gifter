@@ -20,6 +20,7 @@ use App\Services\ReservationManager;
 use App\Services\ServicePricing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -99,6 +100,70 @@ class ArrivalSyncTest extends TestCase
         $this->assertSame(CertificateStatus::InUse, $certificate->refresh()->status);
         $this->assertTrue($certificate->history()->where('description', 'like', '%Заезд по данным PMS%')->exists());
         $this->assertSame(2, $this->requests, 'Два запроса: утром и в 16:00');
+    }
+
+    private function inUse(): Certificate
+    {
+        $certificate = $this->reserved();
+        Carbon::setTestNow('2026-10-20 16:00:00');
+        $this->next = Http::response($this->booking(status: 'checked_in'));
+        app(ArrivalSync::class)->checkIn($certificate);
+        $this->assertSame(CertificateStatus::InUse, $certificate->refresh()->status);
+        $this->requests = 0;
+
+        return $certificate;
+    }
+
+    public function test_hub_checked_out_redeems_automatically(): void
+    {
+        $certificate = $this->inUse();
+
+        Carbon::setTestNow('2026-10-22 14:00:00');
+        $this->next = Http::response($this->booking(status: 'checked_in'));
+        $this->assertSame(0, app(ArrivalSync::class)->syncDepartures()['redeemed'], 'Ещё не выехал');
+        $this->assertSame(CertificateStatus::InUse, $certificate->refresh()->status);
+
+        Carbon::setTestNow('2026-10-22 17:00:00');
+        $this->next = Http::response($this->booking(status: 'checked_out'));
+        $stats = app(ArrivalSync::class)->syncDepartures();
+
+        $this->assertSame(1, $stats['redeemed']);
+        $this->assertSame(CertificateStatus::Used, $certificate->refresh()->status);
+        $this->assertTrue($certificate->history()->where('description', 'like', '%Погашен автоматически%')->exists());
+    }
+
+    public function test_hub_cancelled_booking_is_not_redeemed(): void
+    {
+        $certificate = $this->inUse();
+        Carbon::setTestNow('2026-10-22 14:00:00');
+        $booking = $this->booking(status: 'checked_out');
+        $booking['booking']['status'] = 'Cancelled';
+        $this->next = Http::response($booking);
+
+        $stats = app(ArrivalSync::class)->syncDepartures();
+
+        $this->assertSame([0, 1], [$stats['redeemed'], $stats['discrepancies']]);
+        $this->assertSame(CertificateStatus::InUse, $certificate->refresh()->status);
+    }
+
+    public function test_direct_exely_redeems_the_day_after_planned_departure(): void
+    {
+        $certificate = $this->inUse();
+        PmsSetting::first()->update(['provider' => 'exely', 'client_id' => 'c', 'client_secret' => 's', 'base_url' => null, 'token' => null]);
+        $booking = $this->booking();
+        unset($booking['booking']['roomStays'][0]['hub'], $booking['hub']);
+        Http::swap(new Factory);
+        Http::fake(fn ($request) => str_contains($request->url(), '/auth/token')
+            ? Http::response(['access_token' => 't', 'expires_in' => 900]) : Http::response($booking));
+
+        Carbon::setTestNow('2026-10-22 14:00:00');
+        $this->assertSame(0, app(ArrivalSync::class)->syncDepartures()['checked'], 'В день выезда Exely не опрашиваем');
+
+        Carbon::setTestNow('2026-10-23 14:00:00');
+        $stats = app(ArrivalSync::class)->syncDepartures();
+
+        $this->assertSame(1, $stats['redeemed']);
+        $this->assertSame(CertificateStatus::Used, $certificate->refresh()->status);
     }
 
     public function test_direct_exely_has_no_checkin_status_so_nothing_is_marked_automatically(): void
