@@ -63,16 +63,24 @@ class CommissionRuleResource extends Resource
                 ->options(fn () => Package::query()->where('is_complimentary', false)->orderBy('name')->pluck('name', 'id'))
                 ->helperText('Бесплатные пакеты комиссию не дают.'),
             Select::make('type')->label('Вид комиссии')->options(CommissionType::class)->required()->live()->default(CommissionType::Percent->value),
+            // Процент — по умолчанию (пока вид не выбран или выбран «процент»), сумма — только при «фиксированной».
             TextInput::make('rate')->label('Процент от цены продажи')->numeric()->minValue(0.01)->maxValue(100)->suffix('%')->dehydratedWhenHidden()
-                ->visible(fn (Get $get) => $get('type') === CommissionType::Percent->value)
-                ->required(fn (Get $get) => $get('type') === CommissionType::Percent->value),
+                ->visible(fn (Get $get) => ! self::isFixed($get))
+                ->required(fn (Get $get) => ! self::isFixed($get)),
             TextInput::make('fixed_amount')->label('Сумма за сертификат')->numeric()->minValue(1)->suffix('₸')->dehydratedWhenHidden()
-                ->visible(fn (Get $get) => $get('type') === CommissionType::Fixed->value)
-                ->required(fn (Get $get) => $get('type') === CommissionType::Fixed->value),
+                ->visible(fn (Get $get) => self::isFixed($get))
+                ->required(fn (Get $get) => self::isFixed($get)),
             DatePicker::make('valid_from')->label('Действует с')->required()->default(today())
                 ->helperText('Правило применяется по дате продажи сертификата. Открытое прежнее правило закроется днём раньше.'),
             DatePicker::make('valid_until')->label('Действует до')->helperText('Пусто — без окончания.'),
         ])->columns(2);
+    }
+
+    private static function isFixed(Get $get): bool
+    {
+        $type = $get('type');
+
+        return ($type instanceof CommissionType ? $type->value : $type) === CommissionType::Fixed->value;
     }
 
     public static function table(Table $table): Table

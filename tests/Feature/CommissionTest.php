@@ -426,4 +426,16 @@ class CommissionTest extends TestCase
             ->callAction('approveException', ['comment' => 'Ок']);
         $this->assertSame(CertificateStatus::Reserved, $certificate->refresh()->status);
     }
+
+    public function test_rule_form_shows_percent_field_by_default_and_amount_for_fixed(): void
+    {
+        Livewire::test(CreateCommissionRule::class)
+            ->assertFormFieldVisible('rate')->assertFormFieldHidden('fixed_amount')
+            ->fillForm(['type' => 'fixed'])
+            ->assertFormFieldVisible('fixed_amount')->assertFormFieldHidden('rate')
+            ->fillForm(['package_id' => $this->package->id, 'fixed_amount' => 15000, 'valid_from' => '2026-01-01'])
+            ->call('create')->assertHasNoFormErrors();
+
+        $this->assertSame('15000.00', (string) CommissionRule::sole()->fixed_amount);
+    }
 }
