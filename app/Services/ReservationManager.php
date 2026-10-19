@@ -85,7 +85,7 @@ class ReservationManager
             $this->assertBookingFree($fresh, $booking);
 
             $match = $this->matchName($fresh, $guest);
-            $risk = $isNew && $this->inRiskWindow($fresh);
+            $risk = $isNew && empty($data['skip_risk_review']) && $this->inRiskWindow($fresh);
             $needsReview = $match === NameMatch::Mismatch || $risk;
             if ($needsReview && $note === '') {
                 throw new DomainRuleViolation($match === NameMatch::Mismatch
@@ -206,7 +206,7 @@ class ReservationManager
     }
 
     /** Один номер брони — один сертификат; исключение — сертификаты одной группы (несколько номеров в одной брони). */
-    private function assertBookingFree(Certificate $certificate, string $booking): void
+    public function assertBookingFree(Certificate $certificate, string $booking): void
     {
         $taken = Certificate::query()->where('pms_booking_number', $booking)->whereKeyNot($certificate->id)
             ->whereIn('status', [CertificateStatus::Reserved, CertificateStatus::InUse])

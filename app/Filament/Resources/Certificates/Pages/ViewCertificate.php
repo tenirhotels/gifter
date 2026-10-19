@@ -22,6 +22,7 @@ use App\Services\CertificateDocument;
 use App\Services\CertificateManager;
 use App\Services\PaymentManager;
 use App\Services\RefundManager;
+use App\Services\ReservationExceptionManager;
 use App\Services\ReservationManager;
 use App\Support\Money;
 use Closure;
@@ -60,6 +61,43 @@ class ViewCertificate extends ViewRecord
                 ->color(fn (Certificate $record) => $record->isDraft() ? 'primary' : 'gray')
                 ->visible(fn (Certificate $record) => $record->batch_id && auth()->user()?->can('view', $record->batch))
                 ->url(fn (Certificate $record) => CertificateBatchResource::getUrl('view', ['record' => $record->batch_id])),
+
+            // Истёк без брони: бронь на свободную дату — заявка Front Office, согласует директор по продажам.
+            Action::make('requestException')->label('Бронь по исключению')->icon('heroicon-o-calendar-days')->color('warning')
+                ->authorize(Permission::RequestReservationException)
+                ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Expired && ! $record->hasPendingException())
+                ->modalDescription('Сертификат истёк без брони. Выберите свободную и доступную дату и внесите бронь PMS — заявку согласует директор по продажам. После согласования сертификат вернётся в работу до даты выезда.')
+                ->modalSubmitActionLabel('Отправить директору')
+                ->fillForm(fn (Certificate $record) => ['guest_name' => trim($record->recipient?->last_name.' '.$record->recipient?->first_name)])
+                ->schema([
+                    TextInput::make('booking_number')->label('Номер брони PMS')->required()->maxLength(64),
+                    TextInput::make('guest_name')->label('Гость, как в брони')->required()->maxLength(255),
+                    Grid::make(2)->schema([
+                        DatePicker::make('arrival')->label('Заезд')->required()->minDate(today()),
+                        DatePicker::make('departure')->label('Выезд')->required()->after('arrival'),
+                    ]),
+                    Textarea::make('reason')->label('Причина исключения')->required()->helperText('Что произошло и почему бронь не была поставлена вовремя.'),
+                ])
+                ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
+                    fn () => app(ReservationExceptionManager::class)->request($record, $data), 'Заявка отправлена директору')),
+            Action::make('approveException')->label('Согласовать бронь по исключению')->icon('heroicon-o-hand-thumb-up')->color('success')
+                ->authorize(Permission::ApproveReservationException)
+                ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Expired && $record->hasPendingException())
+                ->modalDescription(function (Certificate $record) {
+                    $e = $record->reservationExceptions()->where('status', 'pending')->latest('id')->first();
+
+                    return $e ? "Бронь № {$e->booking_number}, {$e->arrival_date->format('d.m')}–{$e->departure_date->format('d.m.Y')}, гость {$e->guest_name}. Причина: {$e->reason}" : null;
+                })
+                ->schema([Textarea::make('comment')->label('Комментарий')])
+                ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
+                    fn () => app(ReservationExceptionManager::class)->approve($record->reservationExceptions()->where('status', 'pending')->latest('id')->firstOrFail(), $data['comment'] ?? null),
+                    'Исключение согласовано, сертификат возвращён в работу')),
+            Action::make('rejectException')->label('Отклонить бронь по исключению')->icon('heroicon-o-hand-thumb-down')->color('danger')
+                ->authorize(Permission::ApproveReservationException)
+                ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Expired && $record->hasPendingException())
+                ->schema([Textarea::make('comment')->label('Причина отказа')->required()])
+                ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
+                    fn () => app(ReservationExceptionManager::class)->reject($record->reservationExceptions()->where('status', 'pending')->latest('id')->firstOrFail(), $data['comment']), 'Заявка отклонена')),
 
             Action::make('setSeller')->label('Продавец')->icon('heroicon-o-user-circle')->color('gray')
                 ->authorize(Permission::AssignSeller)

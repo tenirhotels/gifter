@@ -11,6 +11,7 @@ use App\Exceptions\DomainRuleViolation;
 use App\Filament\Pages\Commissions;
 use App\Filament\Pages\MyCommission;
 use App\Filament\Pages\SellerCommissions;
+use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\CommissionRules\Pages\CreateCommissionRule;
 use App\Models\AuditLog;
 use App\Models\Certificate;
@@ -26,6 +27,7 @@ use App\Services\CertificateManager;
 use App\Services\CommissionManager;
 use App\Services\PaymentManager;
 use App\Services\RefundManager;
+use App\Services\ReservationExceptionManager;
 use App\Services\ServicePricing;
 use App\Support\Money;
 use Filament\Actions\Testing\TestAction;
@@ -334,5 +336,94 @@ class CommissionTest extends TestCase
             ->fillForm(['package_id' => $this->package->id, 'type' => 'percent', 'rate' => 9, 'valid_from' => '2026-07-01', 'valid_until' => '2026-07-10'])
             ->call('create');
         $this->assertSame(2, CommissionRule::count(), 'Пересечение с открытой версией отклонено');
+    }
+
+    public function test_expired_without_booking_returns_by_director_exception_and_commission_follows_redemption(): void
+    {
+        $this->rule();
+        $certificate = $this->sold();
+        $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
+        Carbon::setTestNow('2027-06-01 12:00:00');
+        app(CertificateManager::class)->expireOverdue();
+        $this->assertSame(CertificateStatus::Expired, $certificate->refresh()->status);
+        $this->assertSame(CommissionStatus::Void, $certificate->commission->refresh()->status);
+
+        $manager = app(ReservationExceptionManager::class);
+        $data = ['booking_number' => 'PMS-77', 'guest_name' => 'Иванов Иван', 'arrival' => '2027-06-10', 'departure' => '2027-06-12', 'reason' => 'Гость не успел, номера свободны'];
+
+        $this->actingAs(User::factory()->create(['roles' => [Role::FrontOffice]]));
+        $this->get('/admin/reservation-exceptions')->assertOk();
+        $request = $manager->request($certificate->refresh(), $data);
+        $this->assertTrue($certificate->hasPendingException());
+        try {
+            $manager->request($certificate, $data);
+            $this->fail('Вторая заявка при ожидающей');
+        } catch (DomainRuleViolation) {
+        }
+        $this->assertSame(CertificateStatus::Expired, $certificate->refresh()->status, 'До согласования сертификат не меняется');
+
+        $this->actingAs(User::factory()->create(['roles' => [Role::SalesDirector]]));
+        $manager->approve($request, 'Ок');
+
+        $certificate->refresh();
+        $this->assertSame([CertificateStatus::Reserved, 'PMS-77', '2027-06-12'], [$certificate->status, $certificate->pms_booking_number, $certificate->valid_until->toDateString()]);
+        $this->assertNull($certificate->reservation_review_status, 'Финансы не перепроверяют поздний срок — решение принял директор');
+        $this->assertSame(CommissionStatus::PendingRedemption, $certificate->commission->refresh()->status, 'Комиссия не потеряна и не начислена до погашения');
+
+        Carbon::setTestNow('2027-06-10 12:00:00');
+        $this->actingAs(User::factory()->create(['roles' => [Role::FrontOffice]]));
+        app(CertificateManager::class)->transition($certificate->refresh(), CertificateStatus::InUse);
+        app(CertificateManager::class)->transition($certificate->refresh(), CertificateStatus::Used);
+        $this->assertSame(CommissionStatus::Earned, $certificate->commission->refresh()->status);
+        $this->assertSame(1, AuditLog::where('event', 'reservation_exception_approved')->count());
+    }
+
+    public function test_exception_can_be_rejected_and_is_only_for_expired(): void
+    {
+        $this->rule();
+        $active = $this->sold();
+        $manager = app(ReservationExceptionManager::class);
+        $data = ['booking_number' => 'PMS-9', 'guest_name' => 'Иванов Иван', 'arrival' => '2026-06-10', 'departure' => '2026-06-12', 'reason' => 'x'];
+        try {
+            $manager->request($active, $data);
+            $this->fail('Активный сертификат — обычная бронь');
+        } catch (DomainRuleViolation) {
+        }
+
+        $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
+        Carbon::setTestNow('2027-06-01 12:00:00');
+        app(CertificateManager::class)->expireOverdue();
+        $request = $manager->request($active->refresh(), ['arrival' => '2027-06-10', 'departure' => '2027-06-12'] + $data);
+        $this->actingAs(User::factory()->create(['roles' => [Role::SalesDirector]]));
+        try {
+            $manager->reject($request, ' ');
+            $this->fail('Отказ без причины');
+        } catch (DomainRuleViolation) {
+        }
+        $manager->reject($request, 'Нет свободных номеров');
+        $this->assertSame(CertificateStatus::Expired, $active->refresh()->status);
+        $this->assertSame(CommissionStatus::Void, $active->commission->refresh()->status);
+    }
+
+    public function test_exception_actions_on_the_certificate_card(): void
+    {
+        $this->rule();
+        $certificate = $this->sold();
+        $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
+        Carbon::setTestNow('2027-06-01 12:00:00');
+        app(CertificateManager::class)->expireOverdue();
+
+        $this->actingAs(User::factory()->create(['roles' => [Role::FrontOffice]]));
+        Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
+            ->assertActionVisible('requestException')->assertActionHidden('approveException')
+            ->callAction('requestException', ['booking_number' => 'PMS-5', 'guest_name' => 'Иванов Иван', 'arrival' => '2027-06-10', 'departure' => '2027-06-12', 'reason' => 'Свободны номера'])
+            ->assertHasNoActionErrors();
+        $this->assertTrue($certificate->refresh()->hasPendingException());
+
+        $this->actingAs(User::factory()->create(['roles' => [Role::SalesDirector]]));
+        Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
+            ->assertActionHidden('requestException')->assertActionVisible('approveException')
+            ->callAction('approveException', ['comment' => 'Ок']);
+        $this->assertSame(CertificateStatus::Reserved, $certificate->refresh()->status);
     }
 }

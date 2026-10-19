@@ -46,6 +46,9 @@ enum Permission: string
     case ApproveRefunds = 'refunds.approve';
     /** Проверка броней с несовпадением имени или в последние дни срока (фаза 6). */
     case ReviewReservations = 'reservations.review';
+    /** Бронь по исключению для истёкшего сертификата: запросить (Front Office) и согласовать (директор). */
+    case RequestReservationException = 'reservations.exception_request';
+    case ApproveReservationException = 'reservations.exception_approve';
 
     // Комиссии продавцов
     /** Правила комиссии по пакетам (версии). Только администратор. */
@@ -96,6 +99,8 @@ enum Permission: string
             self::ManageCatalog, self::ManagePrices, self::ApproveComplimentary => [Role::SalesDirector],
             // Себестоимость и маржа — не продажам (решение 21.10.2026).
             self::ViewCosts => [Role::SalesDirector, Role::Finance],
+            self::RequestReservationException => [Role::FrontOffice],
+            self::ApproveReservationException => [Role::SalesDirector],
             self::ViewOwnCommissions => $sales,
             self::ViewAllCommissions => [Role::SalesDirector, Role::Finance],
             self::ApproveCommissions => [Role::SalesDirector],

@@ -103,6 +103,17 @@ class Certificate extends Model
         return $this->belongsTo(User::class, 'sold_by');
     }
 
+    public function reservationExceptions(): HasMany
+    {
+        return $this->hasMany(ReservationException::class);
+    }
+
+    /** Ждёт ли решения директора заявка на бронь по исключению. */
+    public function hasPendingException(): bool
+    {
+        return $this->reservationExceptions()->where('status', 'pending')->exists();
+    }
+
     public function commission(): HasOne
     {
         return $this->hasOne(CertificateCommission::class);

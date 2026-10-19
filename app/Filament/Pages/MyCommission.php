@@ -68,7 +68,9 @@ class MyCommission extends Page implements HasTable
                 TextColumn::make('total_amount')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state))->sortable(),
                 TextColumn::make('status')->label('Статус')->badge(),
                 TextColumn::make('reservation')->label('Бронь')
-                    ->state(fn (Certificate $record) => $record->hasReservation() ? $record->reservationLabel() : ($record->status->isFinal() ? '—' : 'нет брони'))
+                    ->state(fn (Certificate $record) => $record->hasReservation() ? $record->reservationLabel()
+                        : ($record->status === CertificateStatus::Expired ? ($record->hasPendingException() ? 'бронь по исключению ждёт директора' : 'истёк — бронь по исключению')
+                            : ($record->status->isFinal() ? '—' : 'нет брони')))
                     ->color(fn (Certificate $record) => ! $record->hasReservation() && $record->status === CertificateStatus::Active ? 'warning' : null)
                     ->wrap(),
                 TextColumn::make('commission.amount')->label('Комиссия')->placeholder('—')
