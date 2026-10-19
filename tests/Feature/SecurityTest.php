@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Exceptions\DomainRuleViolation;
 use App\Filament\Auth\EditProfile;
 use App\Filament\Pages\Security;
+use App\Filament\Resources\Customers\Pages\CreateCustomer;
 use App\Filament\Resources\Customers\Pages\ListCustomers;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Mail\BackupArchiveMail;
@@ -43,7 +44,7 @@ class SecurityTest extends TestCase
         $this->assertStringNotContainsString('701', $raw->phone);
         $this->assertStringNotContainsString('Example', $raw->email);
         $this->assertStringNotContainsString('VIP', $raw->notes);
-        $this->assertSame('+7 701 123 45 67', $customer->fresh()->phone);
+        $this->assertSame('+77011234567', $customer->fresh()->phone, 'Хранится в международном формате без пробелов');
 
         $this->assertTrue(Customer::whereContact('8 (701) 123-45-67')->first()->is($customer));
         $this->assertTrue(Customer::whereContact('anna@example.com')->first()->is($customer));
@@ -219,5 +220,24 @@ class SecurityTest extends TestCase
         $this->artisan('gifter:create-user', ['--name' => 'Админ', '--email' => 'admin@example.test'])
             ->expectsOutputToContain('двухфакторный вход')
             ->assertSuccessful();
+    }
+
+    public function test_phone_must_be_international(): void
+    {
+        $this->actingAs($this->admin());
+
+        Livewire::test(CreateCustomer::class)
+            ->fillForm(['type' => 'individual', 'last_name' => 'Коннор', 'first_name' => 'Джон', 'phone' => '64564556'])
+            ->call('create')
+            ->assertHasFormErrors(['phone']);
+
+        Livewire::test(CreateCustomer::class)
+            ->fillForm(['type' => 'individual', 'last_name' => 'Коннор', 'first_name' => 'Джон', 'phone' => '8 (701) 123-45-67'])
+            ->call('create')
+            ->assertHasNoFormErrors();
+        $this->assertSame('+77011234567', Customer::where('last_name', 'Коннор')->sole()->phone);
+
+        $this->expectException(DomainRuleViolation::class);
+        Recipient::create(['last_name' => 'Ким', 'first_name' => 'Ли', 'phone' => '123']);
     }
 }

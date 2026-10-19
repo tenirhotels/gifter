@@ -3,6 +3,7 @@
 namespace App\Models\Concerns;
 
 use App\Support\ContactHash;
+use App\Support\PhoneNumber;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -17,6 +18,10 @@ trait HasEncryptedContacts
     public static function bootHasEncryptedContacts(): void
     {
         static::saving(function ($model) {
+            if ($model->isDirty('phone')) {
+                PhoneNumber::assertValid($model->phone);
+                $model->phone = PhoneNumber::normalize($model->phone);
+            }
             if ($model->isDirty('phone') || ! $model->exists) {
                 $model->phone_hash = ContactHash::phone($model->phone);
             }

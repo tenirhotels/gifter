@@ -5,6 +5,7 @@ namespace App\Filament\Support;
 use App\Enums\Permission;
 use App\Models\AuditLog;
 use App\Support\ContactMask;
+use App\Support\PhoneNumber;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
@@ -33,9 +34,21 @@ final class ContactFields
     public static function contactInputs(): array
     {
         return [
-            TextInput::make('phone')->label('Телефон')->tel()->maxLength(32),
+            self::phoneInput(),
             TextInput::make('email')->label('Email')->email()->maxLength(255),
         ];
+    }
+
+    /** Телефон в международном формате; хранится без пробелов (+77011234567). */
+    public static function phoneInput(string $name = 'phone'): TextInput
+    {
+        return TextInput::make($name)->label('Телефон')->tel()->telRegex('/^[\d\s()+\-.]+$/')->maxLength(32)->placeholder('+7 701 123 45 67')
+            ->rule(fn () => function (string $attribute, mixed $value, \Closure $fail) {
+                if (! PhoneNumber::isValid($value)) {
+                    $fail(PhoneNumber::HINT.'.');
+                }
+            })
+            ->dehydrateStateUsing(fn (?string $state) => PhoneNumber::normalize($state));
     }
 
     /** @return list<TextColumn> */
@@ -61,7 +74,7 @@ final class ContactFields
             ->modalDescription('Открытие контактов записано в журнал аудита.')
             ->mountUsing(fn (Model $record) => self::logReveal($person($record)))
             ->schema(fn (Model $record) => [
-                TextEntry::make('phone')->label('Телефон')->state($person($record)?->phone)->placeholder('—')->copyable(),
+                TextEntry::make('phone')->label('Телефон')->state(PhoneNumber::format($person($record)?->phone))->placeholder('—')->copyable(),
                 TextEntry::make('email')->label('Email')->state($person($record)?->email)->placeholder('—')->copyable(),
             ])
             ->modalSubmitAction(false)

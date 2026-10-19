@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Providers\Schemas;
 
 use App\Enums\LegalForm;
 use App\Enums\ProviderType;
+use App\Filament\Support\ContactFields;
 use App\Support\KazakhstanBin;
 use Closure;
 use Filament\Forms\Components\Select;
@@ -38,7 +39,7 @@ class ProviderForm
                     }),
             ]),
             TextInput::make('contact_person')->label('Контактное лицо')->maxLength(255),
-            TextInput::make('phone')->label('Телефон')->tel()->maxLength(32),
+            ContactFields::phoneInput(),
             TextInput::make('email')->label('Email')->email()->maxLength(255),
             Toggle::make('is_active')->label('Активен')->default(true),
             Textarea::make('notes')->label('Примечание (условия, как заказывать)')->columnSpanFull(),

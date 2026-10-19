@@ -17,7 +17,7 @@ class ServiceFulfillment extends Model
 
     protected $fillable = [
         'certificate_id', 'certificate_item_id', 'provider_id', 'status', 'requires_scheduling', 'requires_confirmation',
-        'scheduled_date', 'scheduled_time', 'request_details', 'requested_at', 'confirmed_at', 'completed_at',
+        'scheduled_date', 'scheduled_time', 'guests', 'location', 'request_details', 'requested_at', 'confirmed_at', 'completed_at',
         'cancelled_at', 'cancellation_reason', 'notes', 'updated_by',
     ];
 

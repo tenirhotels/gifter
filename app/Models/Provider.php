@@ -6,6 +6,7 @@ use App\Enums\LegalForm;
 use App\Enums\ProviderType;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\PreventsDeletion;
+use App\Support\PhoneNumber;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -21,6 +22,16 @@ class Provider extends Model
     protected function casts(): array
     {
         return ['type' => ProviderType::class, 'legal_form' => LegalForm::class, 'is_active' => 'boolean'];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $provider) {
+            if ($provider->isDirty('phone')) {
+                PhoneNumber::assertValid($provider->phone);
+                $provider->phone = PhoneNumber::normalize($provider->phone);
+            }
+        });
     }
 
     public function isExternal(): bool

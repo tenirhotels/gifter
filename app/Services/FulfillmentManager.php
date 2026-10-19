@@ -16,7 +16,9 @@ use Illuminate\Support\Facades\DB;
  *
  * Заявки появляются при отметке брони — для каждой услуги с признаком «требует
  * подготовки» (решение 27.10.2026). Путь: Ожидает → Заявка отправлена → Время
- * назначено → Подтверждено → Выполнено; отменить можно на любом шаге до выполнения.
+ * назначено → Подтверждено → Выполнено. Вручную услугу не отменяют (сертификат используется
+ * целиком): можно снять подтверждение или отозвать заявку — статус возвращается на шаг назад.
+ * «Отменено» — только вместе с бронью или сертификатом (снятие брони, погашение, истечение, аннулирование).
  * Статус заявки — подготовка услуги, а не частичное погашение: сертификат гасится
  * только целиком. Каждое изменение пишется в историю сертификата.
  */
@@ -45,10 +47,12 @@ class FulfillmentManager
         });
     }
 
-    public function request(ServiceFulfillment $fulfillment, ?string $details = null): ServiceFulfillment
+    /** Заявка отправлена поставщику: текст, гости и место (для трансфера — откуда забрать). */
+    public function request(ServiceFulfillment $fulfillment, ?string $details = null, ?string $guests = null, ?string $location = null): ServiceFulfillment
     {
-        return $this->change($fulfillment, [FulfillmentStatus::Pending], FulfillmentStatus::Requested, function (ServiceFulfillment $f) use ($details) {
-            return ['request_details' => $this->clean($details) ?? $f->request_details, 'requested_at' => now()];
+        return $this->change($fulfillment, [FulfillmentStatus::Pending], FulfillmentStatus::Requested, function (ServiceFulfillment $f) use ($details, $guests, $location) {
+            return ['request_details' => $this->clean($details) ?? $f->request_details, 'requested_at' => now(),
+                'guests' => $this->clean($guests) ?? $f->guests, 'location' => $this->clean($location) ?? $f->location];
         }, $this->clean($details));
     }
 
@@ -101,12 +105,37 @@ class FulfillmentManager
             }, $this->clean($note));
     }
 
-    public function cancel(ServiceFulfillment $fulfillment, string $reason): ServiceFulfillment
+    /**
+     * Шаг назад, услуга остаётся: «Подтверждено» → «Время назначено» (или «Заявка отправлена», если времени нет);
+     * «Заявка отправлена» / «Время назначено» → «Ожидает» (заявку нужно отправить заново). Причина обязательна.
+     */
+    public function revert(ServiceFulfillment $fulfillment, string $reason): ServiceFulfillment
     {
-        $reason = $this->clean($reason) ?? throw new DomainRuleViolation('Укажите причину отмены заявки.');
+        $reason = $this->clean($reason) ?? throw new DomainRuleViolation('Укажите причину.');
+        $target = match ($fulfillment->status) {
+            FulfillmentStatus::Confirmed => $fulfillment->scheduled_date ? FulfillmentStatus::Scheduled : FulfillmentStatus::Requested,
+            FulfillmentStatus::Requested, FulfillmentStatus::Scheduled => FulfillmentStatus::Pending,
+            default => throw new DomainRuleViolation("Заявка в статусе «{$fulfillment->status->getLabel()}»: отменять нечего."),
+        };
 
-        return $this->change($fulfillment, FulfillmentStatus::open(), FulfillmentStatus::Cancelled,
-            fn () => ['cancelled_at' => now(), 'cancellation_reason' => $reason], $reason, requireActiveCertificate: false);
+        return $this->change($fulfillment, [$fulfillment->status], $target, function (ServiceFulfillment $f) use ($target, $reason) {
+            $changes = ['confirmed_at' => null, 'notes' => $this->appendNote($f->notes, $reason)];
+            if ($target === FulfillmentStatus::Pending) {
+                $changes += ['requested_at' => null, 'scheduled_date' => null, 'scheduled_time' => null];
+            }
+
+            return $changes;
+        }, $reason);
+    }
+
+    /** Название шага назад для кнопки: что именно отменяется. */
+    public static function revertLabel(FulfillmentStatus $status): ?string
+    {
+        return match ($status) {
+            FulfillmentStatus::Confirmed => 'Снять подтверждение',
+            FulfillmentStatus::Requested, FulfillmentStatus::Scheduled => 'Отозвать заявку',
+            default => null,
+        };
     }
 
     /** Заявки по услугам «требует подготовки», у которых ещё нет открытой заявки. */

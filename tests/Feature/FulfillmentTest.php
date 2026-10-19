@@ -10,6 +10,7 @@ use App\Exceptions\DomainRuleViolation;
 use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\Certificates\RelationManagers\FulfillmentsRelationManager;
 use App\Filament\Resources\Fulfillments\Pages\ListServiceFulfillments;
+use App\Filament\Support\FulfillmentActions;
 use App\Filament\Widgets\FrontOfficeQueueWidget;
 use App\Models\Certificate;
 use App\Models\Customer;
@@ -146,7 +147,7 @@ class FulfillmentTest extends TestCase
 
         foreach ([fn () => $manager->schedule($dinner, Carbon::parse('2026-10-20'), '25:00'),
             fn () => $manager->schedule($dinner, Carbon::parse('2027-12-01'), '19:00'),
-            fn () => $manager->cancel($dinner, ' ')] as $i => $bad) {
+            fn () => $manager->revert($dinner, 'нечего отменять — заявка ещё не отправлена')] as $i => $bad) {
             try {
                 $bad();
                 $this->fail("Правило {$i}");
@@ -222,7 +223,7 @@ class FulfillmentTest extends TestCase
         Livewire::test(ListServiceFulfillments::class)
             ->assertCanSeeTableRecords([$dinner])
             ->mountAction(TestAction::make('requestFulfillment')->table($dinner))
-            ->assertSchemaStateSet(['request_details' => "Сертификат {$certificate->number}\nГость: Иванов Иван\nУслуга: Ужин × 2\nКогда: уточняется\nСертификат действует до 18.04.2027"])
+            ->assertSchemaStateSet(['request_details' => "Заявка от TENIR\nУслуга: Ужин × 2\nГости: Иванов Иван\nПроживание: заезд 18.10.2026, выезд 20.10.2026\nКогда: уточним"])
             ->callMountedAction();
         $this->assertSame(FulfillmentStatus::Requested, $dinner->refresh()->status);
 
@@ -243,7 +244,7 @@ class FulfillmentTest extends TestCase
         $this->as(Role::Sales);
         $this->get('/admin/fulfillments')->assertForbidden();
         Livewire::test(FulfillmentsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
-            ->assertActionHidden(TestAction::make('cancelFulfillment')->table($dinner));
+            ->assertActionHidden(TestAction::make('revertFulfillment')->table($dinner));
     }
 
     public function test_certificate_tab_shows_requests(): void
@@ -252,9 +253,60 @@ class FulfillmentTest extends TestCase
 
         Livewire::test(FulfillmentsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
             ->assertSee('Ужин × 2')->assertSee('нужно: время, подтверждение')->assertSee('Ресторан')->assertSee('Ожидает')
-            ->callAction(TestAction::make('cancelFulfillment')->table($this->dinner($certificate)), ['reason' => 'Гость отказался от ужина']);
+            ->assertActionHidden(TestAction::make('revertFulfillment')->table($this->dinner($certificate)));
+    }
 
-        $this->assertSame(FulfillmentStatus::Cancelled, $this->dinner($certificate)->status);
+    public function test_revert_steps_back_and_keeps_the_service(): void
+    {
+        $certificate = $this->reserved();
+        $manager = app(FulfillmentManager::class);
+        $dinner = $this->dinner($certificate);
+        $manager->request($dinner, 'текст', 'Иванов Иван', 'Ресторан, 2 этаж');
+        $manager->schedule($dinner, Carbon::parse('2026-10-20'), '19:00');
+        $manager->confirm($dinner);
+
+        Livewire::test(FulfillmentsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
+            ->assertActionHasLabel(TestAction::make('revertFulfillment')->table($dinner), 'Снять подтверждение')
+            ->callAction(TestAction::make('revertFulfillment')->table($dinner), ['reason' => 'Ресторан перенёс бронь']);
+
+        $dinner->refresh();
+        $this->assertSame([FulfillmentStatus::Scheduled, '20.10.2026 19:00'], [$dinner->status, $dinner->whenLabel()]);
+        $this->assertNull($dinner->confirmed_at);
+        $this->assertStringContainsString('Ресторан перенёс бронь', $dinner->notes);
+
+        $manager->revert($dinner, 'Ресторан закрыт, ищем другой');
+        $dinner->refresh();
+        $this->assertSame(FulfillmentStatus::Pending, $dinner->status);
+        $this->assertNull($dinner->scheduled_date);
+        $this->assertSame(['Иванов Иван', 'Ресторан, 2 этаж'], [$dinner->guests, $dinner->location]);
+        $this->assertSame(1, $certificate->fulfillments()->where('certificate_item_id', $dinner->certificate_item_id)->count(), 'Услуга остаётся, новая заявка не создаётся');
+        $this->assertSame(0, $certificate->fulfillments()->where('status', FulfillmentStatus::Cancelled)->count());
+
+        $this->expectException(DomainRuleViolation::class);
+        $manager->revert($dinner, 'уже ожидает');
+    }
+
+    public function test_request_text_for_provider_has_no_certificate_details(): void
+    {
+        $certificate = $this->reserved();
+        $certificate->update(['booking_guest_name' => 'Baimukhanov Akhan', 'arrival_date' => '2026-10-20', 'departure_date' => '2026-10-22']);
+        $dinner = $this->dinner($certificate->refresh());
+
+        $text = FulfillmentActions::requestTemplate($dinner, FulfillmentActions::defaultGuests($dinner), 'Аэропорт, рейс KC 852');
+
+        $this->assertStringContainsString('Гости: Baimukhanov Akhan', $text);
+        $this->assertStringContainsString('заезд 20.10.2026, выезд 22.10.2026', $text);
+        $this->assertStringContainsString('Место: Аэропорт, рейс KC 852', $text);
+        $this->assertStringNotContainsString($certificate->number, $text);
+        $this->assertStringNotContainsString('действует до', $text);
+
+        Livewire::test(FulfillmentsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
+            ->mountAction(TestAction::make('requestFulfillment')->table($dinner))
+            ->assertSchemaStateSet(['guests' => 'Baimukhanov Akhan'], 'mountedActionSchema0')
+            ->setActionData(['location' => 'Аэропорт'])
+            ->callMountedAction();
+
+        $this->assertSame(['Baimukhanov Akhan', 'Аэропорт', FulfillmentStatus::Requested], [$dinner->refresh()->guests, $dinner->location, $dinner->status]);
     }
 
     public function test_fulfillments_cannot_be_deleted(): void
