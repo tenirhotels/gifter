@@ -28,6 +28,7 @@ class AdminCorrections
     public function __construct(
         private readonly CertificateHistoryRecorder $history,
         private readonly FulfillmentManager $fulfillments,
+        private readonly CommissionManager $commissions,
     ) {}
 
     public function setStatus(Certificate $certificate, CertificateStatus $target, string $reason): Certificate
@@ -51,13 +52,33 @@ class AdminCorrections
                 $changes['issued_at'] = now();
                 $changes['verification_token'] = $certificate->verification_token ?? Str::random(32);
             }
+            // Комиссия: откат погашения возможен, пока она не согласована и не выплачена.
+            if ($from === CertificateStatus::Used && $target !== CertificateStatus::Used) {
+                $this->commissions->revertEarned($certificate);
+            }
             $certificate->update($changes);
             $this->record($certificate, "Статус «{$from->getLabel()}» → «{$target->getLabel()}»", $reason,
                 ['status' => $from->value], ['status' => $target->value]);
             $this->fulfillments->syncWithCertificate($certificate, "Исправление администратора: {$reason}");
+            $this->syncCommission($certificate, $from, $target, $reason);
 
             return $certificate;
         });
+    }
+
+    /** Комиссия продавца следует за исправленным статусом: выпуск — снимок, погашение — начисление, конец без погашения — не начисляется. */
+    private function syncCommission(Certificate $certificate, CertificateStatus $from, CertificateStatus $target, string $reason): void
+    {
+        if ($from === CertificateStatus::Draft && $target !== CertificateStatus::Draft) {
+            $this->commissions->snapshotOnIssue($certificate);
+        }
+        if ($target === CertificateStatus::Used) {
+            $this->commissions->earn($certificate);
+        } elseif (in_array($target, [CertificateStatus::Cancelled, CertificateStatus::Expired], true)) {
+            $this->commissions->void($certificate, "Исправление администратора: {$reason}");
+        } elseif (in_array($from, [CertificateStatus::Cancelled, CertificateStatus::Expired], true)) {
+            $this->commissions->reopen($certificate);
+        }
     }
 
     /** Ошибочно отмеченную оплату или ошибочно отменённый счёт — обратно в «Счёт выставлен». */

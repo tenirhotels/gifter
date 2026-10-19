@@ -7,12 +7,14 @@ use App\Enums\CertificateStatus;
 use App\Enums\ComplimentaryPurpose;
 use App\Enums\HistoryEvent;
 use App\Enums\PaymentStatus;
+use App\Enums\Permission;
 use App\Enums\ReservationReview;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\Certificate;
 use App\Models\CertificateItem;
 use App\Models\Package;
 use App\Models\Service;
+use App\Models\User;
 use App\Support\Money;
 use App\Support\ValidityChoice;
 use Illuminate\Support\Carbon;
@@ -30,6 +32,7 @@ class CertificateManager
         private readonly ServicePricing $pricing,
         private readonly CertificateHistoryRecorder $history,
         private readonly FulfillmentManager $fulfillments,
+        private readonly CommissionManager $commissions,
     ) {}
 
     /**
@@ -75,6 +78,8 @@ class CertificateManager
                 'currency' => config('gifter.currency'),
                 'notes' => $data['notes'] ?? null,
                 'created_by' => auth()->id(),
+                // Продавец — автор оформления; менеджер продаж или администратор может назначить другого.
+                'sold_by' => $this->sellerId($data['sold_by'] ?? null),
                 'updated_by' => auth()->id(),
             ]);
             $this->history->record($certificate, HistoryEvent::Created,
@@ -284,6 +289,45 @@ class CertificateManager
             after: ['package_id' => $package->id, 'items' => $certificate->items()->get()->map($this->itemSnapshot(...))->all()]);
     }
 
+    /**
+     * Продавец сертификата — для комиссии. Меняется только в черновике (менеджер продаж или администратор),
+     * после выпуска закреплён навсегда. В группе продавец у всех сертификатов один.
+     */
+    public function setSeller(Certificate $certificate, int $sellerId, bool $viaBatch = false): Certificate
+    {
+        return $this->locked($certificate, function (Certificate $certificate) use ($sellerId, $viaBatch) {
+            $this->assertDraft($certificate);
+            $this->assertNotInBatch($certificate, $viaBatch);
+            $seller = User::query()->where('is_active', true)->find($sellerId);
+            if (! $seller || ! $seller->hasPermission(Permission::CreateCertificates)) {
+                throw new DomainRuleViolation('Продавцом может быть только действующий сотрудник отдела продаж.');
+            }
+            if ((int) $certificate->sold_by === $sellerId) {
+                return $certificate;
+            }
+            $before = ['sold_by' => $certificate->sold_by];
+            $certificate->update(['sold_by' => $sellerId, 'updated_by' => auth()->id()]);
+            $this->history->record($certificate, HistoryEvent::Updated, "Продавец: {$seller->name}", $before, ['sold_by' => $sellerId]);
+
+            return $certificate;
+        });
+    }
+
+    private function sellerId(?int $requested): ?int
+    {
+        if ($requested && $requested !== auth()->id()) {
+            if (! auth()->user()?->can(Permission::AssignSeller)) {
+                throw new DomainRuleViolation('Назначить другого продавца может менеджер продаж.');
+            }
+            $seller = User::query()->where('is_active', true)->find($requested);
+            if (! $seller || ! $seller->hasPermission(Permission::CreateCertificates)) {
+                throw new DomainRuleViolation('Продавцом может быть только действующий сотрудник отдела продаж.');
+            }
+        }
+
+        return $requested ?: auth()->id();
+    }
+
     /** Получатель указывается или меняется в любой момент до погашения. */
     public function setRecipient(Certificate $certificate, ?int $recipientId): Certificate
     {
@@ -360,6 +404,8 @@ class CertificateManager
             ]);
             $this->history->record($certificate, HistoryEvent::Issued, null,
                 ['status' => CertificateStatus::Draft->value], ['status' => CertificateStatus::Active->value]);
+            // Продавец закреплён навсегда; снимок комиссии — по правилу на дату продажи (начисляется при погашении).
+            $this->commissions->snapshotOnIssue($certificate);
 
             return $certificate;
         });
@@ -404,6 +450,12 @@ class CertificateManager
                 $reason, ['status' => $from->value], ['status' => $target->value]);
             // Бронь открывает заявки по услугам, требующим подготовки; снятие брони и погашение закрывают открытые.
             $this->fulfillments->syncWithCertificate($certificate);
+            // Погашение начисляет комиссию продавца; истечение срока — не начисляет.
+            if ($target === CertificateStatus::Used) {
+                $this->commissions->earn($certificate);
+            } elseif ($target === CertificateStatus::Expired) {
+                $this->commissions->void($certificate, $reason ?: 'Срок действия сертификата истёк');
+            }
 
             return $certificate;
         });
@@ -440,6 +492,7 @@ class CertificateManager
             $this->history->record($certificate, HistoryEvent::Cancelled, $reason,
                 ['status' => $from->value], ['status' => CertificateStatus::Cancelled->value]);
             $this->fulfillments->syncWithCertificate($certificate);
+            $this->commissions->void($certificate, "Сертификат аннулирован: {$reason}");
 
             return $certificate;
         });

@@ -3,9 +3,11 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\Role;
+use App\Filament\Pages\Commissions;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Services\ServiceResource;
 use App\Filament\Support\RoleQueueWidget;
+use App\Services\CommissionManager;
 use App\Support\Money;
 
 class DirectorQueueWidget extends RoleQueueWidget
@@ -42,6 +44,8 @@ class DirectorQueueWidget extends RoleQueueWidget
                 (clone $sold)->count().' серт. · маржа '.Money::format(Money::fromMinor($revenue - $cost)), 'heroicon-o-chart-bar'),
             $this->metric('Маркетинговый расход за месяц', Money::format((clone $marketing)->sum('marketing_cost')),
                 (clone $marketing)->count().' бесплатных · по себестоимости', 'heroicon-o-megaphone'),
+            $this->metric('Комиссии на согласовании', Money::format(Money::fromMinor(collect(app(CommissionManager::class)->summary())->sum('to_approve_minor'))),
+                'начислены за погашенные сертификаты', 'heroicon-o-receipt-percent')->url(Commissions::getUrl()),
             $this->counter('Услуги без цены на сегодня', $q->servicesWithoutPrice(), ServiceResource::getUrl('index'), 'danger', 'не продаются', 'heroicon-o-tag'),
             $this->counter('Услуги без себестоимости', $q->servicesWithoutCost(), ServiceResource::getUrl('index'), 'warning', 'маржа неполная', 'heroicon-o-calculator'),
         ];

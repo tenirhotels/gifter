@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Подарочный сертификат — неделимый пакет погашения: все услуги
@@ -30,7 +31,7 @@ class Certificate extends Model
     protected $fillable = [
         'number', 'verification_token', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'complimentary_purpose', 'batch_id', 'complimentary_approved_by', 'complimentary_approved_at', 'sold_at', 'valid_from',
         'valid_until', 'custom_validity', 'total_amount', 'total_cost', 'payable_amount', 'marketing_cost', 'currency', 'issued_at', 'cancelled_at', 'cancellation_reason',
-        'notes', 'created_by', 'updated_by',
+        'notes', 'created_by', 'sold_by', 'updated_by',
         'pms_booking_number', 'booking_guest_name', 'arrival_date', 'departure_date', 'name_match', 'reservation_note',
         'reservation_review_status', 'reservation_reviewed_by', 'reservation_reviewed_at', 'reservation_review_comment',
     ];
@@ -94,6 +95,17 @@ class Certificate extends Model
     public function fulfillments(): HasMany
     {
         return $this->hasMany(ServiceFulfillment::class);
+    }
+
+    /** Продавец, за которым закреплена комиссия (по умолчанию — автор оформления). */
+    public function seller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sold_by');
+    }
+
+    public function commission(): HasOne
+    {
+        return $this->hasOne(CertificateCommission::class);
     }
 
     public function payments(): HasMany

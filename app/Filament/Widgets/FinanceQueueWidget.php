@@ -4,11 +4,14 @@ namespace App\Filament\Widgets;
 
 use App\Enums\RefundStatus;
 use App\Enums\Role;
+use App\Filament\Pages\Commissions;
 use App\Filament\Pages\ReservationReviews;
 use App\Filament\Resources\Payments\PaymentResource;
 use App\Filament\Resources\Refunds\RefundResource;
 use App\Filament\Support\RoleQueueWidget;
+use App\Services\CommissionManager;
 use App\Support\Money;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class FinanceQueueWidget extends RoleQueueWidget
 {
@@ -39,7 +42,16 @@ class FinanceQueueWidget extends RoleQueueWidget
             $this->counter('Брони на проверке', $q->reservationsUnderReview(), ReservationReviews::getUrl(), 'warning', 'имя не совпало или поздняя бронь', 'heroicon-o-shield-check'),
             $this->counter('Возвраты на согласовании', $q->refunds(RefundStatus::Requested), $refunds('requested'), 'danger', 'нужно ваше решение', 'heroicon-o-receipt-refund'),
             $this->counter('Возвраты ждут выплаты', $q->refunds(RefundStatus::Approved), $refunds('approved'), 'warning', 'отметить выплату', 'heroicon-o-arrow-uturn-left'),
+            $this->commissionTile('approved_minor', 'Комиссии к выплате', 'согласованы директором · отметить выплату'),
             $this->metric('Поступило за месяц', Money::format((clone $received)->sum('amount')), (clone $received)->count().' оплат', 'heroicon-o-banknotes'),
         ];
+    }
+
+    private function commissionTile(string $key, string $label, string $hint): Stat
+    {
+        $minor = collect(app(CommissionManager::class)->summary())->sum($key);
+        $stat = $this->metric($label, Money::format(Money::fromMinor($minor)), $hint, 'heroicon-o-receipt-percent');
+
+        return $stat->url(Commissions::getUrl());
     }
 }

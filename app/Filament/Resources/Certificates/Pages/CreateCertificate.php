@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Certificates\Pages;
 
 use App\Enums\PaymentMethod;
+use App\Enums\Permission;
 use App\Exceptions\DomainRuleViolation;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
 use App\Filament\Resources\Certificates\CertificateResource;
@@ -12,6 +13,7 @@ use App\Models\CertificateBatch;
 use App\Models\Customer;
 use App\Models\Package;
 use App\Models\Service;
+use App\Models\User;
 use App\Services\CertificateBatchManager;
 use App\Services\CertificateManager;
 use App\Services\PaymentManager;
@@ -73,6 +75,11 @@ class CreateCertificate extends CreateRecord
                         ->minValue(1)->maxValue(CertificateBatchManager::MAX_QUANTITY)->default(1)->required()->live(onBlur: true)
                         ->helperText('Больше 1 — группа: общий счёт для платных, получатель у каждого свой.'),
                     $soldAt,
+                    // Комиссия за погашение — продавцу; по умолчанию тот, кто оформляет. Другого назначает менеджер продаж.
+                    Select::make('sold_by')->label('Продавец')->options(fn () => User::sellerOptions())->default(fn () => auth()->id())
+                        ->searchable()
+                        ->visible(fn (Get $get) => auth()->user()?->can(Permission::AssignSeller) && ! CertificateForm::isComplimentary($get))
+                        ->helperText('Получит комиссию, когда сертификат будет погашен.'),
                 ]),
                 Grid::make(2)->visible(fn (Get $get) => CertificateForm::isComplimentary($get))->schema([
                     ...CertificateForm::complimentaryFields(),

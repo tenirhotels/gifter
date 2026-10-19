@@ -80,6 +80,14 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         return $this->is_active && $this->roles?->isNotEmpty();
     }
 
+    /** Сотрудники, которые могут быть продавцом сертификата (для выбора). @return array<int, string> */
+    public static function sellerOptions(): array
+    {
+        return static::query()->where('is_active', true)->orderBy('name')->get()
+            ->filter(fn (self $user) => $user->hasPermission(Permission::CreateCertificates))
+            ->mapWithKeys(fn (self $user) => [$user->id => $user->name])->all();
+    }
+
     public function hasRole(Role ...$roles): bool
     {
         return $this->roles?->contains(fn (Role $role) => in_array($role, $roles, true)) ?? false;

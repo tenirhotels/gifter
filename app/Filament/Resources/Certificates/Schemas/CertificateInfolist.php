@@ -68,6 +68,16 @@ class CertificateInfolist
                 TextEntry::make('invoiced')->label('Выставлено счетов')->hidden(fn (Certificate $record) => $record->isComplimentary() && ! $record->hasPayablePart())->state(fn (Certificate $record) => Money::format($record->invoicedAmount())),
                 TextEntry::make('creator.name')->label('Создал')->placeholder('—')
                     ->helperText(fn (Certificate $record) => $record->created_at?->format('d.m.Y H:i')),
+                TextEntry::make('seller.name')->label('Продавец')->placeholder('—')
+                    ->helperText('Комиссия закреплена за продавцом навсегда после выпуска.')
+                    ->visible(fn (Certificate $record) => ! $record->isComplimentary()),
+                TextEntry::make('commission_info')->label('Комиссия продавца')
+                    ->state(fn (Certificate $record) => $record->commission
+                        ? Money::format($record->commission->amount).' · '.$record->commission->status->getLabel()
+                        : 'не предусмотрена')
+                    ->helperText(fn (Certificate $record) => $record->commission ? $record->commission->ruleLabel().' от '.Money::format($record->commission->sale_price).' — правило на дату продажи' : null)
+                    ->visible(fn (Certificate $record) => ! $record->isComplimentary() && ! $record->isDraft()
+                        && (auth()->user()?->can(Permission::ViewAllCommissions) || $record->sold_by === auth()->id())),
                 TextEntry::make('issued_at')->label('Выпущен')->dateTime('d.m.Y H:i')->placeholder('ещё не выпущен'),
             ]),
             // Бронь (фаза 6): номер PMS, гость, даты, сверка имени и проверка Финансов.

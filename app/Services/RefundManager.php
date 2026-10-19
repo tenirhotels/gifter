@@ -24,6 +24,7 @@ class RefundManager
     public function __construct(
         private readonly CertificateHistoryRecorder $history,
         private readonly FulfillmentManager $fulfillments,
+        private readonly CommissionManager $commissions,
     ) {}
 
     public function request(Certificate $certificate, string $amount, string $reason): Refund
@@ -86,6 +87,7 @@ class RefundManager
             $this->history->record($certificate, HistoryEvent::RefundApproved, $comment,
                 ['status' => $from->value], ['status' => CertificateStatus::Cancelled->value]);
             $this->fulfillments->syncWithCertificate($certificate);
+            $this->commissions->void($certificate, 'Возврат по сертификату: комиссия не начисляется');
 
             return $refund;
         });

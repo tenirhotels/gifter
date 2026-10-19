@@ -16,6 +16,7 @@ use App\Filament\Support\RunsDomainActions;
 use App\Filament\Support\WithoutPageHeading;
 use App\Models\Certificate;
 use App\Models\Recipient;
+use App\Models\User;
 use App\Services\AdminCorrections;
 use App\Services\CertificateDocument;
 use App\Services\CertificateManager;
@@ -59,6 +60,15 @@ class ViewCertificate extends ViewRecord
                 ->color(fn (Certificate $record) => $record->isDraft() ? 'primary' : 'gray')
                 ->visible(fn (Certificate $record) => $record->batch_id && auth()->user()?->can('view', $record->batch))
                 ->url(fn (Certificate $record) => CertificateBatchResource::getUrl('view', ['record' => $record->batch_id])),
+
+            Action::make('setSeller')->label('Продавец')->icon('heroicon-o-user-circle')->color('gray')
+                ->authorize(Permission::AssignSeller)
+                ->visible(fn (Certificate $record) => $record->isDraft() && ! $record->isComplimentary() && ! $record->batch_id)
+                ->modalDescription('Комиссия за погашение достанется выбранному продавцу. После выпуска продавец закрепляется навсегда.')
+                ->fillForm(fn (Certificate $record) => ['seller' => $record->sold_by])
+                ->schema([Select::make('seller')->label('Продавец')->required()->searchable()->options(fn () => User::sellerOptions())])
+                ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
+                    fn () => $this->manager()->setSeller($record, (int) $data['seller']), 'Продавец назначен')),
 
             Action::make('approveComplimentary')->label('Согласовать бесплатный')->icon('heroicon-o-hand-thumb-up')->color('success')
                 ->authorize(Permission::ApproveComplimentary)

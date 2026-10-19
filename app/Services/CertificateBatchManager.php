@@ -85,6 +85,7 @@ class CertificateBatchManager
                     'complimentary_reason' => $complimentary ? $reason : null,
                     'complimentary_purpose' => $purpose,
                     'batch_id' => $batch->id,
+                    'sold_by' => $data['sold_by'] ?? null,
                     'validity' => $validity,
                     'sold_at' => $soldAt,
                     'notes' => $data['notes'] ?? null,

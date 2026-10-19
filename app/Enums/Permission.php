@@ -47,6 +47,18 @@ enum Permission: string
     /** Проверка броней с несовпадением имени или в последние дни срока (фаза 6). */
     case ReviewReservations = 'reservations.review';
 
+    // Комиссии продавцов
+    /** Правила комиссии по пакетам (версии). Только администратор. */
+    case ManageCommissionRules = 'commissions.rules';
+    /** Свои продажи и своя комиссия («Моя мотивация»). */
+    case ViewOwnCommissions = 'commissions.view_own';
+    /** Комиссии всех продавцов. */
+    case ViewAllCommissions = 'commissions.view_all';
+    case ApproveCommissions = 'commissions.approve';
+    case PayCommissions = 'commissions.pay';
+    /** Указать или сменить продавца сертификата в черновике. */
+    case AssignSeller = 'certificates.assign_seller';
+
     // Каталог
     case ViewCatalog = 'catalog.view';
     case ManageCatalog = 'catalog.manage';
@@ -84,7 +96,12 @@ enum Permission: string
             self::ManageCatalog, self::ManagePrices, self::ApproveComplimentary => [Role::SalesDirector],
             // Себестоимость и маржа — не продажам (решение 21.10.2026).
             self::ViewCosts => [Role::SalesDirector, Role::Finance],
-            self::ManageUsers, self::ViewAuditLog, self::AdminCorrections => [],
+            self::ViewOwnCommissions => $sales,
+            self::ViewAllCommissions => [Role::SalesDirector, Role::Finance],
+            self::ApproveCommissions => [Role::SalesDirector],
+            self::PayCommissions => [Role::Finance],
+            self::AssignSeller => [Role::SalesManager],
+            self::ManageCommissionRules, self::ManageUsers, self::ViewAuditLog, self::AdminCorrections => [],
         };
     }
 }
