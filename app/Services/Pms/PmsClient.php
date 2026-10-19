@@ -54,19 +54,22 @@ class PmsClient
     }
 
     /**
-     * Проверка связи и токена: запрос несуществующей брони. 404 — связь и токен в порядке.
+     * Проверка связи и ключей: запрос заведомо несуществующей брони в формате номеров PMS
+     * (`ГГГГММДД-код отеля-N`). «Не найдена» (или «номер не принят» — ответ дан после проверки токена) — связь и ключи в порядке.
      *
      * @return array{ok: bool, message: string}
      */
     public function ping(): array
     {
         try {
-            $this->fetch('00000000-0-0');
+            $this->fetch('20000101-'.$this->settings->property_code.'-1');
 
             return ['ok' => true, 'message' => 'Связь есть.'];
         } catch (PmsException $e) {
-            return str_starts_with($e->getMessage(), 'Бронь №') && str_contains($e->getMessage(), 'не найдена')
-                ? ['ok' => true, 'message' => 'Связь есть, токен принят (тестовая бронь не найдена — так и должно быть).']
+            $reached = str_contains($e->getMessage(), 'не найдена') || str_contains($e->getMessage(), 'PMS не принимает');
+
+            return $reached
+                ? ['ok' => true, 'message' => 'Связь есть, ключи приняты (тестовая бронь не найдена — так и должно быть).']
                 : ['ok' => false, 'message' => $e->getMessage()];
         }
     }

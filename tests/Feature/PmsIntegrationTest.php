@@ -352,4 +352,15 @@ class PmsIntegrationTest extends TestCase
         Livewire::test(PmsSettings::class)->fillForm(['enabled' => true, 'provider' => 'hub', 'base_url' => 'https://hub.example.test', 'property_code' => '9305', 'token' => ''])->call('save');
         $this->assertSame(0, PmsSetting::count());
     }
+
+    public function test_ping_uses_a_number_in_pms_format_and_accepts_format_error_as_reached(): void
+    {
+        $this->enable();
+        $this->next = Http::response(['error' => 'not_found'], 404);
+        PmsClient::make()->ping();
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/bookings/20000101-9305-1'));
+
+        $this->next = Http::response(['error' => 'bad_request'], 400);
+        $this->assertTrue(PmsClient::make()->ping()['ok'], 'Ответ получен после проверки токена — связь есть');
+    }
 }
