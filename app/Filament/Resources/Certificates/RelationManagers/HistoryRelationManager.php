@@ -20,7 +20,7 @@ class HistoryRelationManager extends RelationManager
 {
     protected static string $relationship = 'history';
 
-    protected static ?string $title = 'История';
+    protected static ?string $title = 'История изменений';
 
     public function table(Table $table): Table
     {

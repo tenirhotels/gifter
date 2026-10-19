@@ -11,6 +11,7 @@ use App\Exceptions\DomainRuleViolation;
 use App\Filament\Pages\Commissions;
 use App\Filament\Pages\MyCommission;
 use App\Filament\Pages\SellerCommissions;
+use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\CommissionRules\Pages\CreateCommissionRule;
 use App\Filament\Widgets\MySalesWidget;
@@ -320,6 +321,21 @@ class CommissionTest extends TestCase
         $month->assertSee('Продано');
         $this->assertSame('month', $month->get('period'));
         $month->set('period', 'year')->assertSee(now()->format('Y').' год');
+    }
+
+    public function test_certificate_card_explains_commission_state(): void
+    {
+        $this->rule();
+        $certificate = $this->sold();
+        $this->actingAs($this->seller);
+
+        $page = fn () => $this->get(CertificateResource::getUrl('view', ['record' => $certificate]));
+        $page()->assertOk()->assertSee('Стоимость и комиссия')->assertSee('Комиссия за продажу')->assertSee('Комиссия:')
+            ->assertSee('Ожидает использования сертификата')->assertSee('Комиссия будет начислена после использования сертификата');
+
+        $this->redeem($certificate);
+        $this->actingAs($this->seller);
+        $page()->assertSee('Комиссия начислена');
     }
 
     public function test_seller_is_assigned_by_manager_in_draft_and_locked_after_issue(): void

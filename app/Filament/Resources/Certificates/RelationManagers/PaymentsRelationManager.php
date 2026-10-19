@@ -39,15 +39,17 @@ class PaymentsRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                TextColumn::make('method')->label('Способ'),
+                TextColumn::make('method')->label('Способ оплаты'),
                 TextColumn::make('amount')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state)),
-                TextColumn::make('status')->label('Статус')->badge(),
-                TextColumn::make('invoice_number')->label('№ счёта')->placeholder('—'),
-                TextColumn::make('invoiced_at')->label('Выставлен')->dateTime('d.m.Y H:i'),
-                TextColumn::make('paid_at')->label('Оплачен')->dateTime('d.m.Y H:i')->placeholder('—'),
-                TextColumn::make('recorder.name')->label('Кто')->placeholder('—'),
-                TextColumn::make('reconciled_at')->label('Сверено')->dateTime('d.m.Y H:i')->placeholder('нет')
-                    ->description(fn (Payment $record) => $record->reconciler?->name),
+                TextColumn::make('status')->label('Статус оплаты')->badge(),
+                TextColumn::make('invoice_number')->label('Номер счёта')->placeholder('—'),
+                TextColumn::make('invoiced_at')->label('Дата выставления')->dateTime('d.m.Y H:i'),
+                TextColumn::make('paid_at')->label('Дата оплаты')->dateTime('d.m.Y H:i')->placeholder('—'),
+                TextColumn::make('recorder.name')->label('Принял оплату')->placeholder('—'),
+                TextColumn::make('reconciled_at')->label('Сверка')
+                    ->state(fn (Payment $record) => $record->reconciled_at ? __('Сверено') : __('Не сверено'))
+                    ->description(fn (Payment $record) => $record->reconciled_at
+                        ? trim($record->reconciled_at->format('d.m.Y H:i').' '.($record->reconciler?->name ?? '')) : null),
                 TextColumn::make('comment')->label('Комментарий')->placeholder('—')->wrap()->toggleable(),
             ])
             ->paginated(false)

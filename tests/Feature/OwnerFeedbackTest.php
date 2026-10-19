@@ -235,7 +235,7 @@ class OwnerFeedbackTest extends TestCase
 
         $this->as(Role::SalesManager);
         $this->get("/admin/certificates/{$certificate->id}")->assertOk()
-            ->assertSee('Стоимость')->assertSee('Оплачено')
+            ->assertSee('Стоимость')->assertSee('Получено оплаты')
             ->assertDontSee('Себестоимость')->assertDontSee('Маржа');
         $this->get('/admin/payments')->assertForbidden();
     }

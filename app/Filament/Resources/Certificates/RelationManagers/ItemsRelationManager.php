@@ -23,7 +23,7 @@ class ItemsRelationManager extends RelationManager
 {
     protected static string $relationship = 'items';
 
-    protected static ?string $title = 'Состав';
+    protected static ?string $title = 'Состав сертификата';
 
     public function table(Table $table): Table
     {
