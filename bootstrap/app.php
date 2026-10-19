@@ -11,7 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Хостинг за Cloudflare и nginx: доверяем X-Forwarded-* от прокси, иначе Laravel
+        // считает запрос обычным HTTP и строит ссылки и формы с http://.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

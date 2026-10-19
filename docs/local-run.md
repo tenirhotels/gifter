@@ -134,3 +134,7 @@ php artisan serve
 - Автотесты: `php artisan test`.
 - Истечение сроков вручную: `php artisan gifter:expire-certificates`.
 - Команда `gifter:demo-users` работает только при `APP_ENV=local` и для рабочего сервера не предназначена; там первого пользователя создаёт `php artisan gifter:create-user`.
+
+## Рабочий сервер
+
+Установка на хостинг (Hoster.kz, Plesk, без SSH) — `docs/deploy-hoster-kz.md`.

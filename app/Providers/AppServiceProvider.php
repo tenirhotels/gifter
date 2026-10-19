@@ -8,6 +8,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +20,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // На рабочем сервере — только HTTPS.
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
+
         // Таблицы: плотные, с чередованием строк, по 25 записей — для операционной работы.
         Table::configureUsing(fn (Table $table) => $table
             ->striped()
