@@ -67,7 +67,7 @@ class CertificateInfolist
                 TextEntry::make('margin')->label('Маржа')
                     ->state(fn (Certificate $record) => Money::format(Money::fromMinor(Money::toMinor($record->total_amount) - Money::toMinor($record->total_cost))))
                     ->visible(fn (Certificate $record) => ! $record->isComplimentary() && auth()->user()?->can(Permission::ViewCosts)),
-                TextEntry::make('paid')->label('Получено оплаты')->hidden(fn (Certificate $record) => $record->isComplimentary() && ! $record->hasPayablePart())->state(fn (Certificate $record) => Money::format($record->paidAmount()))
+                TextEntry::make('paid')->label('Получено оплаты')->helperText(fn (Certificate $record) => $record->isDraft() && $record->isFullyPaid() && ! $record->isPaymentConfirmed() ? 'Ждёт подтверждения Финансов — после сверки можно выпустить' : null)->hidden(fn (Certificate $record) => $record->isComplimentary() && ! $record->hasPayablePart())->state(fn (Certificate $record) => Money::format($record->paidAmount()))
                     ->color(fn (Certificate $record) => $record->isFullyPaid() && $record->hasPayablePart() ? 'success' : 'warning'),
                 TextEntry::make('invoiced')->label('Выставлено счетов')->hidden(fn (Certificate $record) => $record->isComplimentary() && ! $record->hasPayablePart())->state(fn (Certificate $record) => Money::format($record->invoicedAmount())),
                 TextEntry::make('creator.name')->label('Оформил')->placeholder('—')

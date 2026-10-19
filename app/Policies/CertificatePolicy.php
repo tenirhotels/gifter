@@ -20,12 +20,12 @@ class CertificatePolicy extends PermissionPolicy
         return Permission::CreateCertificates;
     }
 
-    /** Продавец видит только сертификаты, созданные им самим. */
+    /** Продавец видит только сертификаты, созданные им или проданные на него (продавца назначает менеджер). */
     public function view(User $user, Model $model): bool
     {
         /** @var Certificate $model */
         return $user->can(Permission::ViewCertificates)
-            && ($user->can(Permission::ViewAllCertificates) || $model->created_by === $user->id);
+            && ($user->can(Permission::ViewAllCertificates) || $model->created_by === $user->id || $model->sold_by === $user->id);
     }
 
     /** Реквизиты правятся только в своём черновике. */
@@ -42,6 +42,8 @@ class CertificatePolicy extends PermissionPolicy
             return $query;
         }
 
-        return $query->where($query->qualifyColumn('created_by'), $user?->id ?? 0);
+        $id = $user?->id ?? 0;
+
+        return $query->where(fn (Builder $q) => $q->where($q->qualifyColumn('created_by'), $id)->orWhere($q->qualifyColumn('sold_by'), $id));
     }
 }

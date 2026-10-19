@@ -338,6 +338,18 @@ class CommissionTest extends TestCase
         $page()->assertSee('Комиссия начислена');
     }
 
+    public function test_seller_assigned_by_manager_can_open_the_certificate(): void
+    {
+        $this->rule();
+        $certificate = $this->sold();
+        $creator = User::factory()->create(['roles' => [Role::Sales]]);
+        $certificate->update(['created_by' => $creator->id]);
+        $stranger = User::factory()->create(['roles' => [Role::Sales]]);
+
+        $this->actingAs($this->seller)->get(CertificateResource::getUrl('view', ['record' => $certificate]))->assertOk();
+        $this->actingAs($stranger)->get(CertificateResource::getUrl('view', ['record' => $certificate]))->assertNotFound();
+    }
+
     public function test_seller_is_assigned_by_manager_in_draft_and_locked_after_issue(): void
     {
         $this->rule();

@@ -236,6 +236,25 @@ class Certificate extends Model
         return Money::toMinor($this->paidAmount()) >= Money::toMinor($this->payable_amount);
     }
 
+    /** Сумма оплат, подтверждённых Финансами (сверено по выписке). */
+    public function reconciledAmount(): string
+    {
+        return Money::fromMinor(Money::toMinor($this->payments()->where('status', PaymentStatus::Paid)->whereNotNull('reconciled_at')->sum('amount')));
+    }
+
+    /**
+     * Оплату подтвердили Финансы: продавец сам отмечает поступление по Kaspi/Halyk, поэтому выпуск — только после сверки
+     * (решение по аудиту; отключается GIFTER_REQUIRE_PAYMENT_RECONCILED=false). Нет платной части — подтверждать нечего.
+     */
+    public function isPaymentConfirmed(): bool
+    {
+        if (! config('gifter.require_payment_reconciled') || ! $this->hasPayablePart()) {
+            return true;
+        }
+
+        return Money::toMinor($this->reconciledAmount()) >= Money::toMinor($this->payable_amount);
+    }
+
     /** Черновик можно выпускать: бесплатный согласован, платная часть (если есть) оплачена полностью. */
     public function isReadyToIssue(): bool
     {
@@ -244,8 +263,8 @@ class Certificate extends Model
         }
 
         return $this->isComplimentary()
-            ? $this->isComplimentaryApproved() && $this->isFullyPaid()
-            : $this->hasPayablePart() && $this->isFullyPaid();
+            ? $this->isComplimentaryApproved() && $this->isFullyPaid() && $this->isPaymentConfirmed()
+            : $this->hasPayablePart() && $this->isFullyPaid() && $this->isPaymentConfirmed();
     }
 
     /** Первый выставленный и ещё не оплаченный счёт. */

@@ -392,6 +392,10 @@ class CertificateManager
                 throw new DomainRuleViolation(($certificate->isComplimentary() ? 'Платная часть оплачена не полностью: получено ' : 'Сертификат оплачен не полностью: получено ')
                     .Money::format($certificate->paidAmount()).' из '.Money::format($certificate->payable_amount).'.');
             }
+            if (! $certificate->isPaymentConfirmed()) {
+                throw new DomainRuleViolation('Оплата ждёт подтверждения Финансов: получено '.Money::format($certificate->paidAmount())
+                    .', сверено '.Money::format($certificate->reconciledAmount()).' из '.Money::format($certificate->payable_amount).'. Выпуск — после сверки.');
+            }
             if ($certificate->valid_until->lt(today())) {
                 throw new DomainRuleViolation('Срок действия уже истёк — исправьте даты перед выпуском.');
             }

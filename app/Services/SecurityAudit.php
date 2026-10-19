@@ -49,6 +49,8 @@ class SecurityAudit
         $withoutTwoFactor = User::query()->where('is_active', true)->whereNull('app_authentication_secret')->count();
         $add('Все активные пользователи настроили 2FA', $withoutTwoFactor === 0,
             "Без 2FA: {$withoutTwoFactor} — настроят при следующем входе.", false);
+        $add('Часовой пояс отеля (Asia/Almaty)', config('app.timezone') === 'Asia/Almaty', 'APP_TIMEZONE=Asia/Almaty: иначе сроки сертификатов и расписание проверок сдвигаются.');
+        $add('Выплата и выпуск: оплата подтверждается Финансами', (bool) config('gifter.require_payment_reconciled'), 'Уберите GIFTER_REQUIRE_PAYMENT_RECONCILED=false из .env: продавец сам отмечает оплату.', false);
         $add('Папка storage доступна для записи', is_writable(storage_path('framework')) && is_writable(storage_path('logs')),
             'Права на storage/ и bootstrap/cache — запись для пользователя сайта.');
 

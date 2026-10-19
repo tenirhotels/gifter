@@ -2,10 +2,12 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\CommissionStatus;
 use App\Enums\Permission;
 use App\Filament\Support\CommissionPeriod;
 use App\Filament\Support\TranslatesPageLabels;
 use App\Models\Certificate;
+use App\Models\CertificateCommission;
 use App\Models\User;
 use App\Services\CommissionManager;
 use App\Support\Money;
@@ -52,10 +54,10 @@ class Commissions extends Page implements HasTable
 
     public static function getNavigationBadge(): ?string
     {
-        $rows = collect(app(CommissionManager::class)->summary());
-        $toDo = auth()->user()?->can(Permission::PayCommissions) ? $rows->sum('approved_minor') : $rows->sum('to_approve_minor');
+        // Только наличие работы: один быстрый запрос, а не полная сводка по всем сертификатам на каждой странице.
+        $status = auth()->user()?->can(Permission::PayCommissions) ? CommissionStatus::Approved : CommissionStatus::Earned;
 
-        return $toDo > 0 ? '●' : null;
+        return CertificateCommission::query()->where('status', $status)->exists() ? '●' : null;
     }
 
     /** @return array<string, int> */

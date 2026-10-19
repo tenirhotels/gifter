@@ -119,8 +119,9 @@ class CertificateBatch extends Model
     /** Можно выпускать: бесплатная согласована, платная часть (у бесплатной — доп. услуги) оплачена по каждому сертификату. */
     public function scopeReadyToIssue(Builder $query): Builder
     {
+        $confirmed = config('gifter.require_payment_reconciled') ? ' and p.reconciled_at is not null' : '';
         $unpaid = 'not exists (select 1 from certificates c where c.batch_id = certificate_batches.id and c.payable_amount >'
-            .' (select coalesce(sum(amount), 0) from payments p where p.certificate_id = c.id and p.status = ?))';
+            .' (select coalesce(sum(amount), 0) from payments p where p.certificate_id = c.id and p.status = ?'.$confirmed.'))';
 
         return $query->where(fn (Builder $q) => $q
             ->where(fn (Builder $q) => $q->where('status', BatchStatus::Approved)->where('kind', CertificateKind::Complimentary)

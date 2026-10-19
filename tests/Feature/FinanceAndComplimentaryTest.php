@@ -184,6 +184,30 @@ class FinanceAndComplimentaryTest extends TestCase
         $this->assertSame('Наличные', PaymentMethod::Cash->getLabel());
     }
 
+    public function test_issue_waits_for_finance_reconciliation_of_seller_marked_payment(): void
+    {
+        config(['gifter.require_payment_reconciled' => true]);
+        $this->as(Role::Sales);
+        $certificate = $this->draft();
+        $payment = app(PaymentManager::class)->invoice($certificate, PaymentMethod::KaspiInvoice);
+        app(PaymentManager::class)->markPaid($payment);
+
+        $this->assertFalse($certificate->refresh()->isReadyToIssue(), 'Продавец отметил оплату, Финансы ещё не сверили');
+        try {
+            app(CertificateManager::class)->issue($certificate);
+            $this->fail('Выпуск до сверки Финансов');
+        } catch (DomainRuleViolation $e) {
+            $this->assertStringContainsString('ждёт подтверждения Финансов', $e->getMessage());
+        }
+
+        $this->as(Role::Finance);
+        app(PaymentManager::class)->reconcile($payment->refresh());
+
+        $this->assertTrue($certificate->refresh()->isReadyToIssue());
+        $this->as(Role::Sales);
+        $this->assertSame(CertificateStatus::Active, app(CertificateManager::class)->issue($certificate)->status);
+    }
+
     public function test_kaspi_payment_marked_by_sales_waits_for_finance_reconciliation(): void
     {
         $this->as(Role::Sales);

@@ -59,4 +59,9 @@ class LocaleTest extends TestCase
             $this->assertArrayHasKey($status->getLabel(), $kk);
         }
     }
+
+    public function test_application_timezone_defaults_to_almaty(): void
+    {
+        $this->assertSame('Asia/Almaty', config('app.timezone'));
+    }
 }

@@ -14,7 +14,9 @@ use App\Services\Pms\PmsClient;
 use App\Services\Pms\PmsException;
 use App\Support\GuestName;
 use App\Support\NameMatcher;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -152,6 +154,21 @@ class ReservationManager
      * @param  array{booking_number:string, guest_name:string, arrival:mixed, departure:mixed, note?:string|null}  $data
      */
     public function save(Certificate $certificate, array $data): Certificate
+    {
+        // Один номер брони — одна привязка за раз: проверка «бронь свободна» не должна гоняться с параллельным сохранением.
+        $number = trim((string) ($data['booking_number'] ?? ''));
+        if ($number === '') {
+            return $this->saveLocked($certificate, $data);
+        }
+        try {
+            return Cache::lock('gifter:booking:'.$number, 20)->block(10, fn () => $this->saveLocked($certificate, $data));
+        } catch (LockTimeoutException) {
+            throw new DomainRuleViolation('Эту бронь сейчас привязывает другой сотрудник — повторите через несколько секунд.');
+        }
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function saveLocked(Certificate $certificate, array $data): Certificate
     {
         return DB::transaction(function () use ($certificate, $data) {
             $fresh = Certificate::query()->lockForUpdate()->with(['recipient', 'customer'])->findOrFail($certificate->id);
