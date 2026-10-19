@@ -8,8 +8,14 @@ use App\Enums\Role;
 use App\Filament\Pages\MyCommission;
 use App\Filament\Support\RoleQueueWidget;
 use App\Models\Certificate;
+use App\Models\CertificateCommission;
 use App\Services\CommissionManager;
 use App\Support\Money;
+use Filament\Actions\Action;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
+use Filament\Schemas\Components\Component;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -17,8 +23,13 @@ use Illuminate\Database\Eloquent\Builder;
  * поэтому в центре внимания — непогашенные и сертификаты без брони. Видно только свои данные.
  */
 /** На главной — продавцам и менеджерам; на странице «Мои продажи» (`MySalesWidget`) — всем, у кого есть это право. */
-class MyCommissionWidget extends RoleQueueWidget
+class MyCommissionWidget extends RoleQueueWidget implements HasActions
 {
+    use InteractsWithActions;
+
+    /** Период показателей: month — текущий месяц, year — текущий год. */
+    public string $period = 'month';
+
     protected static ?int $sort = 1;
 
     protected ?string $heading = 'Мои продажи';
@@ -33,26 +44,47 @@ class MyCommissionWidget extends RoleQueueWidget
         return 'heroicon-o-trophy';
     }
 
+    public function getSectionContentComponent(): Component
+    {
+        $button = fn (string $key, string $label) => Action::make($key)->label($label)->size('sm')
+            ->color($this->period === $key ? 'primary' : 'gray')->outlined($this->period !== $key)
+            ->action(fn () => $this->period = $key);
+
+        return parent::getSectionContentComponent()->headerActions([$button('month', 'Месяц'), $button('year', 'Год')]);
+    }
+
+    protected function getHeading(): ?string
+    {
+        return 'Мои продажи — '.($this->period === 'year' ? now()->format('Y').' год' : now()->translatedFormat('F Y'));
+    }
+
+    /** Продано за период по дате продажи; комиссия — по месяцу погашения (`earned_at`). */
     protected function getStats(): array
     {
-        $row = app(CommissionManager::class)->summary(auth()->id())[auth()->id()] ?? null;
-        $row ??= ['sold' => 0, 'sales_minor' => 0, 'redeemed' => 0, 'not_redeemed' => 0, 'no_reservation' => 0, 'expired' => 0,
-            'earned_minor' => 0, 'pending_minor' => 0, 'paid_minor' => 0];
+        $from = ($this->period === 'year' ? now()->startOfYear() : now()->startOfMonth())->toDateString();
+        $to = ($this->period === 'year' ? now()->endOfYear() : now()->endOfMonth())->toDateString();
+        $id = auth()->id();
         $money = fn (int $minor) => Money::format(Money::fromMinor($minor));
-        $url = MyCommission::getUrl();
-        $mine = fn (): Builder => Certificate::query()->where('sold_by', auth()->id())->where('kind', CertificateKind::Sale)
-            ->whereNotNull('issued_at');
+        $mine = fn (): Builder => Certificate::query()->where('sold_by', $id)->where('kind', CertificateKind::Sale)->whereNotNull('issued_at');
+
+        $sold = $mine()->where('status', '!=', CertificateStatus::Cancelled)->whereDate('sold_at', '>=', $from)->whereDate('sold_at', '<=', $to)->get(['total_amount', 'status']);
+        $soldMinor = $sold->sum(fn ($c) => Money::toMinor($c->total_amount));
+        $row = app(CommissionManager::class)->summary($id, $from, $to)[$id] ?? ['earned_minor' => 0, 'pending_minor' => 0, 'paid_minor' => 0];
+        $redeemed = CertificateCommission::query()->where('seller_id', $id)->whereDate('earned_at', '>=', $from)->whereDate('earned_at', '<=', $to)->get(['status'])
+            ->filter(fn ($c) => $c->status->isEarned())->count();
+
+        $needBooking = $mine()->where('status', CertificateStatus::Active)->whereNull('pms_booking_number')->count();
+        $expired = $mine()->where('status', CertificateStatus::Expired)->count();
+        $url = MyCommission::getUrl(['filters' => ['no_reservation' => ['isActive' => true]]]);
 
         return [
-            $this->metric('Продано сертификатов', $row['sold'], 'на '.$money($row['sales_minor']), 'heroicon-o-ticket'),
-            $this->metric('Погашено', $row['redeemed'], 'комиссия начислена', 'heroicon-o-check-badge'),
-            $this->metric('Не погашено', $row['not_redeemed'], 'комиссии пока нет', 'heroicon-o-clock'),
-            $this->counter('Без брони', $mine()->where('status', CertificateStatus::Active)->whereNull('pms_booking_number'), $url, 'warning',
-                'комиссия начислится после брони и погашения', 'heroicon-o-calendar'),
-            $this->counter('Истекли без использования', $mine()->where('status', CertificateStatus::Expired), $url, 'gray', 'бронь по исключению — Front Office и директор', 'heroicon-o-exclamation-triangle'),
-            $this->metric('Начислено', $money($row['earned_minor']), 'всего за погашенные', 'heroicon-o-banknotes'),
-            $this->metric('Ожидает выплаты', $money($row['pending_minor']), 'начислено, но не выплачено', 'heroicon-o-receipt-percent'),
-            $this->metric('Выплачено', $money($row['paid_minor']), 'уже получено', 'heroicon-o-check-circle'),
+            $this->metric('Продано', $sold->count(), 'на '.$money($soldMinor).' · не погашено '.$sold->where('status', '!=', CertificateStatus::Used)->count(), 'heroicon-o-ticket'),
+            $this->metric('Погашено', $redeemed, 'комиссия начисляется в месяц погашения', 'heroicon-o-check-badge'),
+            $this->metric('Комиссия', $money($row['earned_minor']), 'к выплате '.$money($row['pending_minor']).' · выплачено '.$money($row['paid_minor']), 'heroicon-o-banknotes'),
+            $this->tile(
+                Stat::make('Нужно посадить бронь', $needBooking + $expired)->url($url)
+                    ->description('без брони: '.$needBooking.' · истекли: '.$expired.($expired ? ' — даты согласует директор по продажам' : '')),
+                'heroicon-o-calendar', $needBooking + $expired > 0 ? 'warning' : 'zero', $needBooking + $expired > 0),
         ];
     }
 }

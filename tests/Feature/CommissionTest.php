@@ -305,6 +305,22 @@ class CommissionTest extends TestCase
             ->assertCountTableRecords(0);
     }
 
+    public function test_my_sales_tiles_follow_month_and_year_and_flag_missing_reservations(): void
+    {
+        $this->rule();
+        $redeemed = $this->sold();
+        $this->redeem($redeemed);
+        $this->sold();
+        $redeemed->update(['sold_at' => now()->subMonthsNoOverflow(2)]);
+        $redeemed->commission->update(['earned_at' => now()->subMonthsNoOverflow(2)]);
+
+        $this->actingAs($this->seller);
+        $month = Livewire::test(MySalesWidget::class)->assertSee('Месяц')->assertSee('Год')->assertSeeHtml('mountAction')->assertSee('Нужно посадить бронь')->assertSee('без брони: 1');
+        $month->assertSee('Продано');
+        $this->assertSame('month', $month->get('period'));
+        $month->set('period', 'year')->assertSee(now()->format('Y').' год');
+    }
+
     public function test_seller_is_assigned_by_manager_in_draft_and_locked_after_issue(): void
     {
         $this->rule();

@@ -82,8 +82,8 @@ class MyCommission extends Page implements HasTable
             ->filters([
                 CommissionPeriod::filter('earned_at', 'commission'),
                 SelectFilter::make('status')->label('Статус сертификата')->options(CertificateStatus::class)->multiple(),
-                Filter::make('no_reservation')->label('Активные без брони')
-                    ->query(fn (Builder $query) => $query->where('status', CertificateStatus::Active)->whereNull('pms_booking_number')),
+                Filter::make('no_reservation')->label('Нужна бронь (без брони и истёкшие)')
+                    ->query(fn (Builder $query) => $query->where(fn (Builder $q) => $q->where(fn (Builder $a) => $a->where('status', CertificateStatus::Active)->whereNull('pms_booking_number'))->orWhere('status', CertificateStatus::Expired))),
             ])
             ->defaultSort('sold_at', 'desc')
             ->emptyStateHeading('Выпущенных продаж пока нет')
