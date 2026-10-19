@@ -276,7 +276,8 @@ class CommissionTest extends TestCase
         $this->assertSame(160000 * 100 * 3, $row['sales_minor']);
 
         $this->actingAs($this->seller);
-        Livewire::test(MyCommission::class)->assertCanSeeTableRecords([$redeemed, $noReservation, $reserved])->assertCanNotSeeTableRecords([$foreign]);
+        Livewire::test(MyCommission::class)->assertCanSeeTableRecords([$redeemed, $noReservation, $reserved])->assertCanNotSeeTableRecords([$foreign])
+            ->assertSee(['Дата продажи', 'Стоимость', 'Бронирование', 'Комиссионные', 'Выплата', 'Бронь не создана', 'ожидается', 'начислено']);
         $this->actingAs(User::factory()->create(['roles' => [Role::Finance]]));
         Livewire::test(Commissions::class)->assertSee('Айгерим')->assertCanSeeTableRecords([$this->seller, $other]);
     }
@@ -315,7 +316,7 @@ class CommissionTest extends TestCase
         $redeemed->commission->update(['earned_at' => now()->subMonthsNoOverflow(2)]);
 
         $this->actingAs($this->seller);
-        $month = Livewire::test(MySalesWidget::class)->assertSee('Месяц')->assertSee('Год')->assertSeeHtml('mountAction')->assertSee('Нужно посадить бронь')->assertSee('без брони: 1');
+        $month = Livewire::test(MySalesWidget::class)->assertSee('Месяц')->assertSee('Год')->assertSeeHtml('mountAction')->assertSee('Требуют внимания')->assertSee('без брони: 1')->assertSee('Ожидается');
         $month->assertSee('Продано');
         $this->assertSame('month', $month->get('period'));
         $month->set('period', 'year')->assertSee(now()->format('Y').' год');

@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
+use App\Enums\CommissionStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\CommissionPeriod;
@@ -20,7 +21,6 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use UnitEnum;
 
 /** «Мои продажи»: мои проданные сертификаты и комиссия по каждому. Только свои данные. */
 class MyCommission extends Page implements HasTable
@@ -31,9 +31,8 @@ class MyCommission extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTrophy;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Продажи';
-
-    protected static ?int $navigationSort = 5;
+    // Без группы: пункт стоит сразу под «Инфопанелью».
+    protected static ?int $navigationSort = -1;
 
     protected static ?string $navigationLabel = 'Мои продажи';
 
@@ -64,29 +63,60 @@ class MyCommission extends Page implements HasTable
             ->columns([
                 TextColumn::make('number')->label('Сертификат')->searchable()
                     ->url(fn (Certificate $record) => CertificateResource::getUrl('view', ['record' => $record]))
-                    ->description(fn (Certificate $record) => $record->package?->name),
-                TextColumn::make('sold_at')->label('Продан')->date('d.m.Y')->sortable(),
-                TextColumn::make('total_amount')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state))->sortable(),
+                    ->color('primary')->description(fn (Certificate $record) => $record->package?->name),
+                TextColumn::make('sold_at')->label('Дата продажи')->date('d.m.Y')->sortable(),
+                TextColumn::make('total_amount')->label('Стоимость')->formatStateUsing(fn ($state) => Money::format($state))->sortable(),
                 TextColumn::make('status')->label('Статус')->badge(),
-                TextColumn::make('reservation')->label('Бронь')
-                    ->state(fn (Certificate $record) => $record->hasReservation() ? $record->reservationLabel()
-                        : ($record->status === CertificateStatus::Expired ? ($record->hasPendingException() ? 'бронь по исключению ждёт директора' : 'истёк — бронь по исключению')
-                            : ($record->status->isFinal() ? '—' : 'нет брони')))
-                    ->color(fn (Certificate $record) => ! $record->hasReservation() && $record->status === CertificateStatus::Active ? 'warning' : null)
-                    ->wrap(),
-                TextColumn::make('commission.amount')->label('Комиссия')->placeholder('—')
-                    ->formatStateUsing(fn ($state) => Money::format($state))->weight('bold')
-                    ->description(fn (Certificate $record) => $record->commission?->ruleLabel()),
-                TextColumn::make('commission.status')->label('Статус комиссии')->badge()->placeholder('нет правила на дату продажи'),
+                TextColumn::make('reservation')->label('Бронирование')
+                    ->state(fn (Certificate $record) => match (true) {
+                        ! $record->hasReservation() => 'Бронь не создана',
+                        $record->pms_check_status === 'cancelled' => 'Бронь отменена',
+                        default => '№ '.$record->pms_booking_number,
+                    })
+                    ->description(fn (Certificate $record) => $record->hasReservation() && $record->pms_check_status !== 'cancelled' && $record->arrival_date && $record->departure_date
+                        ? $record->arrival_date->format('d.m').'–'.$record->departure_date->format('d.m.Y') : null)
+                    ->color(fn (Certificate $record) => ! $record->hasReservation() && in_array($record->status, [CertificateStatus::Active, CertificateStatus::Expired], true) ? 'warning' : null),
+                TextColumn::make('commission_amount')->label('Комиссионные')
+                    ->state(fn (Certificate $record) => $record->commission ? Money::format($record->commission->amount) : '—')
+                    ->weight('bold')
+                    ->description(fn (Certificate $record) => self::commissionNote($record)),
+                TextColumn::make('commission.status')->label('Выплата')->placeholder('—')
+                    ->state(fn (Certificate $record) => $record->commission ? match ($record->commission->status) {
+                        CommissionStatus::Earned => 'Начислена',
+                        CommissionStatus::Approved => 'К выплате',
+                        CommissionStatus::Paid => 'Выплачена',
+                        default => 'Не начислена',
+                    } : null)
+                    ->badge()->color(fn (?string $state) => match ($state) {
+                        'Выплачена' => 'success', 'К выплате' => 'warning', 'Начислена' => 'info', default => 'gray',
+                    }),
             ])
             ->filters([
                 CommissionPeriod::filter('earned_at', 'commission'),
                 SelectFilter::make('status')->label('Статус сертификата')->options(CertificateStatus::class)->multiple(),
-                Filter::make('no_reservation')->label('Нужна бронь (без брони и истёкшие)')
+                Filter::make('no_reservation')->label('Требуют внимания (без брони и истёкшие)')
                     ->query(fn (Builder $query) => $query->where(fn (Builder $q) => $q->where(fn (Builder $a) => $a->where('status', CertificateStatus::Active)->whereNull('pms_booking_number'))->orWhere('status', CertificateStatus::Expired))),
             ])
             ->defaultSort('sold_at', 'desc')
             ->emptyStateHeading('Выпущенных продаж пока нет')
-            ->emptyStateDescription('Комиссия начисляется, когда сертификат погашен.');
+            ->emptyStateDescription('Комиссия начисляется, когда сертификат использован.');
+    }
+
+    /** Состояние комиссии простыми словами: ожидается, начислено, к выплате, выплачено. */
+    private static function commissionNote(Certificate $certificate): string
+    {
+        $commission = $certificate->commission;
+        if (! $commission) {
+            return 'не предусмотрена';
+        }
+
+        return match (true) {
+            $commission->status === CommissionStatus::PendingRedemption => 'ожидается',
+            $commission->status === CommissionStatus::Earned => 'начислено',
+            $commission->status === CommissionStatus::Approved => 'к выплате',
+            $commission->status === CommissionStatus::Paid => 'выплачено',
+            $certificate->status === CertificateStatus::Expired => 'не начислены (истёк без использования)',
+            default => 'не начислены',
+        };
     }
 }
