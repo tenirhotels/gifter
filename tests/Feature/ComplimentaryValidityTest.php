@@ -101,7 +101,7 @@ class ComplimentaryValidityTest extends TestCase
     {
         $certificate = $this->draft(['mode' => 'until_date', 'from' => '2026-11-01', 'until' => '2026-12-31']);
 
-        app(CertificateManager::class)->updateDraft($certificate, ['sold_at' => '2026-10-20']);
+        app(CertificateManager::class)->updateDraft($certificate, ['sold_at' => '2026-10-20', 'sold_at_reason' => 'Дата по договору']);
         $this->assertSame('2026-12-31', $certificate->refresh()->valid_until->toDateString());
 
         $other = Package::create(['name' => 'Партнёры', 'validity_value' => 2, 'validity_unit' => 'months', 'is_complimentary' => true, 'complimentary_purpose' => 'partners']);

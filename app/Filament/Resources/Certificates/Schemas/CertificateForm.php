@@ -18,6 +18,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Carbon;
 
 /**
  * Реквизиты черновика. Продукт — пакет: он задаёт состав, срок действия и тип
@@ -57,6 +58,10 @@ class CertificateForm
             DatePicker::make('sold_at')->label('Дата продажи')->default(today())->required()->live()
                 ->helperText('Цены и срок считаются от этой даты.')
                 ->visible(fn () => auth()->user()?->can(Permission::EditSaleDate)),
+            Textarea::make('sold_at_reason')->label('Причина изменения даты продажи')->minLength(5)->columnSpanFull()
+                ->helperText('Дата влияет на цены и правило комиссии — причину увидит директор по продажам.')
+                ->visible(fn (Get $get) => auth()->user()?->can(Permission::EditSaleDate) && filled($get('sold_at')) && ! Carbon::parse($get('sold_at'))->isSameDay(today()))
+                ->required(fn (Get $get) => filled($get('sold_at')) && ! Carbon::parse($get('sold_at'))->isSameDay(today())),
         ];
     }
 

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Certificates\Tables;
 use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
+use App\Models\AuditLog;
 use App\Models\Certificate;
 use App\Support\Money;
 use Filament\Actions\ViewAction;
@@ -58,6 +59,9 @@ class CertificatesTable
                 Filter::make('awaiting_approval')->label('Бесплатные: ждут согласования директора')
                     ->query(fn (Builder $query) => $query->where('status', CertificateStatus::Draft)
                         ->where('kind', CertificateKind::Complimentary)->whereNull('complimentary_approved_at')),
+                Filter::make('manual_override')->label('Дата продажи или продавец изменены вручную (30 дней)')
+                    ->query(fn (Builder $query) => $query->whereIn('id', AuditLog::query()->whereIn('event', ['sale_date_overridden', 'seller_overridden'])
+                        ->where('auditable_type', (new Certificate)->getMorphClass())->where('created_at', '>=', now()->subDays(30))->select('auditable_id'))),
             ])
             ->recordActions([ViewAction::make()])
             ->defaultSort('id', 'desc');

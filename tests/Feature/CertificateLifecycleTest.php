@@ -84,14 +84,14 @@ class CertificateLifecycleTest extends TestCase
     {
         config(['gifter.number.pattern' => '{PREFIX}-{YYYY}-{SEQ}']);
         $this->assertSame('GIF-2026-000001', $this->draft()->number);
-        $this->assertSame('GIF-2027-000001', $this->draft(['sold_at' => '2027-01-05'])->number);
+        $this->assertSame('GIF-2027-000001', $this->draft(['sold_at' => '2027-01-05', 'sold_at_reason' => 'Продажа по договору'])->number);
     }
 
     public function test_number_pattern_without_year_is_global(): void
     {
         config(['gifter.number.pattern' => '{PREFIX}-{SEQ}']);
         $this->draft();
-        $this->assertSame('GIF-000002', $this->draft(['sold_at' => '2027-01-05'])->number);
+        $this->assertSame('GIF-000002', $this->draft(['sold_at' => '2027-01-05', 'sold_at_reason' => 'Продажа по договору'])->number);
     }
 
     public function test_item_price_is_taken_on_sale_date_and_snapshotted(): void
@@ -296,7 +296,7 @@ class CertificateLifecycleTest extends TestCase
         $certificate = $this->draft();
         $this->certificates->addItem($certificate, $spa, 1);
 
-        $this->certificates->updateDraft($certificate, ['sold_at' => '2026-11-02']);
+        $this->certificates->updateDraft($certificate, ['sold_at' => '2026-11-02', 'sold_at_reason' => 'Цены по дате договора']);
 
         $this->assertSame('50000.00', (string) $certificate->refresh()->total_amount);
         $this->assertSame(HistoryEvent::Repriced, $certificate->history()->first()->event);

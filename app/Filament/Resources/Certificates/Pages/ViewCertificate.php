@@ -113,9 +113,10 @@ class ViewCertificate extends ViewRecord
                 ->visible(fn (Certificate $record) => $record->isDraft() && ! $record->isComplimentary() && ! $record->batch_id)
                 ->modalDescription('Комиссия после использования сертификата достанется выбранному продавцу. После выпуска продавец закрепляется навсегда.')
                 ->fillForm(fn (Certificate $record) => ['seller' => $record->sold_by])
-                ->schema([Select::make('seller')->label('Продавец')->required()->searchable()->options(fn () => User::sellerOptions())])
+                ->schema([Select::make('seller')->label('Продавец')->required()->searchable()->options(fn () => User::sellerOptions()),
+                    Textarea::make('reason')->label('Причина смены продавца')->required()->minLength(5)->helperText('Увидит директор по продажам.')])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                    fn () => $this->manager()->setSeller($record, (int) $data['seller']), 'Продавец назначен')),
+                    fn () => $this->manager()->setSeller($record, (int) $data['seller'], reason: $data['reason'] ?? null), 'Продавец назначен')),
 
             Action::make('approveComplimentary')->label('Согласовать бесплатный')->icon('heroicon-o-hand-thumb-up')->color('success')
                 ->authorize(Permission::ApproveComplimentary)

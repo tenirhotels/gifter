@@ -14,6 +14,7 @@ use App\Filament\Pages\SellerCommissions;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\CommissionRules\Pages\CreateCommissionRule;
+use App\Filament\Widgets\DirectorQueueWidget;
 use App\Filament\Widgets\MySalesWidget;
 use App\Models\AuditLog;
 use App\Models\Certificate;
@@ -350,6 +351,31 @@ class CommissionTest extends TestCase
         $this->actingAs($stranger)->get(CertificateResource::getUrl('view', ['record' => $certificate]))->assertNotFound();
     }
 
+    public function test_sale_date_and_seller_changes_need_a_reason_and_reach_the_director(): void
+    {
+        $manager = app(CertificateManager::class);
+        $this->actingAs(User::factory()->create(['roles' => [Role::SalesManager]]));
+        $certificate = $manager->createDraft(['package_id' => $this->package->id, 'customer_id' => Customer::factory()->create()->id]);
+
+        foreach ([fn () => $manager->updateDraft($certificate, ['sold_at' => '2026-09-01']),
+            fn () => $manager->updateDraft($certificate, ['sold_at' => '2026-09-01', 'sold_at_reason' => 'ок']),
+            fn () => $manager->setSeller($certificate, $this->seller->id)] as $withoutReason) {
+            try {
+                $withoutReason();
+                $this->fail('Изменение без причины');
+            } catch (DomainRuleViolation $e) {
+                $this->assertStringContainsString('причину', $e->getMessage());
+            }
+        }
+
+        $manager->updateDraft($certificate, ['sold_at' => '2026-09-01', 'sold_at_reason' => 'Продажа по договору от 01.09']);
+        $manager->setSeller($certificate, $this->seller->id, reason: 'Клиента привёл другой менеджер');
+
+        $this->assertSame(['sale_date_overridden', 'seller_overridden'], AuditLog::whereIn('event', ['sale_date_overridden', 'seller_overridden'])->orderBy('id')->pluck('event')->all());
+        $this->actingAs(User::factory()->create(['roles' => [Role::SalesDirector]]));
+        Livewire::test(DirectorQueueWidget::class)->assertSee('Ручные изменения продаж');
+    }
+
     public function test_seller_is_assigned_by_manager_in_draft_and_locked_after_issue(): void
     {
         $this->rule();
@@ -359,13 +385,13 @@ class CommissionTest extends TestCase
         $this->assertSame(auth()->id(), $certificate->sold_by);
 
         try {
-            $manager->createDraft(['package_id' => $this->package->id, 'customer_id' => Customer::factory()->create()->id, 'sold_by' => $this->seller->id]);
+            $manager->createDraft(['package_id' => $this->package->id, 'customer_id' => Customer::factory()->create()->id, 'sold_by' => $this->seller->id, 'seller_reason' => 'Клиента привёл другой менеджер']);
             $this->fail('Продавец не может назначить другого');
         } catch (DomainRuleViolation) {
         }
 
         $this->actingAs(User::factory()->create(['roles' => [Role::SalesManager]]));
-        $manager->setSeller($certificate, $this->seller->id);
+        $manager->setSeller($certificate, $this->seller->id, reason: 'Передан другому менеджеру');
         $this->assertSame($this->seller->id, $certificate->refresh()->sold_by);
 
         $payments = app(PaymentManager::class);
@@ -374,7 +400,7 @@ class CommissionTest extends TestCase
         $this->assertSame($this->seller->id, $certificate->commission->seller_id);
 
         $this->expectException(DomainRuleViolation::class);
-        $manager->setSeller($certificate->refresh(), auth()->id());
+        $manager->setSeller($certificate->refresh(), auth()->id(), reason: 'Вернули автору');
     }
 
     public function test_admin_cannot_roll_back_redemption_after_approval(): void

@@ -10,6 +10,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\Permission;
 use App\Enums\ReservationReview;
 use App\Exceptions\DomainRuleViolation;
+use App\Models\AuditLog;
 use App\Models\Certificate;
 use App\Models\CertificateItem;
 use App\Models\Package;
@@ -55,6 +56,9 @@ class CertificateManager
                 throw new DomainRuleViolation("Пакет «{$package->name}» не активен.");
             }
             $soldAt = Carbon::parse($data['sold_at'] ?? today())->startOfDay();
+            $soldAtReason = $soldAt->isSameDay(today()) ? null : $this->overrideReason('Дата продажи отличается от сегодняшней', $data['sold_at_reason'] ?? null);
+            $sellerReason = ($data['sold_by'] ?? null) && (int) $data['sold_by'] !== auth()->id()
+                ? $this->overrideReason('Продавец назначен не автором оформления', $data['seller_reason'] ?? null) : null;
             $kind = $package->is_complimentary ? CertificateKind::Complimentary : CertificateKind::Sale;
             $this->assertKind($kind, $data['customer_id'] ?? null, $data['complimentary_reason'] ?? null);
             $purpose = $kind === CertificateKind::Complimentary ? $this->purpose($data['complimentary_purpose'] ?? null, $package) : null;
@@ -86,6 +90,8 @@ class CertificateManager
                 $package->name.', '.($validity->isCustom() ? $validity->describe($validFrom, $validUntil) : $package->validityLabel()),
                 after: $this->snapshot($certificate));
             $this->addPackageItems($certificate, $package);
+            $this->recordOverride($certificate, 'sale_date_overridden', ['sold_at' => $soldAt->toDateString()], $soldAtReason);
+            $this->recordOverride($certificate, 'seller_overridden', ['sold_by' => $certificate->sold_by], $sellerReason);
 
             return $certificate->refresh();
         });
@@ -144,8 +150,12 @@ class CertificateManager
     {
         return $this->locked($certificate, function (Certificate $certificate) use ($data) {
             $this->assertDraft($certificate);
+            $soldAtReason = $data['sold_at_reason'] ?? null;
             $data = array_intersect_key($data, array_flip(['customer_id', 'recipient_id', 'package_id', 'complimentary_reason', 'complimentary_purpose', 'sold_at', 'notes']));
             $soldAtChanged = isset($data['sold_at']) && ! Carbon::parse($data['sold_at'])->isSameDay($certificate->sold_at);
+            if ($soldAtChanged) {
+                $soldAtReason = $this->overrideReason('Изменена дата продажи', $soldAtReason);
+            }
             $packageChanged = isset($data['package_id']) && (int) $data['package_id'] !== $certificate->package_id;
             $newPackage = $packageChanged ? Package::findOrFail($data['package_id']) : null;
             $kindChanged = $newPackage && $newPackage->is_complimentary !== $certificate->isComplimentary();
@@ -203,6 +213,7 @@ class CertificateManager
             }
             if ($soldAtChanged) {
                 $this->reprice($certificate);
+                $this->recordOverride($certificate, 'sale_date_overridden', ['sold_at' => $certificate->sold_at->toDateString(), 'was' => $before['sold_at'] ?? null], $soldAtReason);
             }
 
             return $certificate;
@@ -293,9 +304,9 @@ class CertificateManager
      * Продавец сертификата — для комиссии. Меняется только в черновике (менеджер продаж или администратор),
      * после выпуска закреплён навсегда. В группе продавец у всех сертификатов один.
      */
-    public function setSeller(Certificate $certificate, int $sellerId, bool $viaBatch = false): Certificate
+    public function setSeller(Certificate $certificate, int $sellerId, bool $viaBatch = false, ?string $reason = null): Certificate
     {
-        return $this->locked($certificate, function (Certificate $certificate) use ($sellerId, $viaBatch) {
+        return $this->locked($certificate, function (Certificate $certificate) use ($sellerId, $viaBatch, $reason) {
             $this->assertDraft($certificate);
             $this->assertNotInBatch($certificate, $viaBatch);
             $seller = User::query()->where('is_active', true)->find($sellerId);
@@ -305,12 +316,34 @@ class CertificateManager
             if ((int) $certificate->sold_by === $sellerId) {
                 return $certificate;
             }
+            $reason = $this->overrideReason('Смена продавца', $reason);
             $before = ['sold_by' => $certificate->sold_by];
             $certificate->update(['sold_by' => $sellerId, 'updated_by' => auth()->id()]);
-            $this->history->record($certificate, HistoryEvent::Updated, "Продавец: {$seller->name}", $before, ['sold_by' => $sellerId]);
+            $this->history->record($certificate, HistoryEvent::Updated, "Продавец: {$seller->name}. Причина: {$reason}", $before, ['sold_by' => $sellerId]);
+            $this->recordOverride($certificate, 'seller_overridden', ['sold_by' => $sellerId, 'was' => $before['sold_by']], $reason);
 
             return $certificate;
         });
+    }
+
+    /** Исключение из обычного порядка (дата продажи, продавец) — только с причиной: видно директору и в журнале. */
+    private function overrideReason(string $what, ?string $reason): string
+    {
+        $reason = trim((string) $reason);
+        if (mb_strlen($reason) < 5) {
+            throw new DomainRuleViolation("{$what}: укажите причину (не короче 5 знаков) — её увидит директор по продажам.");
+        }
+
+        return $reason;
+    }
+
+    /** @param  array<string, mixed>  $after */
+    private function recordOverride(Certificate $certificate, string $event, array $after, ?string $reason): void
+    {
+        if ($reason === null) {
+            return;
+        }
+        AuditLog::record($event, $certificate, null, $after + ['reason' => $reason]);
     }
 
     private function sellerId(?int $requested): ?int
