@@ -6,6 +6,7 @@ use App\Enums\Permission;
 use App\Enums\ReservationReview;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\RunsDomainActions;
+use App\Filament\Support\TranslatesPageLabels;
 use App\Models\Certificate;
 use App\Services\ReservationManager;
 use BackedEnum;
@@ -28,6 +29,7 @@ use UnitEnum;
 class ReservationReviews extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
 
     protected string $view = 'filament.pages.upcoming-arrivals';
 

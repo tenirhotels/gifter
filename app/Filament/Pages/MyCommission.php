@@ -8,6 +8,7 @@ use App\Enums\CommissionStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\CommissionPeriod;
+use App\Filament\Support\TranslatesPageLabels;
 use App\Filament\Widgets\MySalesWidget;
 use App\Models\Certificate;
 use App\Support\Money;
@@ -26,6 +27,7 @@ use Illuminate\Database\Eloquent\Builder;
 class MyCommission extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
 
     protected string $view = 'filament.pages.table-page';
 

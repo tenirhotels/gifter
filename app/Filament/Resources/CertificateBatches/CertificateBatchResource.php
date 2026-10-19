@@ -4,6 +4,7 @@ namespace App\Filament\Resources\CertificateBatches;
 
 use App\Enums\CertificateKind;
 use App\Enums\Permission;
+use App\Filament\Support\TranslatesResourceLabels;
 use App\Models\CertificateBatch;
 use App\Policies\CertificateBatchPolicy;
 use App\Services\CertificateBatchManager;
@@ -26,6 +27,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class CertificateBatchResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = CertificateBatch::class;
 
     protected static bool $shouldRegisterNavigation = false;

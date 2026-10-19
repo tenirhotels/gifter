@@ -5,6 +5,7 @@ namespace App\Filament\Resources\CommissionRules;
 use App\Enums\CommissionType;
 use App\Filament\Resources\CommissionRules\Pages\CreateCommissionRule;
 use App\Filament\Resources\CommissionRules\Pages\ListCommissionRules;
+use App\Filament\Support\TranslatesResourceLabels;
 use App\Models\CommissionRule;
 use App\Models\Package;
 use BackedEnum;
@@ -27,6 +28,8 @@ use UnitEnum;
  */
 class CommissionRuleResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = CommissionRule::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptPercent;

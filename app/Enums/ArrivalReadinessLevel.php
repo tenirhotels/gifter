@@ -16,9 +16,9 @@ enum ArrivalReadinessLevel: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Ready => 'Готов',
-            self::Action => 'Требует действия',
-            self::Exception => 'Исключение',
+            self::Ready => __('Готов'),
+            self::Action => __('Требует действия'),
+            self::Exception => __('Исключение'),
         };
     }
 

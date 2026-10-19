@@ -14,12 +14,13 @@ class PackagesTable
     {
         return $table
             ->columns([
-                TextColumn::make('name')->label('Название')->searchable()->sortable(),
+                TextColumn::make('name')->label('Название пакета')->searchable()->sortable(),
                 TextColumn::make('kind')->label('Тип')->badge()
-                    ->state(fn (Package $record) => $record->is_complimentary ? 'Бесплатный · '.$record->complimentary_purpose?->getLabel() : 'Продажа')
+                    ->state(fn (Package $record) => $record->is_complimentary ? __('Бесплатный') : __('Продажа'))
+                    ->description(fn (Package $record) => $record->is_complimentary ? $record->complimentary_purpose?->getLabel() : null)
                     ->color(fn (Package $record) => $record->is_complimentary ? 'info' : 'gray'),
-                TextColumn::make('validity')->label('Срок')->state(fn (Package $record): string => $record->validity_unit->format($record->validity_value)),
-                TextColumn::make('composition')->label('Базовый состав')->state(fn (Package $record): string => $record->items
+                TextColumn::make('validity')->label('Срок действия')->state(fn (Package $record): string => $record->validity_unit->format($record->validity_value)),
+                TextColumn::make('composition')->label('Состав сертификата')->state(fn (Package $record): string => $record->items
                     ->map(fn ($item) => "{$item->service->name} × {$item->quantity}")->implode(', '))->wrap(),
                 IconColumn::make('is_active')->label('Активен')->boolean(),
             ])

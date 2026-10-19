@@ -6,6 +6,7 @@ use App\Enums\FulfillmentStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\FulfillmentActions;
+use App\Filament\Support\TranslatesResourceLabels;
 use App\Models\Provider;
 use App\Models\ServiceFulfillment;
 use App\Policies\CertificatePolicy;
@@ -23,13 +24,15 @@ use UnitEnum;
 /** Очередь заявок на исполнение услуг для Front Office и менеджера продаж. */
 class ServiceFulfillmentResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = ServiceFulfillment::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentCheck;
 
     protected static string|UnitEnum|null $navigationGroup = 'Продажи';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $modelLabel = 'заявка на исполнение';
 

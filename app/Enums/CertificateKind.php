@@ -14,8 +14,8 @@ enum CertificateKind: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Sale => 'Продажа',
-            self::Complimentary => 'Бесплатный (маркетинг)',
+            self::Sale => __('Продажа'),
+            self::Complimentary => __('Бесплатный (маркетинг)'),
         };
     }
 

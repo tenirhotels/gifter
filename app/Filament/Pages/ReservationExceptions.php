@@ -6,6 +6,7 @@ use App\Enums\ExceptionStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\RunsDomainActions;
+use App\Filament\Support\TranslatesPageLabels;
 use App\Models\ReservationException;
 use App\Services\ReservationExceptionManager;
 use BackedEnum;
@@ -27,6 +28,7 @@ use UnitEnum;
 class ReservationExceptions extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
 
     protected string $view = 'filament.pages.table-page';
 
@@ -34,7 +36,7 @@ class ReservationExceptions extends Page implements HasTable
 
     protected static string|UnitEnum|null $navigationGroup = 'Продажи';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 7;
 
     protected static ?string $navigationLabel = 'Брони по исключению';
 

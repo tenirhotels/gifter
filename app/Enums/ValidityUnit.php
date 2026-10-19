@@ -13,8 +13,8 @@ enum ValidityUnit: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Days => 'дней',
-            self::Months => 'месяцев',
+            self::Days => __('дней'),
+            self::Months => __('месяцев'),
         };
     }
 

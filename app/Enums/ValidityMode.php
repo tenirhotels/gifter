@@ -14,9 +14,9 @@ enum ValidityMode: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Package => 'По пакету',
-            self::Duration => 'Длительность с даты',
-            self::UntilDate => 'До конкретного дня',
+            self::Package => __('По пакету'),
+            self::Duration => __('Длительность с даты'),
+            self::UntilDate => __('До конкретного дня'),
         };
     }
 }

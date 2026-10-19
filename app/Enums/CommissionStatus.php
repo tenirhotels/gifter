@@ -17,11 +17,11 @@ enum CommissionStatus: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::PendingRedemption => 'Ждёт использования',
-            self::Earned => 'Начислена',
-            self::Approved => 'Согласована к выплате',
-            self::Paid => 'Выплачена',
-            self::Void => 'Не начисляется',
+            self::PendingRedemption => __('Ждёт использования'),
+            self::Earned => __('Начислена'),
+            self::Approved => __('Согласована к выплате'),
+            self::Paid => __('Выплачена'),
+            self::Void => __('Не начисляется'),
         };
     }
 

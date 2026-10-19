@@ -14,9 +14,9 @@ enum ExceptionStatus: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Pending => 'Ждёт директора',
-            self::Approved => 'Согласовано',
-            self::Rejected => 'Отклонено',
+            self::Pending => __('Ждёт директора'),
+            self::Approved => __('Согласовано'),
+            self::Rejected => __('Отклонено'),
         };
     }
 

@@ -15,9 +15,9 @@ enum PaymentStatus: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Pending => 'Счёт выставлен',
-            self::Paid => 'Оплачен',
-            self::Cancelled => 'Отменён',
+            self::Pending => __('Счёт выставлен'),
+            self::Paid => __('Оплачен'),
+            self::Cancelled => __('Отменён'),
         };
     }
 

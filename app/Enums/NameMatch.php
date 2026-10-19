@@ -15,9 +15,9 @@ enum NameMatch: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Recipient => 'Совпадает с получателем',
-            self::Customer => 'Совпадает с заказчиком',
-            self::Mismatch => 'Не совпадает ни с получателем, ни с заказчиком',
+            self::Recipient => __('Совпадает с получателем'),
+            self::Customer => __('Совпадает с заказчиком'),
+            self::Mismatch => __('Не совпадает ни с получателем, ни с заказчиком'),
         };
     }
 
@@ -25,9 +25,9 @@ enum NameMatch: string implements HasColor, HasLabel
     public function shortLabel(): string
     {
         return match ($this) {
-            self::Recipient => '= получатель',
-            self::Customer => '= заказчик',
-            self::Mismatch => 'имя не совпадает',
+            self::Recipient => __('= получатель'),
+            self::Customer => __('= заказчик'),
+            self::Mismatch => __('имя не совпадает'),
         };
     }
 

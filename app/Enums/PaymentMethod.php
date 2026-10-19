@@ -17,10 +17,10 @@ enum PaymentMethod: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::KaspiInvoice => 'Счёт Kaspi',
-            self::HalykInvoice => 'Счёт Halyk Bank',
-            self::BankTransfer => 'Перечисление на р/с',
-            self::Cash => 'Наличные',
+            self::KaspiInvoice => __('Счёт Kaspi'),
+            self::HalykInvoice => __('Счёт Halyk Bank'),
+            self::BankTransfer => __('Перечисление на р/с'),
+            self::Cash => __('Наличные'),
         };
     }
 

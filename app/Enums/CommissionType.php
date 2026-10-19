@@ -12,8 +12,8 @@ enum CommissionType: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Percent => 'Процент от цены продажи',
-            self::Fixed => 'Фиксированная сумма',
+            self::Percent => __('Процент от цены продажи'),
+            self::Fixed => __('Фиксированная сумма'),
         };
     }
 }

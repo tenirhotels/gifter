@@ -19,12 +19,12 @@ enum FulfillmentStatus: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Pending => 'Ожидает',
-            self::Requested => 'Заявка отправлена',
-            self::Scheduled => 'Время назначено',
-            self::Confirmed => 'Подтверждено',
-            self::Completed => 'Выполнено',
-            self::Cancelled => 'Отменено',
+            self::Pending => __('Ожидает'),
+            self::Requested => __('Заявка отправлена'),
+            self::Scheduled => __('Время назначено'),
+            self::Confirmed => __('Подтверждено'),
+            self::Completed => __('Выполнено'),
+            self::Cancelled => __('Отменено'),
         };
     }
 

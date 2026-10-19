@@ -6,6 +6,7 @@ use App\Enums\Permission;
 use App\Enums\RefundStatus;
 use App\Filament\Support\RefundActions;
 use App\Filament\Support\RefundColumns;
+use App\Filament\Support\TranslatesResourceLabels;
 use App\Models\Refund;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -17,6 +18,8 @@ use UnitEnum;
 
 class RefundResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Refund::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptRefund;

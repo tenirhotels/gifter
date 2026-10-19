@@ -9,6 +9,7 @@ use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\Certificates\Schemas\CertificateForm;
 use App\Filament\Resources\Certificates\Schemas\CertificateInfolist;
 use App\Filament\Resources\Certificates\Tables\CertificatesTable;
+use App\Filament\Support\TranslatesResourceLabels;
 use App\Models\Certificate;
 use App\Policies\CertificatePolicy;
 use BackedEnum;
@@ -22,6 +23,8 @@ use UnitEnum;
 
 class CertificateResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Certificate::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTicket;

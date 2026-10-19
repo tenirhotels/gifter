@@ -18,13 +18,13 @@ enum CertificateStatus: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Draft => 'Черновик',
-            self::Active => 'Активен',
-            self::Reserved => 'Забронирован',
-            self::InUse => 'Используется',
-            self::Used => 'Использован',
-            self::Expired => 'Истёк',
-            self::Cancelled => 'Аннулирован',
+            self::Draft => __('Черновик'),
+            self::Active => __('Активен'),
+            self::Reserved => __('Забронирован'),
+            self::InUse => __('Используется'),
+            self::Used => __('Использован'),
+            self::Expired => __('Истёк'),
+            self::Cancelled => __('Аннулирован'),
         };
     }
 

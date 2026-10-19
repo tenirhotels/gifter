@@ -12,8 +12,8 @@ enum CustomerType: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Individual => 'Физлицо',
-            self::Company => 'Компания',
+            self::Individual => __('Физлицо'),
+            self::Company => __('Компания'),
         };
     }
 }

@@ -15,10 +15,10 @@ enum ProviderType: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Rooms => 'Служба размещения',
-            self::FoodBeverage => 'Ресторанная служба',
-            self::OtherDepartment => 'Другой отдел отеля',
-            self::External => 'Внешний поставщик',
+            self::Rooms => __('Служба размещения'),
+            self::FoodBeverage => __('Ресторанная служба'),
+            self::OtherDepartment => __('Другой отдел отеля'),
+            self::External => __('Внешний поставщик'),
         };
     }
 }

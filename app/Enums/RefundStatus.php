@@ -16,10 +16,10 @@ enum RefundStatus: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Requested => 'На согласовании',
-            self::Approved => 'Согласован, ждёт выплаты',
-            self::Completed => 'Возвращено',
-            self::Rejected => 'Отклонён',
+            self::Requested => __('На согласовании'),
+            self::Approved => __('Согласован, ждёт выплаты'),
+            self::Completed => __('Возвращено'),
+            self::Rejected => __('Отклонён'),
         };
     }
 

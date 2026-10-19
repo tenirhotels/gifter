@@ -17,24 +17,24 @@ enum Role: string implements HasDescription, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::SuperAdmin => 'Администратор',
-            self::Sales => 'Продажи',
-            self::SalesManager => 'Менеджер продаж',
-            self::SalesDirector => 'Директор по продажам',
-            self::FrontOffice => 'Front Office / Бронирование',
-            self::Finance => 'Финансы',
+            self::SuperAdmin => __('Администратор'),
+            self::Sales => __('Продажи'),
+            self::SalesManager => __('Менеджер продаж'),
+            self::SalesDirector => __('Директор по продажам'),
+            self::FrontOffice => __('Front Office / Бронирование'),
+            self::Finance => __('Финансы'),
         };
     }
 
     public function getDescription(): string
     {
         return match ($this) {
-            self::SuperAdmin => 'Полный доступ, пользователи и журнал аудита',
-            self::Sales => 'Клиенты, черновики, счета, выпуск сертификатов',
-            self::SalesManager => 'Всё из «Продаж» + корректировки, срок действия, бесплатные, возвраты; без себестоимости',
-            self::SalesDirector => 'Каталог, поставщики, цены и себестоимость, пакеты; согласует бесплатные сертификаты',
-            self::FrontOffice => 'Просмотр сертификатов, бронь, заезд, использование',
-            self::Finance => 'Просмотр сертификатов и оплат; финансовые исключения — фаза 7',
+            self::SuperAdmin => __('Полный доступ, пользователи и журнал аудита'),
+            self::Sales => __('Клиенты, черновики, счета, выпуск сертификатов'),
+            self::SalesManager => __('Всё из «Продаж» + корректировки, срок действия, бесплатные, возвраты; без себестоимости'),
+            self::SalesDirector => __('Каталог, поставщики, цены и себестоимость, пакеты; согласует бесплатные сертификаты'),
+            self::FrontOffice => __('Просмотр сертификатов, бронь, заезд, использование'),
+            self::Finance => __('Просмотр сертификатов и оплат; финансовые исключения — фаза 7'),
         };
     }
 }

@@ -14,9 +14,9 @@ enum LegalForm: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Ip => 'ИП',
-            self::Too => 'ТОО',
-            self::Other => 'Другая организация',
+            self::Ip => __('ИП'),
+            self::Too => __('ТОО'),
+            self::Other => __('Другая организация'),
         };
     }
 

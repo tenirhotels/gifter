@@ -7,6 +7,7 @@ use App\Filament\Resources\Providers\Pages\EditProvider;
 use App\Filament\Resources\Providers\Pages\ListProviders;
 use App\Filament\Resources\Providers\Schemas\ProviderForm;
 use App\Filament\Resources\Providers\Tables\ProvidersTable;
+use App\Filament\Support\TranslatesResourceLabels;
 use App\Models\Provider;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -18,6 +19,8 @@ use UnitEnum;
 
 class ProviderResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Provider::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingStorefront;

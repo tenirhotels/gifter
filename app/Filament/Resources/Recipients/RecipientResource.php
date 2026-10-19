@@ -7,6 +7,7 @@ use App\Filament\Resources\Recipients\Pages\EditRecipient;
 use App\Filament\Resources\Recipients\Pages\ListRecipients;
 use App\Filament\Resources\Recipients\Schemas\RecipientForm;
 use App\Filament\Resources\Recipients\Tables\RecipientsTable;
+use App\Filament\Support\TranslatesResourceLabels;
 use App\Models\Recipient;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -18,13 +19,15 @@ use UnitEnum;
 
 class RecipientResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Recipient::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedGift;
 
     protected static string|UnitEnum|null $navigationGroup = 'Продажи';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 6;
 
     protected static ?string $modelLabel = 'получатель';
 

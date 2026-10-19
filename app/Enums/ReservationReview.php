@@ -15,9 +15,9 @@ enum ReservationReview: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Pending => 'На проверке Финансов',
-            self::Approved => 'Проверено Финансами',
-            self::Disputed => 'Оспорено Финансами',
+            self::Pending => __('На проверке Финансов'),
+            self::Approved => __('Проверено Финансами'),
+            self::Disputed => __('Оспорено Финансами'),
         };
     }
 

@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Enums\Permission;
 use App\Filament\Support\CommissionPeriod;
+use App\Filament\Support\TranslatesPageLabels;
 use App\Models\Certificate;
 use App\Models\User;
 use App\Services\CommissionManager;
@@ -25,6 +26,7 @@ use UnitEnum;
 class Commissions extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
 
     protected string $view = 'filament.pages.table-page';
 

@@ -7,6 +7,7 @@ use App\Filament\Resources\ServiceCategories\Pages\EditServiceCategory;
 use App\Filament\Resources\ServiceCategories\Pages\ListServiceCategories;
 use App\Filament\Resources\ServiceCategories\Schemas\ServiceCategoryForm;
 use App\Filament\Resources\ServiceCategories\Tables\ServiceCategoriesTable;
+use App\Filament\Support\TranslatesResourceLabels;
 use App\Models\ServiceCategory;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -18,6 +19,8 @@ use UnitEnum;
 
 class ServiceCategoryResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = ServiceCategory::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;

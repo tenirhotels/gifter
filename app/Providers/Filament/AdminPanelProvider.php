@@ -4,11 +4,13 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\EditProfile;
 use App\Filament\Support\InitialsAvatarProvider;
+use App\Http\Middleware\SetLocale;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -41,7 +43,8 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
-            ->navigationGroups(['Продажи', 'Деньги', 'Каталог', 'Администрирование'])
+            ->navigationGroups(collect(['Продажи', 'Деньги', 'Каталог', 'Администрирование'])
+                ->mapWithKeys(fn (string $name) => [$name => NavigationGroup::make()->label(fn () => __($name))])->all())
             // Рабочее приложение: плотность, скорость, предсказуемость — см. docs/ui-principles.md
             ->maxContentWidth(Width::Full)
             ->sidebarCollapsibleOnDesktop()
@@ -50,6 +53,8 @@ class AdminPanelProvider extends PanelProvider
             ->databaseTransactions()
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
             ->defaultAvatarProvider(InitialsAvatarProvider::class)
+            ->renderHook(PanelsRenderHook::USER_MENU_BEFORE, fn (): View => view('filament.language-switcher'))
+            ->renderHook(PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE, fn (): View => view('filament.language-switcher'))
             ->renderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.app-styles'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
@@ -62,6 +67,7 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                SetLocale::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,

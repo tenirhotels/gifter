@@ -7,6 +7,7 @@ use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\CommissionPeriod;
 use App\Filament\Support\RunsDomainActions;
+use App\Filament\Support\TranslatesPageLabels;
 use App\Models\CertificateCommission;
 use App\Models\User;
 use App\Services\CommissionManager;
@@ -36,6 +37,7 @@ use Illuminate\Support\Carbon;
 class SellerCommissions extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
 
     protected string $view = 'filament.pages.table-page';
 

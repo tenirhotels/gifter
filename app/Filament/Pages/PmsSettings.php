@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Enums\Permission;
+use App\Filament\Support\TranslatesPageLabels;
 use App\Models\AuditLog;
 use App\Models\PmsSetting;
 use App\Services\Pms\PmsClient;
@@ -27,6 +28,8 @@ use UnitEnum;
  */
 class PmsSettings extends Page
 {
+    use TranslatesPageLabels;
+
     protected string $view = 'filament.pages.pms-settings';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedLink;

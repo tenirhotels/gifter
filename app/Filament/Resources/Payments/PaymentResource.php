@@ -8,6 +8,7 @@ use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\PaymentCorrectionActions;
 use App\Filament\Support\RunsDomainActions;
+use App\Filament\Support\TranslatesResourceLabels;
 use App\Models\Payment;
 use App\Services\PaymentManager;
 use App\Support\Money;
@@ -31,6 +32,8 @@ use UnitEnum;
 /** Реестр оплат для сверки Финансами. */
 class PaymentResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Payment::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;

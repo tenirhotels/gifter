@@ -19,7 +19,7 @@ class PackageForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('name')->label('Название')->required()->maxLength(255),
+            TextInput::make('name')->label('Название пакета')->required()->maxLength(255),
             Toggle::make('is_active')->label('Активен')->default(true),
             Grid::make(2)->columnSpanFull()->schema([
                 Toggle::make('is_complimentary')->label('Бесплатный пакет')->live()
@@ -34,7 +34,7 @@ class PackageForm
             Placeholder::make('validity_hint')->label(' ')
                 ->content('Считается от даты продажи. Продавец срок не меняет; исключения — менеджер продаж с указанием причины. Новый срок действует только для новых сертификатов.'),
             Textarea::make('description')->label('Описание')->columnSpanFull(),
-            Repeater::make('items')->label('Базовый состав')->relationship()
+            Repeater::make('items')->label('Состав сертификата')->relationship()
                 ->helperText('Входит в каждый сертификат пакета. Доп. услуги продавец добавляет в сертификате. Изменения не затрагивают созданные сертификаты.')
                 ->orderColumn('position')
                 ->schema([

@@ -7,6 +7,7 @@ use App\Filament\Resources\Packages\Pages\EditPackage;
 use App\Filament\Resources\Packages\Pages\ListPackages;
 use App\Filament\Resources\Packages\Schemas\PackageForm;
 use App\Filament\Resources\Packages\Tables\PackagesTable;
+use App\Filament\Support\TranslatesResourceLabels;
 use App\Models\Package;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -18,19 +19,21 @@ use UnitEnum;
 
 class PackageResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Package::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquares2x2;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Каталог';
+    protected static string|UnitEnum|null $navigationGroup = 'Продажи';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
 
-    protected static ?string $navigationLabel = 'Пакеты (продукты)';
+    protected static ?string $navigationLabel = 'Пакеты сертификатов';
 
-    protected static ?string $modelLabel = 'пакет';
+    protected static ?string $modelLabel = 'пакет сертификатов';
 
-    protected static ?string $pluralModelLabel = 'Пакеты (продукты)';
+    protected static ?string $pluralModelLabel = 'Пакеты сертификатов';
 
     protected static ?string $recordTitleAttribute = 'name';
 

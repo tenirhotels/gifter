@@ -4,8 +4,12 @@ namespace App\Providers;
 
 use App\Enums\Permission;
 use App\Models\User;
+use Filament\Actions\Action as BaseAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Schemas\Components\Component as SchemaComponent;
+use Filament\Tables\Columns\Column;
+use Filament\Tables\Filters\BaseFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
@@ -41,6 +45,12 @@ class AppServiceProvider extends ServiceProvider
             ->native(false)->displayFormat('d.m.Y')->firstDayOfWeek(1)->closeOnDateSelection());
         DateTimePicker::configureUsing(fn (DateTimePicker $picker) => $picker
             ->native(false)->displayFormat('d.m.Y H:i')->firstDayOfWeek(1)->seconds(false));
+
+        // Подписи колонок, фильтров, полей, разделов и кнопок переводятся по русскому тексту (lang/kk.json, lang/en.json).
+        Column::configureUsing(fn (Column $column) => $column->translateLabel());
+        BaseFilter::configureUsing(fn (BaseFilter $filter) => $filter->translateLabel());
+        SchemaComponent::configureUsing(fn (SchemaComponent $component) => method_exists($component, 'translateLabel') ? $component->translateLabel() : $component);
+        BaseAction::configureUsing(fn (BaseAction $action) => $action->translateLabel());
 
         foreach (Permission::cases() as $permission) {
             Gate::define($permission->value, fn (User $user): bool => $user->hasPermission($permission));

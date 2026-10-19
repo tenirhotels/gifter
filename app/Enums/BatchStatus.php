@@ -15,10 +15,10 @@ enum BatchStatus: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Draft => 'Черновик',
-            self::Approved => 'Согласован',
-            self::Issued => 'Выпущен',
-            self::Cancelled => 'Аннулирован',
+            self::Draft => __('Черновик'),
+            self::Approved => __('Согласован'),
+            self::Issued => __('Выпущен'),
+            self::Cancelled => __('Аннулирован'),
         };
     }
 
@@ -26,8 +26,8 @@ enum BatchStatus: string implements HasColor, HasLabel
     public function labelFor(CertificateKind $kind): string
     {
         return match (true) {
-            $this === self::Draft && $kind === CertificateKind::Complimentary => 'Ждёт согласования директора',
-            $this === self::Draft => 'Черновик: счёт и оплата',
+            $this === self::Draft && $kind === CertificateKind::Complimentary => __('Ждёт согласования директора'),
+            $this === self::Draft => __('Черновик: счёт и оплата'),
             default => $this->getLabel(),
         };
     }

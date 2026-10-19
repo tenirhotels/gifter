@@ -6,6 +6,7 @@ use App\Enums\ArrivalReadinessLevel;
 use App\Enums\CertificateStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
+use App\Filament\Support\TranslatesPageLabels;
 use App\Models\Certificate;
 use App\Models\ServiceFulfillment;
 use App\Policies\CertificatePolicy;
@@ -32,6 +33,7 @@ use UnitEnum;
 class UpcomingArrivals extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
 
     protected string $view = 'filament.pages.upcoming-arrivals';
 
@@ -39,7 +41,7 @@ class UpcomingArrivals extends Page implements HasTable
 
     protected static string|UnitEnum|null $navigationGroup = 'Продажи';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $navigationLabel = 'Ближайшие заезды';
 
