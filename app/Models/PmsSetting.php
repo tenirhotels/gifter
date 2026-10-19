@@ -10,13 +10,30 @@ use Illuminate\Database\Eloquent\Model;
  */
 class PmsSetting extends Model
 {
-    protected $fillable = ['enabled', 'base_url', 'property_code', 'token', 'updated_by'];
+    public const HUB = 'hub';
 
-    protected $hidden = ['token'];
+    public const EXELY = 'exely';
+
+    public const EXELY_DEFAULT_URL = 'https://connect.hopenapi.com';
+
+    protected $fillable = ['enabled', 'provider', 'base_url', 'property_code', 'token', 'client_id', 'client_secret', 'updated_by'];
+
+    protected $hidden = ['token', 'client_secret'];
 
     protected function casts(): array
     {
-        return ['enabled' => 'boolean', 'token' => 'encrypted'];
+        return ['enabled' => 'boolean', 'token' => 'encrypted', 'client_secret' => 'encrypted'];
+    }
+
+    public function isExely(): bool
+    {
+        return $this->provider === self::EXELY;
+    }
+
+    /** Адрес API: у Exely по умолчанию connect.hopenapi.com. */
+    public function baseUrl(): string
+    {
+        return rtrim((string) ($this->base_url ?: ($this->isExely() ? self::EXELY_DEFAULT_URL : '')), '/');
     }
 
     public static function current(): self
@@ -24,9 +41,15 @@ class PmsSetting extends Model
         return static::query()->first() ?? new static;
     }
 
-    /** Подключение включено и заполнено — брони проверяются по PMS строго. */
+    /** Подключение включено и заполнено выбранным источником — брони проверяются по PMS строго. */
     public function isActive(): bool
     {
-        return $this->enabled && filled($this->base_url) && filled($this->property_code) && filled($this->token);
+        if (! $this->enabled || blank($this->property_code)) {
+            return false;
+        }
+
+        return $this->isExely()
+            ? filled($this->client_id) && filled($this->client_secret)
+            : filled($this->base_url) && filled($this->token);
     }
 }

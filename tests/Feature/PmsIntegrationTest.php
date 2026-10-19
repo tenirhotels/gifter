@@ -24,6 +24,7 @@ use App\Services\ServicePricing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
@@ -41,11 +42,19 @@ class PmsIntegrationTest extends TestCase
     /** Следующий ответ PMS: ответ или функция (для сбоя связи). */
     private mixed $next = null;
 
+    /** Ответ Exely на запрос токена. */
+    private mixed $auth = null;
+
     protected function setUp(): void
     {
         parent::setUp();
         Carbon::setTestNow('2026-10-18 12:00:00');
-        Http::fake(fn () => is_callable($this->next) ? ($this->next)() : $this->next);
+        $this->auth = Http::response(['access_token' => 'fictional-exely-token', 'expires_in' => 900]);
+        Http::fake(function ($request) {
+            $answer = str_contains($request->url(), '/auth/token') ? $this->auth : $this->next;
+
+            return is_callable($answer) ? $answer() : $answer;
+        });
         $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
         $service = Service::factory()->create(['name' => 'Проживание']);
         app(ServicePricing::class)->addPrice($service, '100000', Carbon::parse('2026-01-01'));
@@ -244,5 +253,103 @@ class PmsIntegrationTest extends TestCase
         $result = PmsClient::make()->ping();
         $this->assertFalse($result['ok']);
         $this->assertStringContainsString('токен', $result['message']);
+    }
+
+    private function enableExely(): void
+    {
+        PmsSetting::query()->delete();
+        PmsSetting::create(['enabled' => true, 'provider' => 'exely', 'property_code' => '9305', 'client_id' => 'fictional-client', 'client_secret' => 'fictional-secret']);
+    }
+
+    public function test_native_exely_uses_oauth_token_cached_and_read_reservation_path(): void
+    {
+        $this->enableExely();
+        $this->next = Http::response($this->booking(hub: []));
+        Cache::flush();
+
+        $client = PmsClient::make();
+        $this->assertSame('2026-10-20', $client->find('20261020-9305-1')->arrival->toDateString());
+        $client->find('20261020-9305-2');
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'https://connect.hopenapi.com/auth/token') && $r['grant_type'] === 'client_credentials'
+            && $r['client_id'] === 'fictional-client' && $r['client_secret'] === 'fictional-secret');
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'https://connect.hopenapi.com/api/read-reservation/v1/properties/9305/bookings/20261020-9305-1')
+            && $r->hasHeader('Authorization', 'Bearer fictional-exely-token'));
+        $tokenRequests = Http::recorded(fn ($request) => str_contains($request->url(), '/auth/token'))->count();
+        $this->assertSame(1, $tokenRequests, 'Токен берётся один раз и кешируется');
+    }
+
+    public function test_native_exely_saves_reservation_and_marks_no_staleness(): void
+    {
+        $this->enableExely();
+        $this->next = Http::response($this->booking(hub: []));
+
+        app(ReservationManager::class)->save($this->certificate, ['booking_number' => '20261020-9305-1']);
+
+        $c = $this->certificate->refresh();
+        $this->assertSame(['Иванова Анна', NameMatch::Recipient, null], [$c->booking_guest_name, $c->name_match, $c->pms_data_age_minutes]);
+        $this->assertNotNull($c->pms_verified_at);
+    }
+
+    public function test_native_exely_errors_keys_rejected_expired_token_and_not_found(): void
+    {
+        $this->enableExely();
+        Cache::flush();
+
+        $this->auth = Http::response(['error' => 'invalid_client'], 401);
+        try {
+            PmsClient::make()->find('X-1');
+            $this->fail('Ключи отклонены');
+        } catch (PmsException $e) {
+            $this->assertStringContainsString('отклонил ключи', $e->getMessage());
+        }
+
+        $this->auth = Http::response(['access_token' => 'fictional-exely-token', 'expires_in' => 900]);
+        $this->next = Http::response(['error' => 'forbidden'], 403);
+        try {
+            PmsClient::make()->find('X-1');
+            $this->fail('Нет доступа к Read Reservation API');
+        } catch (PmsException $e) {
+            $this->assertStringContainsString('Read Reservation', $e->getMessage());
+        }
+
+        $this->next = Http::response([], 404);
+        try {
+            PmsClient::make()->find('X-1');
+            $this->fail('Не найдена');
+        } catch (PmsException $e) {
+            $this->assertStringContainsString('не найдена', $e->getMessage());
+        }
+        $this->assertTrue(PmsClient::make()->ping()['ok']);
+
+        // Токен протух раньше срока: 401 на брони — один новый токен и повтор.
+        Cache::flush();
+        $calls = 0;
+        $this->next = function () use (&$calls) {
+            return ++$calls === 1 ? Http::response([], 401) : Http::response($this->booking(hub: []));
+        };
+        $this->assertSame('2026-10-22', PmsClient::make()->find('20261020-9305-1')->departure->toDateString());
+        $this->assertSame(2, $calls);
+    }
+
+    public function test_provider_is_selected_in_settings_and_secrets_are_encrypted(): void
+    {
+        $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
+        Livewire::test(PmsSettings::class)
+            ->fillForm(['enabled' => true, 'provider' => 'exely', 'property_code' => '9305', 'client_id' => 'fictional-client', 'client_secret' => 'fictional-exely-secret'])
+            ->call('save');
+
+        $setting = PmsSetting::current();
+        $this->assertSame(['exely', 'https://connect.hopenapi.com', true], [$setting->provider, $setting->baseUrl(), $setting->isActive()]);
+        $this->assertStringNotContainsString('fictional-exely-secret', (string) DB::table('pms_settings')->value('client_secret'));
+        $this->assertStringNotContainsString('fictional-exely-secret', AuditLog::all()->toJson());
+        $this->get('/admin/pms-settings')->assertOk()->assertDontSee('fictional-exely-secret');
+
+        // Без client_secret включить нельзя; смена на хаб требует адреса и токена.
+        PmsSetting::query()->delete();
+        Livewire::test(PmsSettings::class)->fillForm(['enabled' => true, 'provider' => 'exely', 'property_code' => '9305', 'client_id' => 'x', 'client_secret' => ''])->call('save');
+        $this->assertSame(0, PmsSetting::count());
+        Livewire::test(PmsSettings::class)->fillForm(['enabled' => true, 'provider' => 'hub', 'base_url' => 'https://hub.example.test', 'property_code' => '9305', 'token' => ''])->call('save');
+        $this->assertSame(0, PmsSetting::count());
     }
 }
