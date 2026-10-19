@@ -185,7 +185,7 @@ final class DashboardQueries
         $day = today()->toDateString();
 
         return Service::query()->where('is_active', true)->whereDoesntHave('prices', fn (Builder $q) => $q
-            ->whereDate('valid_from', '<=', $day)->where(fn (Builder $q) => $q->whereNull('valid_until')->orWhereDate('valid_until', '>=', $day)));
+            ->whereNotNull('approved_at')->whereDate('valid_from', '<=', $day)->where(fn (Builder $q) => $q->whereNull('valid_until')->orWhereDate('valid_until', '>=', $day)));
     }
 
     public function servicesWithoutCost(): Builder

@@ -34,12 +34,21 @@ class PricesRelationManager extends RelationManager
                     ->formatStateUsing(fn ($state) => Money::format($state))
                     ->visible(fn () => auth()->user()?->can(Permission::ViewCosts)),
                 TextColumn::make('price')->label('Цена')->formatStateUsing(fn ($state) => Money::format($state)),
+                TextColumn::make('approved_at')->label('Подтверждение')->badge()
+                    ->state(fn (ServicePrice $record) => $record->isApproved() ? __('Действует') : __('Ждёт подтверждения администратора'))
+                    ->color(fn (ServicePrice $record) => $record->isApproved() ? 'success' : 'warning'),
                 TextColumn::make('creator.name')->label('Добавил')->placeholder('—'),
                 TextColumn::make('created_at')->label('Добавлено')->dateTime('d.m.Y H:i'),
             ])
             ->defaultSort('valid_from', 'desc')
             ->description('Добавленную сегодня цену можно исправить, пока она не попала в сертификаты. Более ранние версии не меняются — добавьте новую.')
             ->recordActions([
+                Action::make('approvePrice')->label('Подтвердить цену')->icon('heroicon-o-check-badge')->color('success')
+                    ->authorize(Permission::AdminCorrections)
+                    ->visible(fn (ServicePrice $record) => ! $record->isApproved())
+                    ->requiresConfirmation()
+                    ->modalDescription(fn (ServicePrice $record) => 'Цена '.Money::format($record->price).' вступит в силу с '.$record->valid_from->format('d.m.Y').'; предыдущая закроется днём раньше.')
+                    ->action(fn (ServicePrice $record, Action $action) => RunsDomainActions::run($action, fn () => app(ServicePricing::class)->approve($record), 'Цена подтверждена')),
                 Action::make('fixPrice')->label('Исправить')->icon('heroicon-o-pencil-square')
                     ->authorize(Permission::ManagePrices)
                     ->visible(fn (ServicePrice $record) => app(ServicePricing::class)->isEditable($record))

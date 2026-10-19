@@ -10,8 +10,10 @@ use App\Filament\Resources\AuditLogs\AuditLogResource;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Payments\PaymentResource;
 use App\Filament\Resources\Refunds\RefundResource;
+use App\Filament\Resources\Services\ServiceResource;
 use App\Filament\Support\RoleQueueWidget;
 use App\Models\AuditLog;
+use App\Models\ServicePrice;
 use App\Services\SecurityAudit;
 use App\Support\Money;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -47,6 +49,7 @@ class AdminOverviewWidget extends RoleQueueWidget
             $this->counter('Оплаты ждут сверки', $q->paymentsToReconcile(), PaymentResource::getUrl('index'), 'warning', 'у Финансов', 'heroicon-o-document-check'),
             $this->counter('Возвраты на согласовании', $q->refunds(RefundStatus::Requested), RefundResource::getUrl('index', ['filters' => ['status' => ['value' => 'requested']]]), 'danger', 'у Финансов', 'heroicon-o-receipt-refund'),
             $this->counter('Лимит контактов', AuditLog::query()->where('event', 'contacts_reveal_limit')->where('created_at', '>=', today()), AuditLogResource::getUrl('index'), 'warning', 'попыток превысить дневной лимит сегодня', 'heroicon-o-eye'),
+            $this->counter('Цены ждут подтверждения', ServicePrice::query()->whereNull('approved_at'), ServiceResource::getUrl('index'), 'warning', 'добавил директор — подтвердите', 'heroicon-o-currency-dollar'),
             $this->problemsTile(),
         ];
     }

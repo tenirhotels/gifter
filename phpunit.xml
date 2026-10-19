@@ -19,6 +19,7 @@
     </source>
     <php>
         <env name="GIFTER_REQUIRE_PAYMENT_RECONCILED" value="false"/>
+        <env name="GIFTER_REQUIRE_PRICE_APPROVAL" value="false"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

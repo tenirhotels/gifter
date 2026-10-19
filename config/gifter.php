@@ -6,6 +6,9 @@ return [
     // Выпуск сертификата с платной частью — только после подтверждения оплаты Финансами (сверка). Аудит 19.10.2026, К1.
     'require_payment_reconciled' => (bool) env('GIFTER_REQUIRE_PAYMENT_RECONCILED', true),
 
+    // Цены, добавленные директором, вступают в силу после подтверждения администратором. Аудит 19.10.2026, В7.
+    'require_price_approval' => (bool) env('GIFTER_REQUIRE_PRICE_APPROVAL', true),
+
     'locales' => ['ru' => 'Русский', 'kk' => 'Қазақша', 'en' => 'English'],
     'currency' => 'KZT',
 

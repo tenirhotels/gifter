@@ -11,6 +11,7 @@ use App\Filament\Support\RoleQueueWidget;
 use App\Models\AuditLog;
 use App\Models\Certificate;
 use App\Models\ReservationException;
+use App\Models\ServicePrice;
 use App\Services\CommissionManager;
 use App\Support\Money;
 
@@ -56,6 +57,7 @@ class DirectorQueueWidget extends RoleQueueWidget
                 ->where('auditable_type', (new Certificate)->getMorphClass())->where('created_at', '>=', now()->subDays(7))->select('auditable_id')),
                 CertificateResource::getUrl('index', ['filters' => ['manual_override' => ['isActive' => true]]]), 'warning',
                 'дата продажи или продавец за 7 дней — с причиной', 'heroicon-o-pencil-square'),
+            $this->counter('Цены ждут подтверждения', ServicePrice::query()->whereNull('approved_at'), ServiceResource::getUrl('index'), 'warning', 'подтверждает администратор', 'heroicon-o-clock'),
             $this->counter('Услуги без цены на сегодня', $q->servicesWithoutPrice(), ServiceResource::getUrl('index'), 'danger', 'не продаются', 'heroicon-o-tag'),
             $this->counter('Услуги без себестоимости', $q->servicesWithoutCost(), ServiceResource::getUrl('index'), 'warning', 'маржа неполная', 'heroicon-o-calculator'),
         ];

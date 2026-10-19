@@ -376,6 +376,33 @@ class CommissionTest extends TestCase
         Livewire::test(DirectorQueueWidget::class)->assertSee('Ручные изменения продаж');
     }
 
+    public function test_director_price_waits_for_admin_approval(): void
+    {
+        config(['gifter.require_price_approval' => true]);
+        $service = Service::factory()->create();
+        $pricing = app(ServicePricing::class);
+        $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
+        $old = $pricing->addPrice($service, '40000', Carbon::parse('2026-01-01'));
+        $this->assertTrue($old->isApproved(), 'Администратор подтверждает сразу');
+
+        $this->actingAs(User::factory()->create(['roles' => [Role::SalesDirector]]));
+        $new = $pricing->addPrice($service, '50000', Carbon::parse('2026-11-01'));
+
+        $this->assertFalse($new->isApproved());
+        $this->assertSame('40000.00', (string) $pricing->priceOn($service, Carbon::parse('2026-11-05'))->price, 'Пока не подтверждена — действует прежняя');
+        $this->assertNull($old->refresh()->valid_until);
+        try {
+            $pricing->approve($new);
+            $this->fail('Директор не подтверждает цену');
+        } catch (DomainRuleViolation) {
+        }
+
+        $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
+        $pricing->approve($new);
+        $this->assertSame('50000.00', (string) $pricing->priceOn($service, Carbon::parse('2026-11-05'))->price);
+        $this->assertSame('2026-10-31', $old->refresh()->valid_until->toDateString());
+    }
+
     public function test_seller_is_assigned_by_manager_in_draft_and_locked_after_issue(): void
     {
         $this->rule();

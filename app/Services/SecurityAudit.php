@@ -51,6 +51,7 @@ class SecurityAudit
             "Без 2FA: {$withoutTwoFactor} — настроят при следующем входе.", false);
         $add('Часовой пояс отеля (Asia/Almaty)', config('app.timezone') === 'Asia/Almaty', 'APP_TIMEZONE=Asia/Almaty: иначе сроки сертификатов и расписание проверок сдвигаются.');
         $add('Выплата и выпуск: оплата подтверждается Финансами', (bool) config('gifter.require_payment_reconciled'), 'Уберите GIFTER_REQUIRE_PAYMENT_RECONCILED=false из .env: продавец сам отмечает оплату.', false);
+        $add('Цены директора подтверждает администратор', (bool) config('gifter.require_price_approval'), 'Уберите GIFTER_REQUIRE_PRICE_APPROVAL=false из .env.', false);
         $add('Папка storage доступна для записи', is_writable(storage_path('framework')) && is_writable(storage_path('logs')),
             'Права на storage/ и bootstrap/cache — запись для пользователя сайта.');
 

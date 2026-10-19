@@ -41,14 +41,17 @@ class ServicePricing
             throw new DomainRuleViolation('Дата окончания раньше даты начала.');
         }
 
-        return DB::transaction(function () use ($service, $price, $validFrom, $validUntil, $cost) {
+        $pending = $this->needsApproval();
+
+        return DB::transaction(function () use ($service, $price, $validFrom, $validUntil, $cost, $pending) {
             $open = $service->prices()->getQuery()->reorder()->whereNull('valid_until')
                 ->whereDate('valid_from', '<', $validFrom->toDateString())->lockForUpdate()->first();
-            if ($open && ! $this->overlapsOthers($service, $validFrom, $validUntil, $open->id)) {
+            // Неподтверждённая цена ничего не закрывает: предыдущая действует, пока администратор не подтвердит новую.
+            if ($open && ! $pending && ! $this->overlapsOthers($service, $validFrom, $validUntil, $open->id)) {
                 $open->update(['valid_until' => $validFrom->copy()->subDay()]);
             }
 
-            if ($this->overlapsOthers($service, $validFrom, $validUntil)) {
+            if ($this->overlapsOthers($service, $validFrom, $validUntil, $pending ? $open?->id : null)) {
                 throw new DomainRuleViolation('Период пересекается с существующей ценой этой услуги.');
             }
 
@@ -59,7 +62,45 @@ class ServicePricing
                 'valid_from' => $validFrom,
                 'valid_until' => $validUntil,
                 'created_by' => auth()->id(),
+                'approved_at' => $pending ? null : now(),
+                'approved_by' => $pending ? null : auth()->id(),
             ]);
+        });
+    }
+
+    /** Цену директора подтверждает администратор (решение владельца 19.10.2026). Выключается GIFTER_REQUIRE_PRICE_APPROVAL=false. */
+    public function needsApproval(): bool
+    {
+        return config('gifter.require_price_approval') && ! auth()->user()?->can(Permission::AdminCorrections);
+    }
+
+    /** Подтверждение цены: версия вступает в силу, предыдущая открытая закрывается днём раньше. */
+    public function approve(ServicePrice $version): ServicePrice
+    {
+        if (! auth()->user()?->can(Permission::AdminCorrections)) {
+            throw new DomainRuleViolation('Цену подтверждает администратор.');
+        }
+
+        return DB::transaction(function () use ($version) {
+            $fresh = ServicePrice::query()->lockForUpdate()->findOrFail($version->id);
+            if ($fresh->isApproved()) {
+                throw new DomainRuleViolation('Цена уже подтверждена.');
+            }
+            $service = $fresh->service;
+            $open = $service->prices()->getQuery()->reorder()->whereKeyNot($fresh->id)->whereNotNull('approved_at')->whereNull('valid_until')
+                ->whereDate('valid_from', '<', $fresh->valid_from->toDateString())->lockForUpdate()->first();
+            if ($open) {
+                $open->update(['valid_until' => $fresh->valid_from->copy()->subDay()]);
+            }
+            if ($service->prices()->getQuery()->reorder()->whereKeyNot($fresh->id)->whereNotNull('approved_at')
+                ->where(fn ($q) => $q->whereNull('valid_until')->orWhereDate('valid_until', '>=', $fresh->valid_from->toDateString()))
+                ->when($fresh->valid_until, fn ($q) => $q->whereDate('valid_from', '<=', $fresh->valid_until->toDateString()))->exists()) {
+                throw new DomainRuleViolation('Период пересекается с подтверждённой ценой этой услуги — исправьте даты.');
+            }
+            $fresh->update(['approved_at' => now(), 'approved_by' => auth()->id()]);
+            $version->setRawAttributes($fresh->getAttributes(), true);
+
+            return $fresh;
         });
     }
 
@@ -100,7 +141,7 @@ class ServicePricing
                 'cost' => $cost === '' ? null : $cost,
                 'valid_from' => $validFrom,
                 'valid_until' => $validUntil,
-            ]);
+            ] + ($this->needsApproval() ? ['approved_at' => null, 'approved_by' => null] : []));
 
             return $version;
         });
