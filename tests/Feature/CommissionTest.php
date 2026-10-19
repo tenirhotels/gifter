@@ -13,6 +13,7 @@ use App\Filament\Pages\MyCommission;
 use App\Filament\Pages\SellerCommissions;
 use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\CommissionRules\Pages\CreateCommissionRule;
+use App\Filament\Widgets\MySalesWidget;
 use App\Models\AuditLog;
 use App\Models\Certificate;
 use App\Models\CertificateCommission;
@@ -249,6 +250,9 @@ class CommissionTest extends TestCase
             ->assertCanSeeTableRecords([$commission])
             ->assertActionVisible(TestAction::make('approve')->table($commission))
             ->assertActionHidden(TestAction::make('pay')->table($commission));
+        $admin = User::factory()->create(['roles' => [Role::SuperAdmin]]);
+        $this->actingAs($admin);
+        Livewire::test(MyCommission::class)->assertSeeLivewire(MySalesWidget::class);
         $this->actingAs(User::factory()->create(['roles' => [Role::Finance]]));
         Livewire::test(SellerCommissions::class, ['seller' => $this->seller->id])
             ->assertActionHidden(TestAction::make('approve')->table($commission));

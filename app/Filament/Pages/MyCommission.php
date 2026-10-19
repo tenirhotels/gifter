@@ -7,7 +7,7 @@ use App\Enums\CertificateStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Support\CommissionPeriod;
-use App\Filament\Widgets\MyCommissionWidget;
+use App\Filament\Widgets\MySalesWidget;
 use App\Models\Certificate;
 use App\Support\Money;
 use BackedEnum;
@@ -48,7 +48,7 @@ class MyCommission extends Page implements HasTable
 
     protected function getHeaderWidgets(): array
     {
-        return [MyCommissionWidget::class];
+        return [MySalesWidget::class];
     }
 
     public function getHeaderWidgetsColumns(): int|array
