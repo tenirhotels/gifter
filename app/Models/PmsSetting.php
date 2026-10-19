@@ -16,7 +16,7 @@ class PmsSetting extends Model
 
     public const EXELY_DEFAULT_URL = 'https://connect.hopenapi.com';
 
-    protected $fillable = ['enabled', 'provider', 'base_url', 'property_code', 'certificate_rate_plan', 'token', 'client_id', 'client_secret', 'updated_by'];
+    protected $fillable = ['enabled', 'provider', 'base_url', 'property_code', 'token', 'client_id', 'client_secret', 'updated_by'];
 
     protected $hidden = ['token', 'client_secret'];
 

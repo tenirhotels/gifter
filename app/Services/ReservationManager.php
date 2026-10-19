@@ -8,7 +8,6 @@ use App\Enums\NameMatch;
 use App\Enums\ReservationReview;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\Certificate;
-use App\Models\PmsSetting;
 use App\Services\Pms\PmsBooking;
 use App\Services\Pms\PmsClient;
 use App\Services\Pms\PmsException;
@@ -131,12 +130,6 @@ class ReservationManager
             $checks[] = ['key' => 'nights', 'ok' => $nightsOk, 'text' => $nightsOk
                 ? 'В брони '.$word($nights).' ('.$booking->arrival->format('d.m').'–'.$booking->departure->format('d.m').') — в рамках сертификата (до '.$word($included).')'
                 : 'В брони '.$word($nights).' ('.$booking->arrival->format('d.m').'–'.$booking->departure->format('d.m').'), а сертификат даёт '.$word($included).' (с учётом доп. ночей)'];
-        }
-        $plan = trim((string) PmsSetting::current()->certificate_rate_plan);
-        if ($plan !== '') {
-            $planOk = $booking->allStaysOnRatePlan($plan);
-            $checks[] = ['key' => 'rate', 'ok' => $planOk, 'text' => $planOk
-                ? "Тариф «{$plan}»" : "Тариф брони: {$booking->ratePlanLabel()} — не «{$plan}»"];
         }
 
         return $checks;
