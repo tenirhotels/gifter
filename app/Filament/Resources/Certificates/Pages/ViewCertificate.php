@@ -8,6 +8,7 @@ use App\Enums\NameMatch;
 use App\Enums\PaymentMethod;
 use App\Enums\Permission;
 use App\Enums\ReservationReview;
+use App\Exceptions\DomainRuleViolation;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Recipients\Schemas\RecipientForm;
@@ -416,9 +417,21 @@ class ViewCertificate extends ViewRecord
                 : null)
             ->schema(fn (Certificate $record) => $viaPms($record) ? [] : [Textarea::make('reason')->label('Комментарий')])
             ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                fn () => $viaPms($record)
-                    ? app(ArrivalSync::class)->checkIn($record)
-                    : $this->manager()->transition($record, CertificateStatus::InUse, $data['reason'] ?? null),
+                function () use ($viaPms, $record, $data) {
+                    if (! $viaPms($record)) {
+                        $this->manager()->transition($record, CertificateStatus::InUse, $data['reason'] ?? null);
+
+                        return;
+                    }
+                    try {
+                        app(ArrivalSync::class)->checkIn($record);
+                    } catch (DomainRuleViolation $e) {
+                        throw $e;
+                    } catch (\Throwable $e) {
+                        report($e);
+                        throw new DomainRuleViolation('Не удалось проверить заезд в PMS, попробуйте позже. Заезд не отмечен.');
+                    }
+                },
                 'Статус: '.CertificateStatus::InUse->getLabel()));
     }
 

@@ -34,15 +34,32 @@ final class PmsBooking
         return array_map(fn (array $p) => trim($p['last'].' '.$p['first']), $this->guests);
     }
 
-    /** Все действующие комнаты забронированы по тарифу, название или код которого содержит $needle (без учёта регистра). */
-    public function allStaysOnRatePlan(string $needle): bool
+    /**
+     * Названия тарифа из настройки: несколько через запятую или «;»; «Сертификат» и «Certificate» — одно и то же,
+     * поэтому при любом из них принимаются оба языка.
+     *
+     * @return list<string>
+     */
+    public static function ratePlanAliases(string $setting): array
     {
-        $needle = mb_strtolower(trim($needle));
-        if ($this->stayRatePlans === []) {
+        $norm = fn (string $v) => str_replace('ё', 'е', mb_strtolower(trim($v)));
+        $names = collect(preg_split('/[,;]/u', $setting))->map($norm)->filter()->values();
+        if ($names->contains(fn (string $n) => str_contains($n, 'сертификат') || str_contains($n, 'certificate'))) {
+            $names = $names->push('сертификат', 'certificate');
+        }
+
+        return $names->unique()->values()->all();
+    }
+
+    /** Все действующие комнаты забронированы по тарифу, название или код которого содержит любое из названий настройки (без учёта регистра и языка «Сертификат»/«Certificate»). */
+    public function allStaysOnRatePlan(string $setting): bool
+    {
+        $needles = self::ratePlanAliases($setting);
+        if ($this->stayRatePlans === [] || $needles === []) {
             return false;
         }
         foreach ($this->stayRatePlans as $plans) {
-            if (! collect($plans)->contains(fn (string $p) => str_contains(mb_strtolower($p), $needle))) {
+            if (! collect($plans)->contains(fn (string $p) => collect($needles)->contains(fn (string $n) => str_contains(str_replace('ё', 'е', mb_strtolower($p)), $n)))) {
                 return false;
             }
         }

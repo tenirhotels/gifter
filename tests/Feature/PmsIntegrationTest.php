@@ -17,6 +17,7 @@ use App\Models\Recipient;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\CertificateManager;
+use App\Services\Pms\PmsBooking;
 use App\Services\Pms\PmsClient;
 use App\Services\Pms\PmsException;
 use App\Services\ReservationManager;
@@ -377,6 +378,20 @@ class PmsIntegrationTest extends TestCase
             ->mountAction('reserve')->fillForm(['booking_number' => 'T-1'])
             ->assertMountedActionModalSee(['Bekki R.', 'Имя гостя не совпадает', 'Тариф брони: Стандартный — не «Сертификат»', 'Причина расхождений'])
             ->assertMountedActionModalDontSee('Ramzi');
+    }
+
+    public function test_rate_plan_matches_in_any_language_and_several_names(): void
+    {
+        $this->enable();
+        $this->actingAs(User::factory()->create(['roles' => [Role::FrontOffice]]));
+        $this->next = Http::response($this->booking(['roomStays' => [['ratePlans' => [['id' => 'r2', 'name' => 'Certificate']]]]]));
+
+        Livewire::test(ViewCertificate::class, ['record' => $this->certificate->id])
+            ->mountAction('reserve')->fillForm(['booking_number' => 'T-1'])
+            ->assertMountedActionModalDontSee('не «Сертификат»');
+
+        $this->assertTrue(PmsBooking::fromResponse($this->booking(['roomStays' => [['ratePlans' => [['id' => 'x', 'name' => 'Gift Rate']]]]]), 'N')->allStaysOnRatePlan('Сертификат, Gift'));
+        $this->assertFalse(PmsBooking::fromResponse($this->booking(['roomStays' => [['ratePlans' => [['id' => 'x', 'name' => 'Стандартный']]]]]), 'N')->allStaysOnRatePlan('Сертификат, Certificate'));
     }
 
     public function test_wrong_rate_plan_needs_reason_and_goes_to_finance_review(): void

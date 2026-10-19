@@ -78,8 +78,8 @@ class PmsSettings extends Page
                     ->placeholder(fn (Get $get) => $isExely($get) ? PmsSetting::EXELY_DEFAULT_URL : 'https://hub.example.com')
                     ->helperText(fn (Get $get) => $isExely($get) ? 'Можно оставить пустым — используется '.PmsSetting::EXELY_DEFAULT_URL.'.' : 'Без «/v1/…»: путь /v1/properties/{код}/bookings/{номер} добавляется автоматически.'),
                 TextInput::make('property_code')->label(fn (Get $get) => $isExely($get) ? 'Идентификатор отеля в Exely (propertyId)' : 'Код отеля')->maxLength(64),
-                TextInput::make('certificate_rate_plan')->label('Тариф для сертификатов')->maxLength(100)
-                    ->helperText('Название (или его часть) тарифа PMS, по которому бронируются сертификаты, например «Сертификат». Если тариф брони другой, бронь можно сохранить только с причиной — она уйдёт на проверку Финансам. Пусто — тариф не сверяется.'),
+                TextInput::make('certificate_rate_plan')->label('Тариф для сертификатов')->maxLength(200)
+                    ->helperText('Название (или его часть) тарифа PMS, по которому бронируются сертификаты. Можно несколько названий через запятую, в том числе на английском: «Сертификат, Certificate» (эти два языка Gifter считает одним тарифом). Если тариф брони другой, бронь можно сохранить только с причиной — она уйдёт на проверку Финансам. Пусто — тариф не сверяется.'),
                 TextInput::make('token')->label('Токен хаба')->password()->autocomplete('off')->maxLength(500)
                     ->visible(fn (Get $get) => ! $isExely($get))
                     ->placeholder(filled($current->token) ? '•••••••• сохранён — оставьте пустым, чтобы не менять' : '')
