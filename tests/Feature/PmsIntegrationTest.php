@@ -81,6 +81,7 @@ class PmsIntegrationTest extends TestCase
             'propertyId' => '9305', 'number' => '20261020-9305-1', 'status' => 'Active',
             'roomStays' => [[
                 'index' => 0, 'stayDates' => ['arrivalDateTime' => '2026-10-20T14:00', 'departureDateTime' => '2026-10-22T12:00'],
+                'ratePlans' => [['id' => 'r1', 'name' => 'Сертификат']],
                 'guests' => [['firstName' => 'Анна', 'lastName' => 'Иванова']], 'hub' => ['status' => 'booked'],
             ]],
             'customer' => ['firstName' => 'Пётр', 'lastName' => 'Сидоров'],
@@ -150,7 +151,7 @@ class PmsIntegrationTest extends TestCase
 
         $booking = PmsClient::make()->find('M-1');
         $this->assertSame(['2026-10-20', '2026-10-24', 2], [$booking->arrival->toDateString(), $booking->departure->toDateString(), $booking->roomCount]);
-        $this->assertNotContains('Гость Отмена', $booking->guestNames);
+        $this->assertNotContains('Гость Отмена', $booking->guestNames());
 
         $this->next = Http::response(['booking' => ['number' => 'M-2', 'status' => 'Active', 'roomStays' => [$stay('2026-10-21', '2026-10-23', 'cancelled', 'Один')]]]);
         $this->assertTrue(PmsClient::make()->find('M-2')->cancelled, 'Все комнаты отменены — бронь отменена');
@@ -176,7 +177,9 @@ class PmsIntegrationTest extends TestCase
             $this->assertStringContainsString('причину', $e->getMessage());
         }
         $manager->save($this->certificate, ['booking_number' => 'B3', 'note' => 'Гость придёт вместо получателя']);
-        $this->assertSame(NameMatch::Mismatch, $this->certificate->refresh()->name_match);
+        $this->assertSame([NameMatch::Mismatch, 'Иван Л.'], [$this->certificate->refresh()->name_match, $this->certificate->booking_guest_name],
+            'При несовпадении хранится и показывается только имя и первая буква фамилии');
+        $this->assertStringNotContainsString('Левый', (string) $this->certificate->reservation_note.$this->certificate->history()->pluck('description')->implode(' '));
         $this->assertNotNull($this->certificate->reservation_review_status, 'Несовпадение уходит на проверку Финансов');
     }
 
@@ -362,5 +365,68 @@ class PmsIntegrationTest extends TestCase
 
         $this->next = Http::response(['error' => 'bad_request'], 400);
         $this->assertTrue(PmsClient::make()->ping()['ok'], 'Ответ получен после проверки токена — связь есть');
+    }
+
+    public function test_checks_rate_plan_dates_and_masked_name_in_the_form_preview(): void
+    {
+        $this->enable();
+        $this->actingAs(User::factory()->create(['roles' => [Role::FrontOffice]]));
+        $this->next = Http::response($this->booking(['roomStays' => [['ratePlans' => [['id' => 'r9', 'name' => 'Стандартный']], 'guests' => [['firstName' => 'Bekki', 'lastName' => 'Ramzi']]]], 'customer' => ['firstName' => 'Кто', 'lastName' => 'Угодно']]));
+
+        Livewire::test(ViewCertificate::class, ['record' => $this->certificate->id])
+            ->mountAction('reserve')->fillForm(['booking_number' => 'T-1'])
+            ->assertMountedActionModalSee(['Bekki R.', 'Имя гостя не совпадает', 'Тариф брони: Стандартный — не «Сертификат»', 'Причина расхождений'])
+            ->assertMountedActionModalDontSee('Ramzi');
+    }
+
+    public function test_wrong_rate_plan_needs_reason_and_goes_to_finance_review(): void
+    {
+        $this->enable();
+        $manager = app(ReservationManager::class);
+        $this->next = Http::response($this->booking(['roomStays' => [['ratePlans' => [['id' => 'r9', 'name' => 'Стандартный']]]]]));
+
+        try {
+            $manager->save($this->certificate, ['booking_number' => 'R-1']);
+            $this->fail('Тариф не «Сертификат» без причины');
+        } catch (DomainRuleViolation $e) {
+            $this->assertStringContainsString('Тариф брони: Стандартный', $e->getMessage());
+        }
+
+        $manager->save($this->certificate, ['booking_number' => 'R-1', 'note' => 'Гость оплатил разницу тарифа']);
+        $c = $this->certificate->refresh();
+        $this->assertNotNull($c->reservation_review_status);
+        $this->assertStringContainsString('Расхождения: Тариф брони: Стандартный', (string) $c->reservation_note);
+        $this->assertStringContainsString('Гость оплатил разницу тарифа', (string) $c->reservation_note);
+
+        // Тариф не сверяется, если название в настройках пустое.
+        $manager->release($this->certificate->refresh(), 'тест');
+        PmsSetting::query()->update(['certificate_rate_plan' => null]);
+        $manager->save($this->certificate->refresh(), ['booking_number' => 'R-2']);
+        $this->assertSame(CertificateStatus::Reserved, $this->certificate->refresh()->status);
+    }
+
+    public function test_dates_arrival_outside_validity_is_blocked_departure_beyond_needs_reason(): void
+    {
+        $this->enable();
+        $manager = app(ReservationManager::class);
+        $validUntil = $this->certificate->valid_until;
+
+        $this->next = Http::response($this->booking(['roomStays' => [['stayDates' => ['arrivalDateTime' => $validUntil->copy()->addDays(5)->format('Y-m-d').'T14:00', 'departureDateTime' => $validUntil->copy()->addDays(6)->format('Y-m-d').'T12:00']]]]));
+        try {
+            $manager->save($this->certificate, ['booking_number' => 'D-1', 'note' => 'очень надо']);
+            $this->fail('Заезд после конца срока');
+        } catch (DomainRuleViolation $e) {
+            $this->assertStringContainsString('в пределах срока', $e->getMessage());
+        }
+
+        $this->next = Http::response($this->booking(['roomStays' => [['stayDates' => ['arrivalDateTime' => $validUntil->copy()->format('Y-m-d').'T14:00', 'departureDateTime' => $validUntil->copy()->addDays(3)->format('Y-m-d').'T12:00']]]]));
+        try {
+            $manager->save($this->certificate, ['booking_number' => 'D-2']);
+            $this->fail('Выезд позже срока без причины');
+        } catch (DomainRuleViolation $e) {
+            $this->assertStringContainsString('позже конца срока', $e->getMessage());
+        }
+        $manager->save($this->certificate, ['booking_number' => 'D-2', 'note' => 'Продление согласовано']);
+        $this->assertSame(CertificateStatus::Reserved, $this->certificate->refresh()->status);
     }
 }

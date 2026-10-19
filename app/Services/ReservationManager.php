@@ -8,9 +8,11 @@ use App\Enums\NameMatch;
 use App\Enums\ReservationReview;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\Certificate;
+use App\Models\PmsSetting;
 use App\Services\Pms\PmsBooking;
 use App\Services\Pms\PmsClient;
 use App\Services\Pms\PmsException;
+use App\Support\GuestName;
 use App\Support\NameMatcher;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -50,10 +52,15 @@ class ReservationManager
     }
 
     /**
-     * Бронь из PMS: гость (из гостей и заказчика брони тот, кто совпал с получателем, затем с заказчиком сертификата),
-     * совпадение имени и даты. Отменённая бронь не подходит. `fresh` — без кеша (для сохранения).
+     * Бронь из PMS и сверка с сертификатом. Гость: из гостей и заказчика брони тот, кто совпал с получателем,
+     * затем с заказчиком сертификата; при несовпадении показываются только имя и первая буква фамилии.
+     * Отменённая бронь не подходит. `fresh` — без кеша (для сохранения).
      *
-     * @return array{booking: PmsBooking, guest: string, match: NameMatch}
+     * Сверка (`checks`): имя гостя; даты (заезд в срок сертификата — иначе бронь не принимается; выезд не позже
+     * конца срока); тариф «Сертификат» (название задаётся в настройках PMS). Расхождение — причина обязательна,
+     * бронь уходит на проверку Финансам.
+     *
+     * @return array{booking: PmsBooking, guest: string, match: NameMatch, checks: list<array{key: string, ok: bool, text: string}>}
      */
     public function resolveFromPms(Certificate $certificate, string $number, bool $fresh = false): array
     {
@@ -67,7 +74,8 @@ class ReservationManager
         }
         $certificate->loadMissing(['recipient', 'customer']);
         $best = null;
-        foreach ($booking->guestNames as $name) {
+        foreach ($booking->guests as $i => $person) {
+            $name = $booking->guestNames()[$i];
             $match = $this->matchName($certificate, $name);
             if ($match === NameMatch::Recipient || ($match === NameMatch::Customer && ($best === null || $best['match'] === NameMatch::Mismatch))) {
                 $best = ['guest' => $name, 'match' => $match];
@@ -75,14 +83,43 @@ class ReservationManager
                     break;
                 }
             } elseif ($best === null) {
-                $best = ['guest' => $name, 'match' => $match];
+                $best = ['guest' => $name, 'match' => $match, 'person' => $person];
             }
         }
         if ($best === null) {
             throw new PmsException("В брони № {$number} нет имени гостя — обратитесь в бронирование.");
         }
+        if ($best['match'] === NameMatch::Mismatch) {
+            $best['guest'] = GuestName::masked($best['person']['first'], $best['person']['last']);
+        }
+        unset($best['person']);
 
-        return ['booking' => $booking] + $best;
+        return ['booking' => $booking] + $best + ['checks' => $this->pmsChecks($certificate, $booking, $best['match'])];
+    }
+
+    /** @return list<array{key: string, ok: bool, text: string}> */
+    private function pmsChecks(Certificate $certificate, PmsBooking $booking, NameMatch $match): array
+    {
+        $arrivalOk = ! $booking->arrival->lt($certificate->valid_from) && ! $booking->arrival->gt($certificate->valid_until);
+        $departureOk = ! $booking->departure->gt($certificate->valid_until->copy()->addDay());
+        $checks = [
+            ['key' => 'name', 'ok' => $match !== NameMatch::Mismatch, 'text' => $match === NameMatch::Mismatch
+                ? 'Имя гостя не совпадает ни с получателем, ни с заказчиком' : $match->getLabel()],
+            ['key' => 'arrival', 'ok' => $arrivalOk, 'text' => $arrivalOk
+                ? 'Заезд '.$booking->arrival->format('d.m.Y').' — в сроке сертификата (до '.$certificate->valid_until->format('d.m.Y').')'
+                : 'Заезд '.$booking->arrival->format('d.m.Y').' вне срока сертификата ('.$certificate->valid_from->format('d.m.Y').' — '.$certificate->valid_until->format('d.m.Y').')'],
+            ['key' => 'departure', 'ok' => $departureOk, 'text' => $departureOk
+                ? 'Выезд '.$booking->departure->format('d.m.Y').' — в рамках срока'
+                : 'Выезд '.$booking->departure->format('d.m.Y').' позже конца срока сертификата ('.$certificate->valid_until->format('d.m.Y').')'],
+        ];
+        $plan = trim((string) PmsSetting::current()->certificate_rate_plan);
+        if ($plan !== '') {
+            $planOk = $booking->allStaysOnRatePlan($plan);
+            $checks[] = ['key' => 'rate', 'ok' => $planOk, 'text' => $planOk
+                ? "Тариф «{$plan}»" : "Тариф брони: {$booking->ratePlanLabel()} — не «{$plan}»"];
+        }
+
+        return $checks;
     }
 
     /** Бронь попадает в последние дни срока — нужна проверка. */
@@ -137,11 +174,16 @@ class ReservationManager
 
             $match = $pms['match'] ?? $this->matchName($fresh, $guest);
             $risk = $isNew && empty($data['skip_risk_review']) && $this->inRiskWindow($fresh);
-            $needsReview = $match === NameMatch::Mismatch || $risk;
+            // Расхождения сверки с PMS (кроме заезда вне срока — он блокирует, см. assertDates).
+            $discrepancies = $pms ? collect($pms['checks'])->reject(fn (array $c) => $c['ok'] || $c['key'] === 'arrival')->pluck('text')->all() : [];
+            $needsReview = $match === NameMatch::Mismatch || $risk || $discrepancies !== [];
             if ($needsReview && $note === '') {
-                throw new DomainRuleViolation($match === NameMatch::Mismatch
-                    ? 'Имя в брони не совпадает ни с получателем, ни с заказчиком — укажите причину (её проверят Финансы).'
+                throw new DomainRuleViolation($discrepancies !== [] || $match === NameMatch::Mismatch
+                    ? 'Есть расхождения: '.($discrepancies !== [] ? implode('; ', $discrepancies) : 'имя в брони не совпадает ни с получателем, ни с заказчиком').' — укажите причину (её проверят Финансы).'
                     : 'Бронь в последние '.self::RISK_DAYS.' дней срока — укажите комментарий (бронь проверят Финансы).');
+            }
+            if ($discrepancies !== []) {
+                $note = trim('Расхождения: '.implode('; ', $discrepancies).'. '.$note);
             }
 
             $before = $this->snapshot($fresh);

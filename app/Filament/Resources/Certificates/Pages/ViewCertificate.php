@@ -299,7 +299,7 @@ class ViewCertificate extends ViewRecord
                     return false;
                 }
 
-                return $found['match'] === NameMatch::Mismatch || $risk;
+                return $risk || collect($found['checks'])->contains(fn (array $c) => ! $c['ok'] && $c['key'] !== 'arrival');
             }
 
             return filled($get('guest_name')) && ($reservations()->matchName($record, (string) $get('guest_name')) === NameMatch::Mismatch || $risk);
@@ -339,8 +339,8 @@ class ViewCertificate extends ViewRecord
                         ->minDate(fn (Certificate $record) => $record->valid_from)->maxDate(fn (Certificate $record) => $record->valid_until),
                     DatePicker::make('departure')->label('Выезд')->required(fn () => ! $pmsActive())->after('arrival'),
                 ]),
-                Textarea::make('note')->label(fn (Certificate $record, Get $get) => ($pmsActive() ? ($needsNote($record, $get) && ! $this->pmsMatches($record, $get)) : $reservations()->matchName($record, (string) $get('guest_name')) === NameMatch::Mismatch)
-                    ? 'Причина несовпадения имени' : 'Комментарий: бронь в последние дни срока')
+                Textarea::make('note')->label(fn (Certificate $record, Get $get) => ($pmsActive() ? $this->hasDiscrepancy($record, $get) : $reservations()->matchName($record, (string) $get('guest_name')) === NameMatch::Mismatch)
+                    ? ($pmsActive() ? 'Причина расхождений' : 'Причина несовпадения имени') : 'Комментарий: бронь в последние дни срока')
                     ->helperText('Бронь уйдёт на проверку Финансам.')
                     ->visible($needsNote)->required($needsNote),
             ])
@@ -348,17 +348,19 @@ class ViewCertificate extends ViewRecord
                 fn () => $reservations()->save($record, $data), $name === 'reserve' ? 'Бронь отмечена' : 'Бронь изменена'));
     }
 
-    /** С PMS совпало имя гостя (получатель или заказчик). */
-    private function pmsMatches(Certificate $record, Get $get): bool
+    /** Сверка с PMS нашла расхождение (имя, выезд за срок, тариф), требующее причины. */
+    private function hasDiscrepancy(Certificate $record, Get $get): bool
     {
         try {
-            return app(ReservationManager::class)->resolveFromPms($record, (string) $get('booking_number'))['match'] !== NameMatch::Mismatch;
+            $found = app(ReservationManager::class)->resolveFromPms($record, (string) $get('booking_number'));
         } catch (PmsException) {
             return false;
         }
+
+        return collect($found['checks'])->contains(fn (array $c) => ! $c['ok'] && $c['key'] !== 'arrival');
     }
 
-    /** Что нашла PMS по номеру брони: гость, даты, совпадение имени; или причина, почему бронь нельзя привязать. */
+    /** Что нашла PMS по номеру брони и результат сверки с сертификатом; или причина, почему бронь нельзя привязать. */
     private static function pmsPreview(Certificate $record, string $number): HtmlString|string
     {
         if (blank($number)) {
@@ -371,11 +373,10 @@ class ViewCertificate extends ViewRecord
         }
         $b = $found['booking'];
         $stale = $b->stale ? ' <span class="text-warning-600">(данные PMS устарели: '.($b->dataAgeMinutes ?? '?').' мин)</span>' : '';
-        $ok = $found['match'] !== NameMatch::Mismatch;
+        $lines = collect($found['checks'])->map(fn (array $c) => '<div class="'.($c['ok'] ? 'text-success-600' : 'text-danger-600').'">'.($c['ok'] ? '✓ ' : '✗ ').e($c['text']).'</div>')->implode('');
 
-        return new HtmlString('<div><strong>'.e($found['guest']).'</strong> · '.$b->arrival->format('d.m.Y').' — '.$b->departure->format('d.m.Y').' · комнат: '.$b->roomCount.$stale.'<br>'
-            .'<span class="'.($ok ? 'text-success-600' : 'text-danger-600').'">'.e($found['match']->getLabel()).'</span> '
-            .'<span class="gf-muted">(получатель: '.e($record->recipient?->full_name ?? '—').', заказчик: '.e($record->customer?->displayName() ?: '—').')</span></div>');
+        return new HtmlString('<div><strong>'.e($found['guest']).'</strong> · '.$b->arrival->format('d.m.Y').' — '.$b->departure->format('d.m.Y').' · комнат: '.$b->roomCount.$stale.'</div>'
+            .$lines.'<div class="gf-muted">Получатель: '.e($record->recipient?->full_name ?? '—').', заказчик: '.e($record->customer?->displayName() ?: '—').'</div>');
     }
 
     private static function reviewSummary(Certificate $record): string

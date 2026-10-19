@@ -58,7 +58,7 @@ class PmsSettings extends Page
     private function formState(PmsSetting $setting): array
     {
         return ['enabled' => $setting->enabled, 'provider' => $setting->provider ?: PmsSetting::HUB, 'base_url' => $setting->base_url,
-            'property_code' => $setting->property_code, 'token' => null, 'client_id' => $setting->client_id, 'client_secret' => null];
+            'property_code' => $setting->property_code, 'certificate_rate_plan' => $setting->certificate_rate_plan, 'token' => null, 'client_id' => $setting->client_id, 'client_secret' => null];
     }
 
     public function form(Schema $schema): Schema
@@ -78,6 +78,8 @@ class PmsSettings extends Page
                     ->placeholder(fn (Get $get) => $isExely($get) ? PmsSetting::EXELY_DEFAULT_URL : 'https://hub.example.com')
                     ->helperText(fn (Get $get) => $isExely($get) ? 'Можно оставить пустым — используется '.PmsSetting::EXELY_DEFAULT_URL.'.' : 'Без «/v1/…»: путь /v1/properties/{код}/bookings/{номер} добавляется автоматически.'),
                 TextInput::make('property_code')->label(fn (Get $get) => $isExely($get) ? 'Идентификатор отеля в Exely (propertyId)' : 'Код отеля')->maxLength(64),
+                TextInput::make('certificate_rate_plan')->label('Тариф для сертификатов')->maxLength(100)
+                    ->helperText('Название (или его часть) тарифа PMS, по которому бронируются сертификаты, например «Сертификат». Если тариф брони другой, бронь можно сохранить только с причиной — она уйдёт на проверку Финансам. Пусто — тариф не сверяется.'),
                 TextInput::make('token')->label('Токен хаба')->password()->autocomplete('off')->maxLength(500)
                     ->visible(fn (Get $get) => ! $isExely($get))
                     ->placeholder(filled($current->token) ? '•••••••• сохранён — оставьте пустым, чтобы не менять' : '')
@@ -115,6 +117,7 @@ class PmsSettings extends Page
             'provider' => in_array($state['provider'] ?? null, [PmsSetting::HUB, PmsSetting::EXELY], true) ? $state['provider'] : PmsSetting::HUB,
             'base_url' => filled($state['base_url'] ?? null) ? rtrim((string) $state['base_url'], '/') : null,
             'property_code' => filled($state['property_code'] ?? null) ? trim((string) $state['property_code']) : null,
+            'certificate_rate_plan' => filled($state['certificate_rate_plan'] ?? null) ? trim((string) $state['certificate_rate_plan']) : null,
             'client_id' => filled($state['client_id'] ?? null) ? trim((string) $state['client_id']) : $setting->client_id,
             'updated_by' => auth()->id(),
         ]);
