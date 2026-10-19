@@ -165,6 +165,25 @@ class FinanceAndComplimentaryTest extends TestCase
         $this->assertTrue($certificate->refresh()->isFullyPaid());
     }
 
+    public function test_cash_is_confirmed_only_by_finance_and_counts_as_reconciled(): void
+    {
+        $this->as(Role::Sales);
+        $certificate = $this->draft();
+        $payment = app(PaymentManager::class)->invoice($certificate, PaymentMethod::Cash);
+
+        Livewire::test(PaymentsRelationManager::class, ['ownerRecord' => $certificate, 'pageClass' => ViewCertificate::class])
+            ->assertActionHidden(TestAction::make('markPaid')->table($payment));
+
+        $this->as(Role::Finance);
+        Livewire::test(ListPayments::class)
+            ->assertCanSeeTableRecords([$payment])
+            ->callAction(TestAction::make('receiveTransfer')->table($payment), ['paid_at' => now()]);
+
+        $this->assertTrue($payment->refresh()->isReconciled());
+        $this->assertTrue($certificate->refresh()->isFullyPaid());
+        $this->assertSame('Наличные', PaymentMethod::Cash->getLabel());
+    }
+
     public function test_kaspi_payment_marked_by_sales_waits_for_finance_reconciliation(): void
     {
         $this->as(Role::Sales);

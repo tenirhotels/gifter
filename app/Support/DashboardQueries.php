@@ -164,7 +164,7 @@ final class DashboardQueries
 
     public function bankTransfersAwaiting(): Builder
     {
-        return Payment::query()->where('status', PaymentStatus::Pending)->where('method', PaymentMethod::BankTransfer);
+        return Payment::query()->where('status', PaymentStatus::Pending)->whereIn('method', PaymentMethod::financeConfirmed());
     }
 
     public function receivedThisMonth(): Builder

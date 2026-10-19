@@ -74,7 +74,7 @@ class PaymentResource extends Resource
             return null;
         }
         $count = Payment::query()->where('status', PaymentStatus::Paid)->whereNull('reconciled_at')->count()
-            + Payment::query()->where('status', PaymentStatus::Pending)->where('method', PaymentMethod::BankTransfer)->count();
+            + Payment::query()->where('status', PaymentStatus::Pending)->whereIn('method', PaymentMethod::financeConfirmed())->count();
 
         return $count ? (string) $count : null;
     }
@@ -101,16 +101,16 @@ class PaymentResource extends Resource
                 Filter::make('to_reconcile')->label('Ждут сверки')->default()
                     ->query(fn (Builder $query) => $query->where(fn (Builder $q) => $q
                         ->where(fn (Builder $q) => $q->where('status', PaymentStatus::Paid)->whereNull('reconciled_at'))
-                        ->orWhere(fn (Builder $q) => $q->where('status', PaymentStatus::Pending)->where('method', PaymentMethod::BankTransfer)))),
+                        ->orWhere(fn (Builder $q) => $q->where('status', PaymentStatus::Pending)->whereIn('method', PaymentMethod::financeConfirmed())))),
                 SelectFilter::make('method')->label('Способ')->options(PaymentMethod::class),
                 SelectFilter::make('status')->label('Статус')->options(PaymentStatus::class),
             ])
             ->recordActions([
-                Action::make('receiveTransfer')->label('Поступило на р/с')->icon('heroicon-o-banknotes')->color('success')
+                Action::make('receiveTransfer')->label(fn (Payment $record) => $record->method === PaymentMethod::Cash ? 'Принято в кассе' : 'Поступило на р/с')->icon('heroicon-o-banknotes')->color('success')
                     ->authorize(Permission::ReceiveBankTransfers)
-                    ->visible(fn (Payment $record) => $record->status === PaymentStatus::Pending && $record->method === PaymentMethod::BankTransfer)
+                    ->visible(fn (Payment $record) => $record->status === PaymentStatus::Pending && $record->method->requiresFinanceConfirmation())
                     ->modalDescription(fn (Payment $record) => $record->batch_id ? 'Общий счёт группы: отметка относится ко всем его строкам.' : null)
-                    ->schema([DateTimePicker::make('paid_at')->label('Дата поступления по выписке')->default(now())->maxDate(now())->required()])
+                    ->schema([DateTimePicker::make('paid_at')->label('Дата поступления (выписка или касса)')->default(now())->maxDate(now())->required()])
                     ->action(fn (Payment $record, array $data, Action $action) => RunsDomainActions::run($action,
                         fn () => app(PaymentManager::class)->markPaid($record, Carbon::parse($data['paid_at'])), 'Поступление отмечено и сверено')),
                 Action::make('reconcile')->label('Сверено')->icon('heroicon-o-document-check')

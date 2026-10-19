@@ -11,18 +11,28 @@ enum PaymentMethod: string implements HasLabel
     /** Перечисление на расчётный счёт (юрлица). Поступление подтверждают Финансы. */
     case BankTransfer = 'bank_transfer';
 
+    /** Наличные в кассе. Поступление подтверждают Финансы. */
+    case Cash = 'cash';
+
     public function getLabel(): string
     {
         return match ($this) {
             self::KaspiInvoice => 'Счёт Kaspi',
             self::HalykInvoice => 'Счёт Halyk Bank',
             self::BankTransfer => 'Перечисление на р/с',
+            self::Cash => 'Наличные',
         };
     }
 
     /** Поступление по этому способу отмечают только Финансы по выписке. */
     public function requiresFinanceConfirmation(): bool
     {
-        return $this === self::BankTransfer;
+        return in_array($this, self::financeConfirmed(), true);
+    }
+
+    /** @return list<self> */
+    public static function financeConfirmed(): array
+    {
+        return [self::BankTransfer, self::Cash];
     }
 }

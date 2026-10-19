@@ -37,8 +37,8 @@ class FinanceQueueWidget extends RoleQueueWidget
 
         return [
             $this->counter('Ждут сверки', $q->paymentsToReconcile(), PaymentResource::getUrl('index'), 'warning', 'отмечены продажами', 'heroicon-o-document-check'),
-            $this->counter('Перечисления на р/с', $q->bankTransfersAwaiting(),
-                PaymentResource::getUrl('index', ['filters' => ['method' => ['value' => 'bank_transfer'], 'status' => ['value' => 'pending']]]), 'warning', 'проверить выписку', 'heroicon-o-building-library'),
+            $this->counter('Р/с и наличные', $q->bankTransfersAwaiting(),
+                PaymentResource::getUrl('index', ['filters' => ['status' => ['value' => 'pending']]]), 'warning', 'подтвердить поступление', 'heroicon-o-building-library'),
             $this->counter('Брони на проверке', $q->reservationsUnderReview(), ReservationReviews::getUrl(), 'warning', 'имя не совпало или поздняя бронь', 'heroicon-o-shield-check'),
             $this->counter('Возвраты на согласовании', $q->refunds(RefundStatus::Requested), $refunds('requested'), 'danger', 'нужно ваше решение', 'heroicon-o-receipt-refund'),
             $this->counter('Возвраты ждут выплаты', $q->refunds(RefundStatus::Approved), $refunds('approved'), 'warning', 'отметить выплату', 'heroicon-o-arrow-uturn-left'),
