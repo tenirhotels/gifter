@@ -166,7 +166,7 @@ class SecurityTest extends TestCase
             'app.debug' => false, 'app.url' => 'https://gifter.example.test',
             'session.secure' => true, 'session.encrypt' => true, 'logging.channels.single.level' => 'warning',
             'gifter.security.contact_hash_key' => 'fictional-hash-key-for-tests', 'backup.backup.password' => 'fictional-archive-pass',
-            'gifter.backup.mail_to' => 'owner@example.test',
+            'gifter.backup.mail_to' => 'owner@example.test', 'gifter.require_payment_reconciled' => true,
         ]);
 
         $results = app(SecurityAudit::class)->run();
