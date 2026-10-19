@@ -6,7 +6,9 @@ use App\Enums\Permission;
 use App\Filament\Support\TranslatesPageLabels;
 use App\Models\AuditLog;
 use App\Models\PmsSetting;
+use App\Services\Pms\PmsCatalogSync;
 use App\Services\Pms\PmsClient;
+use App\Services\Pms\PmsException;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Radio;
@@ -100,6 +102,14 @@ class PmsSettings extends Page
     {
         return [
             Action::make('save')->label('Сохранить')->icon('heroicon-o-check')->action(fn () => $this->save()),
+            Action::make('syncServices')->label('Обновить услуги из PMS')->icon('heroicon-o-arrow-path')->color('gray')->action(function () {
+                try {
+                    $stats = app(PmsCatalogSync::class)->run();
+                    Notification::make()->success()->title("Услуг в PMS: {$stats['total']}, новых: {$stats['new']}, изменено: {$stats['updated']}, пропало: {$stats['missing']}")->send();
+                } catch (PmsException $e) {
+                    Notification::make()->danger()->title($e->getMessage())->send();
+                }
+            })->tooltip('Список услуг из Exely (без цен); включать услуги в сертификаты — в разделе «Услуги PMS»'),
             Action::make('ping')->label('Проверить связь')->icon('heroicon-o-signal')->color('gray')->action(function () {
                 $result = PmsClient::make()->ping();
                 $note = Notification::make()->title($result['message']);

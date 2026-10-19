@@ -1,0 +1,136 @@
+<?php
+
+namespace App\Filament\Pages;
+
+use App\Enums\Permission;
+use App\Exceptions\DomainRuleViolation;
+use App\Filament\Support\TranslatesPageLabels;
+use App\Models\PmsService;
+use App\Models\Service;
+use App\Services\Pms\PmsCatalogSync;
+use App\Services\Pms\PmsException;
+use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Table;
+use Illuminate\Contracts\Support\Htmlable;
+use UnitEnum;
+
+/**
+ * Услуги из PMS (Exely): список обновляется раз в ночь и по кнопке. Тумблер «Можно включать в сертификат» создаёт услугу Gifter
+ * (без цены — цену вводит директор). Ключ — ID услуги в PMS; названия могут быть на разных языках.
+ */
+class PmsServices extends Page implements HasTable
+{
+    use InteractsWithTable;
+    use TranslatesPageLabels;
+
+    protected string $view = 'filament.pages.table-page';
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPath;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Каталог';
+
+    protected static ?int $navigationSort = 5;
+
+    protected static ?string $navigationLabel = 'Услуги PMS';
+
+    protected static ?string $title = 'Услуги из PMS';
+
+    protected static ?string $slug = 'pms-services';
+
+    public static function canAccess(): bool
+    {
+        return (bool) auth()->user()?->can(Permission::ViewCatalog);
+    }
+
+    public function getSubheading(): string|Htmlable|null
+    {
+        $last = PmsCatalogSync::last();
+        if (! $last) {
+            return __('Список ещё не обновлялся.');
+        }
+        $when = now()->parse($last['at'])->format('d.m.Y H:i');
+
+        return $last['ok'] ? __('Обновлено').": {$when} · ".__('новых').": {$last['stats']['new']}, ".__('изменено').": {$last['stats']['updated']}, ".__('пропало').": {$last['stats']['missing']}"
+            : __('Последняя попытка').": {$when} — {$last['message']}";
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('sync')->label('Обновить услуги из PMS')->icon('heroicon-o-arrow-path')
+                ->authorize(Permission::ManageCatalog)
+                ->action(function () {
+                    try {
+                        $stats = app(PmsCatalogSync::class)->run();
+                        Notification::make()->success()->title("Услуг в PMS: {$stats['total']}, новых: {$stats['new']}, изменено: {$stats['updated']}, пропало: {$stats['missing']}")->send();
+                    } catch (PmsException $e) {
+                        Notification::make()->danger()->title($e->getMessage())->send();
+                    }
+                }),
+        ];
+    }
+
+    public function table(Table $table): Table
+    {
+        $can = fn () => (bool) auth()->user()?->can(Permission::ManageCatalog);
+
+        return $table
+            ->query(fn () => PmsService::query()->with('service'))
+            ->columns([
+                TextColumn::make('name')->label('Название в PMS')->searchable()->sortable()
+                    ->description(fn (PmsService $record) => 'ID '.$record->external_id.($record->kind ? ' · '.$record->kind : '')),
+                ToggleColumn::make('allowed_in_certificate')->label('Можно включать в сертификат')
+                    ->disabled(fn (PmsService $record) => ! $can() || $record->isMissing())
+                    ->updateStateUsing(function (PmsService $record, bool $state) {
+                        try {
+                            app(PmsCatalogSync::class)->setAllowed($record, $state);
+                        } catch (DomainRuleViolation $e) {
+                            Notification::make()->danger()->title($e->getMessage())->send();
+
+                            return ! $state;
+                        }
+
+                        return $state;
+                    }),
+                TextColumn::make('service.name')->label('Услуга в Gifter')->placeholder('—')
+                    ->description(fn (PmsService $record) => $record->service_id && $record->allowed_in_certificate ? __('цену вводит директор') : null),
+                TextColumn::make('missing_since')->label('Статус в PMS')->badge()
+                    ->state(fn (PmsService $record) => $record->isMissing() ? __('Пропала в PMS') : ($record->status ?: __('Есть')))
+                    ->color(fn (PmsService $record) => $record->isMissing() ? 'danger' : 'gray'),
+                TextColumn::make('synced_at')->label('Обновлено')->dateTime('d.m.Y H:i')->placeholder('—'),
+            ])
+            ->filters([
+                TernaryFilter::make('allowed_in_certificate')->label('Можно включать в сертификат'),
+            ])
+            ->recordActions([
+                Action::make('link')->label('Связать с услугой Gifter')->icon('heroicon-o-link')->color('gray')
+                    ->authorize(Permission::ManageCatalog)
+                    ->visible(fn (PmsService $record) => ! $record->service_id && ! $record->isMissing())
+                    ->modalDescription('Если такая услуга уже есть в Gifter — свяжите её, чтобы не создавать дубль.')
+                    ->schema([Select::make('service_id')->label('Услуга Gifter')->required()->searchable()
+                        ->options(fn () => Service::query()->whereDoesntHave('pmsService')->orderBy('name')->pluck('name', 'id'))])
+                    ->action(function (PmsService $record, array $data, Action $action) {
+                        try {
+                            app(PmsCatalogSync::class)->link($record, Service::findOrFail($data['service_id']));
+                            Notification::make()->success()->title('Услуга связана')->send();
+                        } catch (DomainRuleViolation $e) {
+                            Notification::make()->danger()->title($e->getMessage())->send();
+                            $action->halt();
+                        }
+                    }),
+            ])
+            ->defaultSort('name')
+            ->emptyStateHeading('Услуги ещё не загружены')
+            ->emptyStateDescription('Нажмите «Обновить услуги из PMS» (нужны подключение Exely в «Настройках PMS» и доступ ключей к Content API).');
+    }
+}

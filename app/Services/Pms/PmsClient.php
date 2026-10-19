@@ -99,6 +99,47 @@ class PmsClient
         return null;
     }
 
+    /**
+     * Список услуг отеля из справочника Exely (Content API: `GET /api/content/v1/properties/{propertyId}`, поле `services`).
+     * Берутся только услуги (ID, название, вид, статус); тарифы и цены не читаются. Только прямой Exely — хаб пока не подключён.
+     *
+     * @return list<array{id: string, name: string, kind: ?string, status: ?string}>
+     */
+    public function catalogServices(): array
+    {
+        if (! $this->isActive()) {
+            throw new PmsException('Интеграция с PMS не настроена.');
+        }
+        if (! $this->settings->isExely()) {
+            throw new PmsException('Список услуг сейчас берётся только из Exely напрямую: выберите источник «Exely напрямую» в настройках PMS.');
+        }
+        $code = rawurlencode((string) $this->settings->property_code);
+        $url = $this->settings->baseUrl()."/api/content/v1/properties/{$code}";
+        try {
+            $response = $this->request()->get($url);
+            if ($response->status() === 401) {
+                Cache::forget($this->tokenKey());
+                $response = $this->request()->get($url);
+            }
+        } catch (ConnectionException) {
+            throw new PmsException('Exely не отвечает — список услуг не обновлён. Попробуйте позже.');
+        }
+        if (in_array($response->status(), [401, 403], true)) {
+            throw new PmsException('Exely не пускает Gifter в Content API (нет доступа у ключей) — запросите доступ к Content API у Exely.');
+        }
+        if ($response->status() === 429) {
+            throw new PmsException('Слишком много запросов к Exely — подождите минуту и повторите.');
+        }
+        if (! $response->successful()) {
+            throw new PmsException('Exely вернул ошибку '.$response->status().' — список услуг не обновлён.');
+        }
+
+        return collect((array) $response->json('services', []))
+            ->filter(fn ($s) => is_array($s) && filled($s['id'] ?? null) && filled($s['name'] ?? null))
+            ->map(fn (array $s) => ['id' => (string) $s['id'], 'name' => trim((string) $s['name']), 'kind' => isset($s['kind']) ? (string) $s['kind'] : null, 'status' => isset($s['status']) ? (string) $s['status'] : null])
+            ->unique('id')->values()->all();
+    }
+
     private function fetch(string $number): PmsBooking
     {
         $number = self::normalizeNumber($number);

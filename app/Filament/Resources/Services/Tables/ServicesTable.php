@@ -29,7 +29,7 @@ class ServicesTable
         };
 
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['category', 'provider']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['category', 'provider', 'pmsService']))
             ->columns([
                 TextColumn::make('name')->label('Название')->searchable()->sortable()
                     ->description(fn (Service $record) => $record->unit),
@@ -41,6 +41,7 @@ class ServicesTable
                 IconColumn::make('requires_fulfillment')->label('Подготовка')->boolean(),
                 IconColumn::make('requires_scheduling')->label('Время')->boolean()->toggleable(),
                 IconColumn::make('requires_confirmation')->label('Подтверждение')->boolean()->toggleable(),
+                IconColumn::make('from_pms')->label('Из PMS')->boolean()->state(fn (Service $record) => $record->pmsService !== null)->toggleable(),
                 IconColumn::make('is_active')->label('Активна')->boolean(),
             ])
             ->filters([

@@ -23,3 +23,6 @@ foreach (config('gifter.pms.arrival_check_times') as $slot => $time) {
 
 // Автопогашение после выезда (Hub — checked_out, Exely — на следующий день после выезда): раз в день после выезда гостей.
 Schedule::command('gifter:sync-departures')->dailyAt(config('gifter.pms.departure_check_time'))->withoutOverlapping();
+
+// Список услуг из PMS (Exely) — раз в ночь; цены вводятся в Gifter.
+Schedule::command('gifter:sync-pms-catalog')->dailyAt('03:00')->withoutOverlapping();
