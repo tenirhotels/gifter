@@ -21,6 +21,8 @@ use App\Services\AdminCorrections;
 use App\Services\CertificateDocument;
 use App\Services\CertificateManager;
 use App\Services\PaymentManager;
+use App\Services\Pms\PmsClient;
+use App\Services\Pms\PmsException;
 use App\Services\RefundManager;
 use App\Services\ReservationExceptionManager;
 use App\Services\ReservationManager;
@@ -31,6 +33,7 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -38,6 +41,7 @@ use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\HtmlString;
 
 class ViewCertificate extends ViewRecord
 {
@@ -70,11 +74,14 @@ class ViewCertificate extends ViewRecord
                 ->modalSubmitActionLabel('Отправить директору')
                 ->fillForm(fn (Certificate $record) => ['guest_name' => trim($record->recipient?->last_name.' '.$record->recipient?->first_name)])
                 ->schema([
-                    TextInput::make('booking_number')->label('Номер брони PMS')->required()->maxLength(64),
-                    TextInput::make('guest_name')->label('Гость, как в брони')->required()->maxLength(255),
-                    Grid::make(2)->schema([
-                        DatePicker::make('arrival')->label('Заезд')->required()->minDate(today()),
-                        DatePicker::make('departure')->label('Выезд')->required()->after('arrival'),
+                    TextInput::make('booking_number')->label('Номер брони PMS')->required()->maxLength(64)->live(onBlur: true),
+                    Placeholder::make('pms_preview')->hiddenLabel()->visible(fn () => PmsClient::make()->isActive())
+                        ->content(fn (Certificate $record, Get $get) => self::pmsPreview($record, (string) $get('booking_number'))),
+                    TextInput::make('guest_name')->label('Гость, как в брони')->required(fn () => ! PmsClient::make()->isActive())->maxLength(255)
+                        ->visible(fn () => ! PmsClient::make()->isActive()),
+                    Grid::make(2)->visible(fn () => ! PmsClient::make()->isActive())->schema([
+                        DatePicker::make('arrival')->label('Заезд')->required(fn () => ! PmsClient::make()->isActive())->minDate(today()),
+                        DatePicker::make('departure')->label('Выезд')->required(fn () => ! PmsClient::make()->isActive())->after('arrival'),
                     ]),
                     Textarea::make('reason')->label('Причина исключения')->required()->helperText('Что произошло и почему бронь не была поставлена вовремя.'),
                 ])
@@ -282,15 +289,29 @@ class ViewCertificate extends ViewRecord
     private function reservationAction(string $name, string $label, array $statuses): Action
     {
         $reservations = fn (): ReservationManager => app(ReservationManager::class);
-        $needsNote = fn (Certificate $record, Get $get): bool => filled($get('guest_name'))
-            && ($reservations()->matchName($record, (string) $get('guest_name')) === NameMatch::Mismatch
-                || ($record->status === CertificateStatus::Active && $reservations()->inRiskWindow($record)));
+        $pmsActive = fn (): bool => PmsClient::make()->isActive();
+        $needsNote = function (Certificate $record, Get $get) use ($reservations, $pmsActive): bool {
+            $risk = $record->status === CertificateStatus::Active && $reservations()->inRiskWindow($record);
+            if ($pmsActive()) {
+                try {
+                    $found = $reservations()->resolveFromPms($record, (string) $get('booking_number'));
+                } catch (PmsException) {
+                    return false;
+                }
+
+                return $found['match'] === NameMatch::Mismatch || $risk;
+            }
+
+            return filled($get('guest_name')) && ($reservations()->matchName($record, (string) $get('guest_name')) === NameMatch::Mismatch || $risk);
+        };
 
         return Action::make($name)->label($label)->icon('heroicon-o-calendar')
             ->color($name === 'reserve' ? 'primary' : 'gray')
             ->authorize(Permission::ManageReservations)
             ->visible(fn (Certificate $record) => in_array($record->status, $statuses, true))
-            ->modalDescription('Бронь заводится в PMS; сюда вносятся её номер, гость и даты. Имя гостя сверяется с получателем и заказчиком.')
+            ->modalDescription(fn () => $pmsActive()
+                ? 'Введите номер брони PMS — гость и даты подтянутся из PMS автоматически. Без подтверждения PMS бронь не сохраняется.'
+                : 'Бронь заводится в PMS; сюда вносятся её номер, гость и даты. Имя гостя сверяется с получателем и заказчиком.')
             ->modalSubmitActionLabel('Сохранить бронь')
             ->fillForm(fn (Certificate $record) => [
                 'booking_number' => $record->pms_booking_number,
@@ -300,8 +321,11 @@ class ViewCertificate extends ViewRecord
                 'note' => $record->reservation_note,
             ])
             ->schema([
-                TextInput::make('booking_number')->label('Номер брони PMS')->required()->maxLength(64),
-                TextInput::make('guest_name')->label('Гость, как в брони')->required()->maxLength(255)->live(onBlur: true)
+                TextInput::make('booking_number')->label('Номер брони PMS')->required()->maxLength(64)->live(onBlur: true),
+                Placeholder::make('pms_preview')->hiddenLabel()->visible($pmsActive)
+                    ->content(fn (Certificate $record, Get $get) => self::pmsPreview($record, (string) $get('booking_number'))),
+                TextInput::make('guest_name')->label('Гость, как в брони')->required(fn () => ! $pmsActive())->maxLength(255)->live(onBlur: true)
+                    ->visible(fn () => ! $pmsActive())
                     ->helperText(function (Certificate $record, Get $get) use ($reservations): ?string {
                         if (blank($get('guest_name'))) {
                             return null;
@@ -310,18 +334,48 @@ class ViewCertificate extends ViewRecord
                         return $reservations()->matchName($record, (string) $get('guest_name'))->getLabel()
                             .' (получатель: '.($record->recipient?->full_name ?? '—').', заказчик: '.($record->customer?->displayName() ?: '—').')';
                     }),
-                Grid::make(2)->schema([
-                    DatePicker::make('arrival')->label('Заезд')->required()
+                Grid::make(2)->visible(fn () => ! $pmsActive())->schema([
+                    DatePicker::make('arrival')->label('Заезд')->required(fn () => ! $pmsActive())
                         ->minDate(fn (Certificate $record) => $record->valid_from)->maxDate(fn (Certificate $record) => $record->valid_until),
-                    DatePicker::make('departure')->label('Выезд')->required()->after('arrival'),
+                    DatePicker::make('departure')->label('Выезд')->required(fn () => ! $pmsActive())->after('arrival'),
                 ]),
-                Textarea::make('note')->label(fn (Certificate $record, Get $get) => $reservations()->matchName($record, (string) $get('guest_name')) === NameMatch::Mismatch
+                Textarea::make('note')->label(fn (Certificate $record, Get $get) => ($pmsActive() ? ($needsNote($record, $get) && ! $this->pmsMatches($record, $get)) : $reservations()->matchName($record, (string) $get('guest_name')) === NameMatch::Mismatch)
                     ? 'Причина несовпадения имени' : 'Комментарий: бронь в последние дни срока')
                     ->helperText('Бронь уйдёт на проверку Финансам.')
                     ->visible($needsNote)->required($needsNote),
             ])
             ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                 fn () => $reservations()->save($record, $data), $name === 'reserve' ? 'Бронь отмечена' : 'Бронь изменена'));
+    }
+
+    /** С PMS совпало имя гостя (получатель или заказчик). */
+    private function pmsMatches(Certificate $record, Get $get): bool
+    {
+        try {
+            return app(ReservationManager::class)->resolveFromPms($record, (string) $get('booking_number'))['match'] !== NameMatch::Mismatch;
+        } catch (PmsException) {
+            return false;
+        }
+    }
+
+    /** Что нашла PMS по номеру брони: гость, даты, совпадение имени; или причина, почему бронь нельзя привязать. */
+    private static function pmsPreview(Certificate $record, string $number): HtmlString|string
+    {
+        if (blank($number)) {
+            return 'После ввода номера здесь появятся данные брони из PMS.';
+        }
+        try {
+            $found = app(ReservationManager::class)->resolveFromPms($record, $number);
+        } catch (PmsException $e) {
+            return new HtmlString('<span class="text-danger-600">'.e($e->getMessage()).'</span>');
+        }
+        $b = $found['booking'];
+        $stale = $b->stale ? ' <span class="text-warning-600">(данные PMS устарели: '.($b->dataAgeMinutes ?? '?').' мин)</span>' : '';
+        $ok = $found['match'] !== NameMatch::Mismatch;
+
+        return new HtmlString('<div><strong>'.e($found['guest']).'</strong> · '.$b->arrival->format('d.m.Y').' — '.$b->departure->format('d.m.Y').' · комнат: '.$b->roomCount.$stale.'<br>'
+            .'<span class="'.($ok ? 'text-success-600' : 'text-danger-600').'">'.e($found['match']->getLabel()).'</span> '
+            .'<span class="gf-muted">(получатель: '.e($record->recipient?->full_name ?? '—').', заказчик: '.e($record->customer?->displayName() ?: '—').')</span></div>');
     }
 
     private static function reviewSummary(Certificate $record): string

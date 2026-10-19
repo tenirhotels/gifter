@@ -8,6 +8,9 @@ use App\Enums\NameMatch;
 use App\Enums\ReservationReview;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\Certificate;
+use App\Services\Pms\PmsBooking;
+use App\Services\Pms\PmsClient;
+use App\Services\Pms\PmsException;
 use App\Support\NameMatcher;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +49,42 @@ class ReservationManager
         return NameMatch::Mismatch;
     }
 
+    /**
+     * Бронь из PMS: гость (из гостей и заказчика брони тот, кто совпал с получателем, затем с заказчиком сертификата),
+     * совпадение имени и даты. Отменённая бронь не подходит. `fresh` — без кеша (для сохранения).
+     *
+     * @return array{booking: PmsBooking, guest: string, match: NameMatch}
+     */
+    public function resolveFromPms(Certificate $certificate, string $number, bool $fresh = false): array
+    {
+        $client = PmsClient::make();
+        $booking = $fresh ? $client->find($number) : $client->preview($number);
+        if ($booking->cancelled) {
+            throw new PmsException("Бронь № {$number} отменена в PMS — привязать её нельзя.");
+        }
+        if (! $booking->arrival || ! $booking->departure) {
+            throw new PmsException("В брони № {$number} нет дат проживания — обратитесь в бронирование.");
+        }
+        $certificate->loadMissing(['recipient', 'customer']);
+        $best = null;
+        foreach ($booking->guestNames as $name) {
+            $match = $this->matchName($certificate, $name);
+            if ($match === NameMatch::Recipient || ($match === NameMatch::Customer && ($best === null || $best['match'] === NameMatch::Mismatch))) {
+                $best = ['guest' => $name, 'match' => $match];
+                if ($match === NameMatch::Recipient) {
+                    break;
+                }
+            } elseif ($best === null) {
+                $best = ['guest' => $name, 'match' => $match];
+            }
+        }
+        if ($best === null) {
+            throw new PmsException("В брони № {$number} нет имени гостя — обратитесь в бронирование.");
+        }
+
+        return ['booking' => $booking] + $best;
+    }
+
     /** Бронь попадает в последние дни срока — нужна проверка. */
     public function inRiskWindow(Certificate $certificate): bool
     {
@@ -74,17 +113,29 @@ class ReservationManager
             }
 
             $booking = trim((string) ($data['booking_number'] ?? ''));
-            $guest = trim(preg_replace('/\s+/u', ' ', (string) ($data['guest_name'] ?? '')) ?? '');
             $note = trim((string) ($data['note'] ?? ''));
-            if ($booking === '' || $guest === '') {
-                throw new DomainRuleViolation('Укажите номер брони PMS и имя гостя, как в брони.');
+            $pms = null;
+            if (PmsClient::make()->isActive()) {
+                // Интеграция включена: бронь подтверждается по PMS строго — гость и даты берутся из PMS, а не вводятся.
+                if ($booking === '') {
+                    throw new DomainRuleViolation('Укажите номер брони PMS.');
+                }
+                $pms = $this->resolveFromPms($fresh, $booking, fresh: true);
+                $guest = $pms['guest'];
+                $arrival = $pms['booking']->arrival;
+                $departure = $pms['booking']->departure;
+            } else {
+                $guest = trim(preg_replace('/\s+/u', ' ', (string) ($data['guest_name'] ?? '')) ?? '');
+                if ($booking === '' || $guest === '') {
+                    throw new DomainRuleViolation('Укажите номер брони PMS и имя гостя, как в брони.');
+                }
+                $arrival = Carbon::parse($data['arrival'])->startOfDay();
+                $departure = Carbon::parse($data['departure'])->startOfDay();
             }
-            $arrival = Carbon::parse($data['arrival'])->startOfDay();
-            $departure = Carbon::parse($data['departure'])->startOfDay();
             $this->assertDates($fresh, $arrival, $departure, $isNew);
             $this->assertBookingFree($fresh, $booking);
 
-            $match = $this->matchName($fresh, $guest);
+            $match = $pms['match'] ?? $this->matchName($fresh, $guest);
             $risk = $isNew && empty($data['skip_risk_review']) && $this->inRiskWindow($fresh);
             $needsReview = $match === NameMatch::Mismatch || $risk;
             if ($needsReview && $note === '') {
@@ -104,6 +155,8 @@ class ReservationManager
                 'arrival_date' => $arrival->toDateString(),
                 'departure_date' => $departure->toDateString(),
                 'name_match' => $match,
+                'pms_verified_at' => $pms ? now() : null,
+                'pms_data_age_minutes' => $pms['booking']->dataAgeMinutes ?? null,
                 'reservation_note' => $note !== '' ? $note : null,
                 'reservation_review_status' => $review,
                 'reservation_reviewed_by' => $review === ReservationReview::Pending ? null : $fresh->reservation_reviewed_by,
@@ -112,6 +165,7 @@ class ReservationManager
                 'updated_by' => auth()->id(),
             ]);
             $description = $fresh->reservationLabel().'. '.$match->getLabel()
+                .($pms ? '. Подтверждена по PMS'.($pms['booking']->stale ? ' (данные устарели: '.($pms['booking']->dataAgeMinutes ?? '?').' мин)' : '') : '')
                 .($risk ? '. За '.max(0, today()->diffInDays($fresh->valid_until, false)).' дн. до конца срока' : '')
                 .($note !== '' ? ". {$note}" : '').($review === ReservationReview::Pending ? '. На проверке Финансов' : '');
             $this->history->record($fresh, $isNew ? HistoryEvent::Reserved : HistoryEvent::ReservationChanged, $description, $before, $this->snapshot($fresh));

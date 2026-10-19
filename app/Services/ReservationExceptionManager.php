@@ -9,6 +9,7 @@ use App\Exceptions\DomainRuleViolation;
 use App\Models\AuditLog;
 use App\Models\Certificate;
 use App\Models\ReservationException;
+use App\Services\Pms\PmsClient;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -42,16 +43,27 @@ class ReservationExceptionManager
                 throw new DomainRuleViolation('Для брони укажите получателя (гостя).');
             }
             $booking = trim((string) ($data['booking_number'] ?? ''));
-            $guest = trim((string) ($data['guest_name'] ?? ''));
             $reason = trim((string) ($data['reason'] ?? ''));
-            if ($booking === '' || $guest === '') {
-                throw new DomainRuleViolation('Укажите номер брони PMS и имя гостя, как в брони.');
+            if (PmsClient::make()->isActive()) {
+                // Бронь подтверждается по PMS: гость и даты — оттуда.
+                if ($booking === '') {
+                    throw new DomainRuleViolation('Укажите номер брони PMS.');
+                }
+                $pms = $this->reservations->resolveFromPms($fresh, $booking, fresh: true);
+                $guest = $pms['guest'];
+                $arrival = $pms['booking']->arrival;
+                $departure = $pms['booking']->departure;
+            } else {
+                $guest = trim((string) ($data['guest_name'] ?? ''));
+                if ($booking === '' || $guest === '') {
+                    throw new DomainRuleViolation('Укажите номер брони PMS и имя гостя, как в брони.');
+                }
+                $arrival = Carbon::parse($data['arrival'])->startOfDay();
+                $departure = Carbon::parse($data['departure'])->startOfDay();
             }
             if ($reason === '') {
                 throw new DomainRuleViolation('Укажите причину исключения для директора.');
             }
-            $arrival = Carbon::parse($data['arrival'])->startOfDay();
-            $departure = Carbon::parse($data['departure'])->startOfDay();
             if ($departure->lte($arrival)) {
                 throw new DomainRuleViolation('Дата выезда должна быть позже даты заезда.');
             }

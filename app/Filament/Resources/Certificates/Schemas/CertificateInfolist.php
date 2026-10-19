@@ -84,7 +84,10 @@ class CertificateInfolist
             Section::make('Бронь')->icon('heroicon-o-calendar-days')->columns(4)->columnSpanFull()
                 ->visible(fn (Certificate $record) => $record->hasReservation())
                 ->schema([
-                    TextEntry::make('pms_booking_number')->label('Номер брони PMS')->weight('bold')->copyable(),
+                    TextEntry::make('pms_booking_number')->label('Номер брони PMS')->weight('bold')->copyable()
+                        ->helperText(fn (Certificate $record) => $record->pms_verified_at
+                            ? 'Подтверждена по PMS '.$record->pms_verified_at->format('d.m.Y H:i').($record->pms_data_age_minutes ? " (данным PMS {$record->pms_data_age_minutes} мин)" : '')
+                            : 'Внесена вручную, не подтверждена по PMS'),
                     TextEntry::make('stay')->label('Проживание')
                         ->state(fn (Certificate $record) => $record->arrival_date?->format('d.m.Y').' — '.$record->departure_date?->format('d.m.Y'))
                         ->helperText(fn (Certificate $record) => $record->arrival_date ? $record->arrival_date->diffInDays($record->departure_date).' ноч.' : null),

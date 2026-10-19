@@ -74,6 +74,8 @@ enum Permission: string
     case AdminCorrections = 'admin.corrections';
     case ManageUsers = 'users.manage';
     case ViewAuditLog = 'audit.view';
+    /** Подключение к PMS (Hotel Hub / Exely): адрес, код отеля, токен. Только администратор. */
+    case ManageIntegrations = 'integrations.manage';
 
     /** @return list<Role> */
     public function roles(): array
@@ -106,7 +108,7 @@ enum Permission: string
             self::ApproveCommissions => [Role::SalesDirector],
             self::PayCommissions => [Role::Finance],
             self::AssignSeller => [Role::SalesManager],
-            self::ManageCommissionRules, self::ManageUsers, self::ViewAuditLog, self::AdminCorrections => [],
+            self::ManageIntegrations, self::ManageCommissionRules, self::ManageUsers, self::ViewAuditLog, self::AdminCorrections => [],
         };
     }
 }
