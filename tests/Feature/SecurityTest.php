@@ -14,6 +14,7 @@ use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\Recipient;
 use App\Models\User;
+use App\Services\ContactRevealGuard;
 use App\Services\SecurityAudit;
 use App\Services\UserSecurity;
 use Filament\Actions\Testing\TestAction;
@@ -220,6 +221,23 @@ class SecurityTest extends TestCase
         $this->artisan('gifter:create-user', ['--name' => 'Админ', '--email' => 'admin@example.test'])
             ->expectsOutputToContain('двухфакторный вход')
             ->assertSuccessful();
+    }
+
+    public function test_contact_reveals_are_limited_per_day_and_logged(): void
+    {
+        config(['gifter.security.reveal_daily_limit' => 2]);
+        $this->actingAs(User::factory()->create(['roles' => [Role::Sales]]));
+        [$a, $b, $c] = Customer::factory()->count(3)->create()->all();
+        $guard = app(ContactRevealGuard::class);
+
+        $this->assertTrue($guard->reveal($a));
+        $this->assertTrue($guard->reveal($b));
+        $this->assertTrue($guard->reveal($a), 'Повторное открытие того же клиента не считается');
+        $this->assertFalse($guard->reveal($c));
+        $this->assertSame(1, AuditLog::where('event', 'contacts_reveal_limit')->count());
+
+        $this->actingAs($this->admin());
+        $this->assertTrue($guard->reveal($c), 'Администратор не ограничен');
     }
 
     public function test_phone_must_be_international(): void

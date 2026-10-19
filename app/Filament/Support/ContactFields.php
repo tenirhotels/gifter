@@ -3,12 +3,13 @@
 namespace App\Filament\Support;
 
 use App\Enums\Permission;
-use App\Models\AuditLog;
+use App\Services\ContactRevealGuard;
 use App\Support\ContactMask;
 use App\Support\PhoneNumber;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Component;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
@@ -72,7 +73,12 @@ final class ContactFields
             ->visible(fn (Model $record) => $person($record) !== null)
             ->modalHeading(fn (Model $record) => $person($record)?->full_name)
             ->modalDescription('Открытие контактов записано в журнал аудита.')
-            ->mountUsing(fn (Model $record) => self::logReveal($person($record)))
+            ->mountUsing(function (Model $record, Action $action) use ($person) {
+                if (! self::logReveal($person($record))) {
+                    Notification::make()->danger()->title(self::limitMessage())->send();
+                    $action->halt();
+                }
+            })
             ->schema(fn (Model $record) => [
                 TextEntry::make('phone')->label('Телефон')->state(PhoneNumber::format($person($record)?->phone))->placeholder('—')->copyable(),
                 TextEntry::make('email')->label('Email')->state($person($record)?->email)->placeholder('—')->copyable(),
@@ -81,10 +87,14 @@ final class ContactFields
             ->modalCancelActionLabel('Закрыть');
     }
 
-    public static function logReveal(?Model $person): void
+    /** Записать открытие контактов; false — дневной лимит исчерпан. */
+    public static function logReveal(?Model $person): bool
     {
-        if ($person) {
-            AuditLog::record('contacts_revealed', $person, null, null);
-        }
+        return $person === null || app(ContactRevealGuard::class)->reveal($person);
+    }
+
+    public static function limitMessage(): string
+    {
+        return 'Дневной лимит открытия контактов исчерпан ('.config('gifter.security.reveal_daily_limit').' клиентов). Попытка записана в журнал; нужен доступ — обратитесь к администратору.';
     }
 }

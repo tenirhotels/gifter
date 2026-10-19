@@ -37,6 +37,8 @@ return [
         'contact_hash_key' => env('CONTACT_HASH_KEY'),
         // Двухфакторный вход обязателен всем. Отключать можно только при локальной проверке
         // (APP_ENV=local); на рабочем сервере он обязателен всегда.
+        // Не более стольких разных клиентов в день, чьи контакты сотрудник может открыть (0 — без ограничения; администратор не ограничен).
+        'reveal_daily_limit' => (int) env('GIFTER_REVEAL_DAILY_LIMIT', 30),
         'require_two_factor' => env('GIFTER_REQUIRE_2FA', true),
     ],
 
