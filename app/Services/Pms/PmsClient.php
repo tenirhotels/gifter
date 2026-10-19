@@ -74,14 +74,42 @@ class PmsClient
         }
     }
 
+    /** Номер как в PMS: без пробелов, невидимых знаков и «умных» тире из копирования. */
+    public static function normalizeNumber(string $number): string
+    {
+        $number = preg_replace('/[\p{Z}\s\x{200B}-\x{200D}\x{FEFF}]+/u', '', $number);
+
+        return preg_replace('/[\x{2010}-\x{2015}\x{2212}]/u', '-', (string) $number);
+    }
+
+    /** Формат номеров PMS — `ГГГГММДД-код отеля-N`; проверяется до запроса, чтобы не слать заведомо неверное в PMS. */
+    public function formatError(string $number): ?string
+    {
+        if (! preg_match('/^(\d{8})-(\d+)-(\d+)$/', $number, $m)) {
+            return "Номер брони «{$number}» не похож на номер PMS. Формат: ГГГГММДД-код отеля-номер, например 20261019-".($this->settings->property_code ?: '9305').'-1266607523.';
+        }
+        if (! checkdate((int) substr($m[1], 4, 2), (int) substr($m[1], 6, 2), (int) substr($m[1], 0, 4))) {
+            return "В номере брони «{$number}» неверная дата ({$m[1]}).";
+        }
+        $code = trim((string) $this->settings->property_code);
+        if ($code !== '' && $m[2] !== $code) {
+            return "Номер брони «{$number}» относится к другому отелю (код {$m[2]}, в настройках — {$code}).";
+        }
+
+        return null;
+    }
+
     private function fetch(string $number): PmsBooking
     {
-        $number = trim($number);
+        $number = self::normalizeNumber($number);
         if (! $this->isActive()) {
             throw new PmsException('Интеграция с PMS не настроена.');
         }
         if ($number === '') {
             throw new PmsException('Укажите номер брони PMS.');
+        }
+        if ($error = $this->formatError($number)) {
+            throw new PmsException($error);
         }
 
         $response = $this->get($number);

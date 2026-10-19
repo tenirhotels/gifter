@@ -52,7 +52,7 @@ class ArrivalSyncTest extends TestCase
     }
 
     /** @param  array<string, mixed>  $stay */
-    private function booking(array $stay = [], string $status = 'booked', string $number = 'B-1'): array
+    private function booking(array $stay = [], string $status = 'booked', string $number = '20261020-9305-661'): array
     {
         return ['booking' => [
             'number' => $number, 'status' => 'Active',
@@ -65,7 +65,7 @@ class ArrivalSyncTest extends TestCase
         ], 'hub' => ['stale' => false, 'data_age_minutes' => 2]];
     }
 
-    private function reserved(string $number = 'B-1'): Certificate
+    private function reserved(string $number = '20261020-9305-661'): Certificate
     {
         $service = Service::factory()->create(['name' => 'Проживание', 'unit' => 'ночь']);
         app(ServicePricing::class)->addPrice($service, '100000', Carbon::parse('2026-01-01'));
@@ -127,7 +127,7 @@ class ArrivalSyncTest extends TestCase
 
         Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
             ->mountAction('checkIn')
-            ->assertMountedActionModalSee('запросит бронь № B-1 в PMS')
+            ->assertMountedActionModalSee('запросит бронь № 20261020-9305-661 в PMS')
             ->callMountedAction()->assertHasNoActionErrors();
 
         $this->assertSame(CertificateStatus::InUse, $certificate->refresh()->status);
@@ -137,7 +137,7 @@ class ArrivalSyncTest extends TestCase
     public function test_cancelled_in_pms_blocks_arrival_and_goes_to_finance_review(): void
     {
         $certificate = $this->reserved();
-        $this->next = Http::response(['booking' => ['number' => 'B-1', 'status' => 'Cancelled', 'roomStays' => [['hub' => ['status' => 'cancelled']]]]]);
+        $this->next = Http::response(['booking' => ['number' => '20261020-9305-661', 'status' => 'Cancelled', 'roomStays' => [['hub' => ['status' => 'cancelled']]]]]);
 
         try {
             app(ArrivalSync::class)->checkIn($certificate);
@@ -193,11 +193,11 @@ class ArrivalSyncTest extends TestCase
 
     public function test_few_requests_only_today_one_per_booking_and_no_repeat_within_two_hours(): void
     {
-        $this->reserved('B-1');
-        $second = $this->reserved('B-3'); // два сертификата одной брони (как в группе): один запрос на номер
-        $second->update(['pms_booking_number' => 'B-1']);
+        $this->reserved('20261020-9305-661');
+        $second = $this->reserved('20261020-9305-663'); // два сертификата одной брони (как в группе): один запрос на номер
+        $second->update(['pms_booking_number' => '20261020-9305-661']);
         // Бронь с заездом не сегодня — не опрашивается.
-        $future = $this->reserved('B-2');
+        $future = $this->reserved('20261020-9305-662');
         $future->update(['arrival_date' => '2026-11-10', 'departure_date' => '2026-11-12']);
         $this->requests = 0;
 
@@ -232,7 +232,7 @@ class ArrivalSyncTest extends TestCase
         $this->assertSame(0, $this->requests, 'Раньше срока в PMS не ходим');
 
         // Бронь внесена вручную (не подтверждена по PMS) — прежнее поведение с комментарием.
-        $manual = $this->reserved('B-9');
+        $manual = $this->reserved('20261020-9305-669');
         $manual->update(['pms_verified_at' => null]);
         $this->actingAs(User::factory()->create(['roles' => [Role::FrontOffice]]));
         Livewire::test(ViewCertificate::class, ['record' => $manual->id])

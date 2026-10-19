@@ -118,12 +118,12 @@ class PmsIntegrationTest extends TestCase
             'Слишком много' => Http::response([], 429),
             'ошибку 500' => Http::response([], 500),
             'отменена в PMS' => Http::response($this->booking(['status' => 'Cancelled'])),
-            'нет дат' => Http::response(['booking' => ['number' => 'X-1', 'status' => 'Active', 'roomStays' => [['guests' => [['firstName' => 'А', 'lastName' => 'Б']]]]]]),
+            'нет дат' => Http::response(['booking' => ['number' => '20261020-9305-881', 'status' => 'Active', 'roomStays' => [['guests' => [['firstName' => 'А', 'lastName' => 'Б']]]]]]),
         ];
         foreach ($cases as $expected => $response) {
             $this->next = $response;
             try {
-                $manager->save($this->certificate, ['booking_number' => 'X-1']);
+                $manager->save($this->certificate, ['booking_number' => '20261020-9305-881']);
                 $this->fail("Бронь сохранена при: {$expected}");
             } catch (PmsException $e) {
                 $this->assertStringContainsString($expected, $e->getMessage());
@@ -135,7 +135,7 @@ class PmsIntegrationTest extends TestCase
         $this->next = fn () => throw new ConnectionException('timeout');
         $this->expectException(PmsException::class);
         $this->expectExceptionMessage('PMS не отвечает');
-        $manager->save($this->certificate, ['booking_number' => 'X-1']);
+        $manager->save($this->certificate, ['booking_number' => '20261020-9305-881']);
     }
 
     public function test_multi_room_dates_and_cancelled_room_and_all_cancelled(): void
@@ -144,18 +144,18 @@ class PmsIntegrationTest extends TestCase
         $stay = fn (string $from, string $to, string $status, string $first) => [
             'stayDates' => ['arrivalDateTime' => "{$from}T14:00", 'departureDateTime' => "{$to}T12:00"],
             'guests' => [['firstName' => $first, 'lastName' => 'Гость']], 'hub' => ['status' => $status]];
-        $this->next = Http::response(['booking' => ['number' => 'M-1', 'status' => 'Active', 'roomStays' => [
+        $this->next = Http::response(['booking' => ['number' => '20261020-9305-771', 'status' => 'Active', 'roomStays' => [
             $stay('2026-10-21', '2026-10-23', 'booked', 'Один'),
             $stay('2026-10-20', '2026-10-24', 'booked', 'Два'),
             $stay('2026-09-01', '2026-09-02', 'cancelled', 'Отмена'),
         ]], 'hub' => ['stale' => false, 'data_age_minutes' => 1]]);
 
-        $booking = PmsClient::make()->find('M-1');
+        $booking = PmsClient::make()->find('20261020-9305-771');
         $this->assertSame(['2026-10-20', '2026-10-24', 2], [$booking->arrival->toDateString(), $booking->departure->toDateString(), $booking->roomCount]);
         $this->assertNotContains('Гость Отмена', $booking->guestNames());
 
-        $this->next = Http::response(['booking' => ['number' => 'M-2', 'status' => 'Active', 'roomStays' => [$stay('2026-10-21', '2026-10-23', 'cancelled', 'Один')]]]);
-        $this->assertTrue(PmsClient::make()->find('M-2')->cancelled, 'Все комнаты отменены — бронь отменена');
+        $this->next = Http::response(['booking' => ['number' => '20261020-9305-772', 'status' => 'Active', 'roomStays' => [$stay('2026-10-21', '2026-10-23', 'cancelled', 'Один')]]]);
+        $this->assertTrue(PmsClient::make()->find('20261020-9305-772')->cancelled, 'Все комнаты отменены — бронь отменена');
     }
 
     public function test_name_match_prefers_recipient_then_customer_else_mismatch_needs_note(): void
@@ -165,19 +165,19 @@ class PmsIntegrationTest extends TestCase
         $guests = fn (array $people) => $this->booking(['roomStays' => [['guests' => $people]], 'customer' => ['firstName' => 'Кто', 'lastName' => 'Угодно']]);
 
         $this->next = Http::response($guests([['firstName' => 'Иван', 'lastName' => 'Левый'], ['firstName' => 'Анна', 'lastName' => 'Иванова']]));
-        $this->assertSame([NameMatch::Recipient, 'Иванова Анна'], [($r = $manager->resolveFromPms($this->certificate, 'B'))['match'], $r['guest']]);
+        $this->assertSame([NameMatch::Recipient, 'Иванова Анна'], [($r = $manager->resolveFromPms($this->certificate, '20261020-9305-66'))['match'], $r['guest']]);
 
         $this->next = Http::response($guests([['firstName' => 'Пётр', 'lastName' => 'Сидоров']]));
-        $this->assertSame(NameMatch::Customer, $manager->resolveFromPms($this->certificate, 'B2')['match']);
+        $this->assertSame(NameMatch::Customer, $manager->resolveFromPms($this->certificate, '20261020-9305-662')['match']);
 
         $this->next = Http::response($guests([['firstName' => 'Иван', 'lastName' => 'Левый']]));
         try {
-            $manager->save($this->certificate, ['booking_number' => 'B3']);
+            $manager->save($this->certificate, ['booking_number' => '20261020-9305-663']);
             $this->fail('Несовпадение имени без причины');
         } catch (DomainRuleViolation $e) {
             $this->assertStringContainsString('причину', $e->getMessage());
         }
-        $manager->save($this->certificate, ['booking_number' => 'B3', 'note' => 'Гость придёт вместо получателя']);
+        $manager->save($this->certificate, ['booking_number' => '20261020-9305-663', 'note' => 'Гость придёт вместо получателя']);
         $this->assertSame([NameMatch::Mismatch, 'Иван Л.'], [$this->certificate->refresh()->name_match, $this->certificate->booking_guest_name],
             'При несовпадении хранится и показывается только имя и первая буква фамилии');
         $this->assertStringNotContainsString('Левый', (string) $this->certificate->reservation_note.$this->certificate->history()->pluck('description')->implode(' '));
@@ -189,7 +189,7 @@ class PmsIntegrationTest extends TestCase
         $this->enable();
         $this->next = Http::response($this->booking(hub: ['data_age_minutes' => 240, 'stale' => true]));
 
-        app(ReservationManager::class)->save($this->certificate, ['booking_number' => 'S-1']);
+        app(ReservationManager::class)->save($this->certificate, ['booking_number' => '20261020-9305-831']);
 
         $this->assertSame(240, $this->certificate->refresh()->pms_data_age_minutes);
         $this->assertTrue($this->certificate->history()->where('description', 'like', '%данные устарели: 240 мин%')->exists());
@@ -197,7 +197,7 @@ class PmsIntegrationTest extends TestCase
 
     public function test_without_integration_manual_entry_still_works(): void
     {
-        app(ReservationManager::class)->save($this->certificate, ['booking_number' => 'M-1', 'guest_name' => 'Иванова Анна', 'arrival' => '2026-10-20', 'departure' => '2026-10-22']);
+        app(ReservationManager::class)->save($this->certificate, ['booking_number' => '20261020-9305-771', 'guest_name' => 'Иванова Анна', 'arrival' => '2026-10-20', 'departure' => '2026-10-22']);
 
         $this->assertSame(CertificateStatus::Reserved, $this->certificate->refresh()->status);
         $this->assertNull($this->certificate->pms_verified_at);
@@ -302,7 +302,7 @@ class PmsIntegrationTest extends TestCase
 
         $this->auth = Http::response(['error' => 'invalid_client'], 401);
         try {
-            PmsClient::make()->find('X-1');
+            PmsClient::make()->find('20261020-9305-881');
             $this->fail('Ключи отклонены');
         } catch (PmsException $e) {
             $this->assertStringContainsString('отклонил ключи', $e->getMessage());
@@ -311,7 +311,7 @@ class PmsIntegrationTest extends TestCase
         $this->auth = Http::response(['access_token' => 'fictional-exely-token', 'expires_in' => 900]);
         $this->next = Http::response(['error' => 'forbidden'], 403);
         try {
-            PmsClient::make()->find('X-1');
+            PmsClient::make()->find('20261020-9305-881');
             $this->fail('Нет доступа к Read Reservation API');
         } catch (PmsException $e) {
             $this->assertStringContainsString('Read Reservation', $e->getMessage());
@@ -319,7 +319,7 @@ class PmsIntegrationTest extends TestCase
 
         $this->next = Http::response([], 404);
         try {
-            PmsClient::make()->find('X-1');
+            PmsClient::make()->find('20261020-9305-881');
             $this->fail('Не найдена');
         } catch (PmsException $e) {
             $this->assertStringContainsString('не найдена', $e->getMessage());
@@ -375,7 +375,7 @@ class PmsIntegrationTest extends TestCase
         $this->next = Http::response($this->booking(['roomStays' => [['ratePlans' => [['id' => 'r9', 'name' => 'Стандартный']], 'guests' => [['firstName' => 'Bekki', 'lastName' => 'Ramzi']]]], 'customer' => ['firstName' => 'Кто', 'lastName' => 'Угодно']]));
 
         Livewire::test(ViewCertificate::class, ['record' => $this->certificate->id])
-            ->mountAction('reserve')->fillForm(['booking_number' => 'T-1'])
+            ->mountAction('reserve')->fillForm(['booking_number' => '20261020-9305-841'])
             ->assertMountedActionModalSee(['Bekki R.', 'Имя гостя не совпадает', 'Тариф брони: Стандартный — не «Сертификат»', 'Причина расхождений'])
             ->assertMountedActionModalDontSee('Ramzi');
     }
@@ -387,11 +387,37 @@ class PmsIntegrationTest extends TestCase
         $this->next = Http::response($this->booking(['roomStays' => [['ratePlans' => [['id' => 'r2', 'name' => 'Certificate']]]]]));
 
         Livewire::test(ViewCertificate::class, ['record' => $this->certificate->id])
-            ->mountAction('reserve')->fillForm(['booking_number' => 'T-1'])
+            ->mountAction('reserve')->fillForm(['booking_number' => '20261020-9305-841'])
             ->assertMountedActionModalDontSee('не «Сертификат»');
 
         $this->assertTrue(PmsBooking::fromResponse($this->booking(['roomStays' => [['ratePlans' => [['id' => 'x', 'name' => 'Gift Rate']]]]]), 'N')->allStaysOnRatePlan('Сертификат, Gift'));
         $this->assertFalse(PmsBooking::fromResponse($this->booking(['roomStays' => [['ratePlans' => [['id' => 'x', 'name' => 'Стандартный']]]]]), 'N')->allStaysOnRatePlan('Сертификат, Certificate'));
+    }
+
+    public function test_number_format_is_checked_before_any_request(): void
+    {
+        $this->enable();
+        $calls = 0;
+        Http::fake(function () use (&$calls) {
+            $calls++;
+
+            return Http::response($this->booking());
+        });
+
+        foreach (['B-1', '20261019-9999-5', '20261340-9305-5', 'abc'] as $bad) {
+            try {
+                PmsClient::make()->find($bad);
+                $this->fail("Принят неверный номер {$bad}");
+            } catch (PmsException $e) {
+                $this->assertStringNotContainsString('не отвечает', $e->getMessage());
+            }
+        }
+        $this->assertSame(0, $calls, 'Неверный формат не уходит в PMS');
+
+        // Копирование из PMS: неразрывные пробелы и «умные» тире приводятся к обычным.
+        $this->assertSame('20261019-9305-68463', PmsClient::normalizeNumber("20261019\u{2011}9305\u{2013}68463\u{00A0}"));
+        PmsClient::make()->find("20261020\u{2011}9305-1\u{200B}");
+        $this->assertSame(1, $calls);
     }
 
     public function test_wrong_rate_plan_needs_reason_and_goes_to_finance_review(): void
@@ -401,13 +427,13 @@ class PmsIntegrationTest extends TestCase
         $this->next = Http::response($this->booking(['roomStays' => [['ratePlans' => [['id' => 'r9', 'name' => 'Стандартный']]]]]));
 
         try {
-            $manager->save($this->certificate, ['booking_number' => 'R-1']);
+            $manager->save($this->certificate, ['booking_number' => '20261020-9305-821']);
             $this->fail('Тариф не «Сертификат» без причины');
         } catch (DomainRuleViolation $e) {
             $this->assertStringContainsString('Тариф брони: Стандартный', $e->getMessage());
         }
 
-        $manager->save($this->certificate, ['booking_number' => 'R-1', 'note' => 'Гость оплатил разницу тарифа']);
+        $manager->save($this->certificate, ['booking_number' => '20261020-9305-821', 'note' => 'Гость оплатил разницу тарифа']);
         $c = $this->certificate->refresh();
         $this->assertNotNull($c->reservation_review_status);
         $this->assertStringContainsString('Расхождения: Тариф брони: Стандартный', (string) $c->reservation_note);
@@ -416,7 +442,7 @@ class PmsIntegrationTest extends TestCase
         // Тариф не сверяется, если название в настройках пустое.
         $manager->release($this->certificate->refresh(), 'тест');
         PmsSetting::query()->update(['certificate_rate_plan' => null]);
-        $manager->save($this->certificate->refresh(), ['booking_number' => 'R-2']);
+        $manager->save($this->certificate->refresh(), ['booking_number' => '20261020-9305-822']);
         $this->assertSame(CertificateStatus::Reserved, $this->certificate->refresh()->status);
     }
 
@@ -427,7 +453,7 @@ class PmsIntegrationTest extends TestCase
         $this->next = Http::response($this->booking(['roomStays' => [['stayDates' => ['arrivalDateTime' => $validUntil->copy()->addDays(5)->format('Y-m-d').'T14:00', 'departureDateTime' => $validUntil->copy()->addDays(6)->format('Y-m-d').'T12:00']]]]));
 
         try {
-            app(ReservationManager::class)->save($this->certificate, ['booking_number' => 'D-1', 'note' => 'очень надо']);
+            app(ReservationManager::class)->save($this->certificate, ['booking_number' => '20261020-9305-681', 'note' => 'очень надо']);
             $this->fail('Заезд после конца срока');
         } catch (DomainRuleViolation $e) {
             $this->assertStringContainsString('в пределах срока', $e->getMessage());
@@ -444,22 +470,22 @@ class PmsIntegrationTest extends TestCase
         // Сертификат на 2 ночи: 2 ночи и меньше — в рамках; 3 — расхождение.
         $this->assertSame(2, $this->certificate->nightsIncluded());
         $this->next = Http::response($stay('2026-10-20', '2026-10-22'));
-        $this->assertTrue($nightsCheck($this->certificate, 'N-2')['ok']);
+        $this->assertTrue($nightsCheck($this->certificate, '20261020-9305-782')['ok']);
         $this->next = Http::response($stay('2026-10-20', '2026-10-21'));
-        $this->assertTrue($nightsCheck($this->certificate, 'N-1')['ok'], 'Меньше ночей — не расхождение');
+        $this->assertTrue($nightsCheck($this->certificate, '20261020-9305-781')['ok'], 'Меньше ночей — не расхождение');
         $this->next = Http::response($stay('2026-10-20', '2026-10-23'));
-        $check = $nightsCheck($this->certificate, 'N-3');
+        $check = $nightsCheck($this->certificate, '20261020-9305-783');
         $this->assertFalse($check['ok']);
         $this->assertStringContainsString('В брони 3 ночи', $check['text']);
         $this->assertStringContainsString('даёт 2 ночи', $check['text']);
 
         try {
-            $manager->save($this->certificate, ['booking_number' => 'N-3']);
+            $manager->save($this->certificate, ['booking_number' => '20261020-9305-783']);
             $this->fail('Больше ночей, чем в сертификате, без причины');
         } catch (DomainRuleViolation $e) {
             $this->assertStringContainsString('даёт 2 ночи', $e->getMessage());
         }
-        $manager->save($this->certificate, ['booking_number' => 'N-3', 'note' => 'Гость докупает ночь']);
+        $manager->save($this->certificate, ['booking_number' => '20261020-9305-783', 'note' => 'Гость докупает ночь']);
         $this->assertNotNull($this->certificate->refresh()->reservation_review_status);
         $this->assertStringContainsString('Расхождения: В брони 3 ночи', (string) $this->certificate->reservation_note);
     }
@@ -477,12 +503,12 @@ class PmsIntegrationTest extends TestCase
         $reservations = app(ReservationManager::class);
 
         $this->assertSame(1, $draft->nightsIncluded());
-        $this->assertFalse(collect($reservations->resolveFromPms($draft, 'E-1')['checks'])->firstWhere('key', 'nights')['ok'], '1 ночь в сертификате, в брони 2');
+        $this->assertFalse(collect($reservations->resolveFromPms($draft, '20261020-9305-691')['checks'])->firstWhere('key', 'nights')['ok'], '1 ночь в сертификате, в брони 2');
 
         $manager->addItem($draft, $night, 1);
         $this->assertSame(2, $draft->nightsIncluded());
         Cache::flush();
-        $this->assertTrue(collect($reservations->resolveFromPms($draft->refresh(), 'E-1')['checks'])->firstWhere('key', 'nights')['ok'], '1 ночь + доп. ночь = 2 ночи максимум');
+        $this->assertTrue(collect($reservations->resolveFromPms($draft->refresh(), '20261020-9305-691')['checks'])->firstWhere('key', 'nights')['ok'], '1 ночь + доп. ночь = 2 ночи максимум');
 
         $dinner = Service::factory()->create(['name' => 'Ужин', 'unit' => 'шт']);
         app(ServicePricing::class)->addPrice($dinner, '10000', Carbon::parse('2026-01-01'));
@@ -490,6 +516,6 @@ class PmsIntegrationTest extends TestCase
         $noNights->items()->create(['service_id' => $dinner->id, 'quantity' => 1]);
         $d2 = $manager->createDraft(['package_id' => $noNights->id, 'customer_id' => Customer::factory()->create()->id, 'recipient_id' => Recipient::factory()->create(['last_name' => 'Иванова', 'first_name' => 'Анна'])->id]);
         $this->assertNull($d2->nightsIncluded());
-        $this->assertNull(collect($reservations->resolveFromPms($d2, 'E-1')['checks'])->firstWhere('key', 'nights'), 'Нет проживания в составе — ночи не сверяются');
+        $this->assertNull(collect($reservations->resolveFromPms($d2, '20261020-9305-691')['checks'])->firstWhere('key', 'nights'), 'Нет проживания в составе — ночи не сверяются');
     }
 }
