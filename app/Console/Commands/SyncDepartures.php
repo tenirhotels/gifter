@@ -18,7 +18,7 @@ class SyncDepartures extends Command
     public function handle(ArrivalSync $sync): int
     {
         $stats = $sync->syncDepartures();
-        $this->info("Проверено: {$stats['checked']}, использовано: {$stats['redeemed']}, расхождений: {$stats['discrepancies']}, с невыполненными услугами: {$stats['open_services']}, PMS недоступна: {$stats['unavailable']}.");
+        $this->info("Проверено: {$stats['checked']}, использовано: {$stats['redeemed']}, не заезд (закрыто): {$stats['no_show']}, расхождений: {$stats['discrepancies']}, с невыполненными услугами: {$stats['open_services']}, PMS недоступна: {$stats['unavailable']}.");
 
         return self::SUCCESS;
     }

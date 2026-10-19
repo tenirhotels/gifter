@@ -114,6 +114,38 @@ class ArrivalSyncTest extends TestCase
         return $certificate;
     }
 
+    public function test_no_show_is_closed_as_used_the_day_after_departure_with_commission_logic(): void
+    {
+        $certificate = $this->reserved();
+        $this->next = Http::response($this->booking());
+
+        Carbon::setTestNow('2026-10-22 14:00:00');
+        $this->assertSame(0, app(ArrivalSync::class)->syncDepartures()['no_show'], 'В день выезда ещё ждём');
+        $this->assertSame(CertificateStatus::Reserved, $certificate->refresh()->status);
+
+        Carbon::setTestNow('2026-10-23 14:00:00');
+        $stats = app(ArrivalSync::class)->syncDepartures();
+
+        $this->assertSame(1, $stats['no_show']);
+        $this->assertSame(CertificateStatus::Used, $certificate->refresh()->status);
+        $this->assertTrue($certificate->history()->where('description', 'like', '%no-show%')->exists());
+    }
+
+    public function test_no_show_is_not_closed_when_booking_cancelled_in_pms(): void
+    {
+        $certificate = $this->reserved();
+        $booking = $this->booking();
+        $booking['booking']['status'] = 'Cancelled';
+        $this->next = Http::response($booking);
+
+        Carbon::setTestNow('2026-10-23 14:00:00');
+        $stats = app(ArrivalSync::class)->syncDepartures();
+
+        $this->assertSame(0, $stats['no_show']);
+        $this->assertSame(CertificateStatus::Reserved, $certificate->refresh()->status);
+        $this->assertSame(ReservationReview::Pending, $certificate->reservation_review_status);
+    }
+
     public function test_hub_checked_out_redeems_automatically(): void
     {
         $certificate = $this->inUse();

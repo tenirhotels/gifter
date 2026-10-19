@@ -182,11 +182,12 @@ class ArrivalSync
      * С невыполненными заявками по услугам сертификат не гасится — его гасит сотрудник («нужно внимание»).
      * Один запрос на номер брони; уже решённые и недавно проверенные пропускаются.
      *
-     * @return array{checked: int, redeemed: int, discrepancies: int, unavailable: int, open_services: int}
+     * @return array{checked: int, redeemed: int, discrepancies: int, unavailable: int, open_services: int, no_show: int}
      */
     public function syncDepartures(): array
     {
-        $stats = ['checked' => 0, 'redeemed' => 0, 'discrepancies' => 0, 'unavailable' => 0, 'open_services' => 0];
+        $stats = ['checked' => 0, 'redeemed' => 0, 'discrepancies' => 0, 'unavailable' => 0, 'open_services' => 0, 'no_show' => 0];
+        $stats['no_show'] = $this->closeNoShows();
         if (! PmsClient::make()->isActive()) {
             return $stats;
         }
@@ -245,6 +246,54 @@ class ArrivalSync
         }
 
         return $stats;
+    }
+
+    /**
+     * Не заезд (no-show), решение владельца 19.10.2026: бронь прошла, а заезда не было — на следующий день после планового
+     * выезда сертификат закрывается как использованный (деньги получены, услуга «сгорела»), комиссия начисляется.
+     * С включённой PMS бронь сверяется: отмена и расхождение — на проверку Финансам, не закрываем. Возвращает число закрытых.
+     */
+    private function closeNoShows(): int
+    {
+        $closed = 0;
+        $client = PmsClient::make();
+        $bookings = [];
+        $candidates = Certificate::query()->where('status', CertificateStatus::Reserved)->whereNotNull('departure_date')
+            ->whereDate('departure_date', '<', today()->toDateString())
+            ->where(fn ($q) => $q->whereNull('reservation_review_status')->orWhere('reservation_review_status', '!=', ReservationReview::Disputed))
+            ->where(fn ($q) => $q->whereNull('pms_check_status')->orWhereNotIn('pms_check_status', [self::CANCELLED, self::DISCREPANCY]))
+            ->orderBy('id')->get();
+
+        foreach ($candidates as $certificate) {
+            if ($this->applies($certificate)) {
+                $number = (string) $certificate->pms_booking_number;
+                if (! array_key_exists($number, $bookings)) {
+                    try {
+                        $bookings[$number] = $client->find($number);
+                        usleep(250_000);
+                    } catch (PmsException) {
+                        $bookings[$number] = null;
+                    }
+                }
+                if ($bookings[$number] === null) {
+                    continue; // PMS недоступна — повтор завтра
+                }
+                $result = $this->inspect($certificate, $bookings[$number]);
+                if (in_array($result['status'], [self::CANCELLED, self::DISCREPANCY], true)) {
+                    continue;
+                }
+            }
+            try {
+                $this->certificates->transition($certificate, CertificateStatus::InUse, 'Заезд не подтверждён: гость не приехал (no-show)');
+                $this->certificates->transition($certificate->refresh(), CertificateStatus::Used,
+                    'Не заезд (no-show): день после планового выезда, сертификат закрыт автоматически как использованный');
+                $closed++;
+            } catch (DomainRuleViolation) {
+                // Спор, возврат на рассмотрении, заезд раньше срока и т. п. — оставляем сотруднику.
+            }
+        }
+
+        return $closed;
     }
 
     /** @return array{status: string, message: ?string} */
