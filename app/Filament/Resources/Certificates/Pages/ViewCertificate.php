@@ -64,8 +64,10 @@ class ViewCertificate extends ViewRecord
                 ->authorize(Permission::ApproveComplimentary)
                 ->visible(fn (Certificate $record) => $record->isDraft() && $record->isComplimentary() && ! $record->isComplimentaryApproved() && ! $record->batch_id)
                 ->modalDescription(fn (Certificate $record) => 'Срок: '.$record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y')
-                    .($record->custom_validity ? ' (задан вручную)' : '').'. Маркетинговый расход по себестоимости: '.Money::format($record->total_cost)
-                    .($record->hasUnknownCost() ? ' (у части услуг себестоимость не указана)' : '').'. После согласования состав фиксируется.')
+                    .($record->custom_validity ? ' (задан вручную)' : '').'. Маркетинговый расход по себестоимости: '.Money::format($record->marketing_cost)
+                    .($record->hasUnknownCost() ? ' (у части услуг себестоимость не указана)' : '')
+                    .($record->hasPayablePart() ? '. Платные услуги оплачивает заказчик: '.Money::format($record->payable_amount).' (выпуск — после оплаты)' : '')
+                    .'. После согласования состав фиксируется.')
                 ->schema([Textarea::make('comment')->label('Комментарий')])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                     fn () => $this->manager()->approveComplimentary($record, $data['comment'] ?? null), 'Бесплатный сертификат согласован')),
@@ -74,10 +76,10 @@ class ViewCertificate extends ViewRecord
             Action::make('invoice')->label('Выставить счёт')->icon('heroicon-o-document-text')
                 ->authorize(Permission::ManagePayments)
                 ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && ! $record->pendingPayment()
-                    && Money::toMinor($record->invoicedAmount()) < Money::toMinor($record->total_amount))
+                    && Money::toMinor($record->invoicedAmount()) < Money::toMinor($record->payable_amount))
                 ->fillForm(fn (Certificate $record) => [
                     'method' => PaymentMethod::KaspiInvoice->value,
-                    'amount' => Money::fromMinor(Money::toMinor($record->total_amount) - Money::toMinor($record->invoicedAmount())),
+                    'amount' => Money::fromMinor(Money::toMinor($record->payable_amount) - Money::toMinor($record->invoicedAmount())),
                 ])
                 ->schema([
                     Select::make('method')->label('Способ')->options(PaymentMethod::class)->required(),
@@ -299,9 +301,10 @@ class ViewCertificate extends ViewRecord
         $this->redirect(CertificateResource::getUrl('view', ['record' => $this->getRecord()]));
     }
 
+    /** Черновик не из группы с частью, которую оплачивает заказчик: вся продажа или платные доп. услуги бесплатного. */
     private function isOwnSaleDraft(Certificate $record): bool
     {
-        return $record->isDraft() && ! $record->isComplimentary() && ! $record->batch_id;
+        return $record->isDraft() && ($record->hasPayablePart() || ! $record->isComplimentary()) && ! $record->batch_id;
     }
 
     private function manager(): CertificateManager

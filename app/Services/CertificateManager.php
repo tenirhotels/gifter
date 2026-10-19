@@ -90,24 +90,28 @@ class CertificateManager
      * Предварительный расчёт до создания черновика (для мастера продажи):
      * базовый состав пакета + доп. услуги по ценам на дату продажи.
      *
-     * @param  list<array{service_id:int|string|null, quantity:int|string|null}>  $extras
-     * @return array{lines: list<array{name:string, quantity:int, unit_price:string, line_total:string, from_package:bool}>, total:string, missing: list<string>}
+     * Оплата: у платного пакета всё оплачивает заказчик; у бесплатного — только доп. услуги
+     * с признаком `paid` (тумблер «Платная»).
+     *
+     * @param  list<array{service_id:int|string|null, quantity:int|string|null, paid?:bool|null}>  $extras
+     * @return array{lines: list<array{name:string, quantity:int, unit_price:string, line_total:string, from_package:bool, paid:bool}>, total:string, payable:string, free:string, missing: list<string>}
      */
     public function quote(Package $package, array $extras, Carbon $soldAt): array
     {
         $rows = $package->items()->with('service')->get()
-            ->map(fn ($item) => [$item->service, (int) $item->quantity, true])->all();
+            ->map(fn ($item) => [$item->service, (int) $item->quantity, true, ! $package->is_complimentary])->all();
         foreach ($extras as $extra) {
             $service = Service::find($extra['service_id'] ?? null);
             if ($service && (int) ($extra['quantity'] ?? 0) > 0) {
-                $rows[] = [$service, (int) $extra['quantity'], false];
+                $rows[] = [$service, (int) $extra['quantity'], false, ! $package->is_complimentary || (bool) ($extra['paid'] ?? false)];
             }
         }
 
         $lines = [];
         $missing = [];
         $total = 0;
-        foreach ($rows as [$service, $quantity, $fromPackage]) {
+        $payable = 0;
+        foreach ($rows as [$service, $quantity, $fromPackage, $paid]) {
             try {
                 $price = $this->pricing->priceOn($service, $soldAt)->price;
             } catch (DomainRuleViolation) {
@@ -117,10 +121,12 @@ class CertificateManager
             }
             $lineTotal = Money::multiply($price, $quantity);
             $total += Money::toMinor($lineTotal);
-            $lines[] = ['name' => $service->name, 'quantity' => $quantity, 'unit_price' => (string) $price, 'line_total' => $lineTotal, 'from_package' => $fromPackage];
+            $payable += $paid ? Money::toMinor($lineTotal) : 0;
+            $lines[] = ['name' => $service->name, 'quantity' => $quantity, 'unit_price' => (string) $price, 'line_total' => $lineTotal, 'from_package' => $fromPackage, 'paid' => $paid];
         }
 
-        return ['lines' => $lines, 'total' => Money::fromMinor($total), 'missing' => $missing];
+        return ['lines' => $lines, 'total' => Money::fromMinor($total), 'payable' => Money::fromMinor($payable),
+            'free' => Money::fromMinor($total - $payable), 'missing' => $missing];
     }
 
     /**
@@ -173,6 +179,7 @@ class CertificateManager
                 throw new DomainRuleViolation('Дата продажи позже начала срока, заданного вручную: сначала измените срок.');
             }
             $this->assertKind($certificate->kind, $certificate->customer_id, $certificate->complimentary_reason);
+            $this->assertPayablePartHasCustomer($certificate);
             if (! $certificate->isDirty()) {
                 return $certificate;
             }
@@ -181,8 +188,13 @@ class CertificateManager
 
             if ($packageChanged) {
                 $certificate->items()->where('from_package', true)->get()->each->delete();
+                if ($kindChanged) {
+                    // Сменился тип: у платного оплачивается всё, у бесплатного доп. услуги снова бесплатные.
+                    $certificate->items()->update(['paid_by_customer' => ! $certificate->isComplimentary()]);
+                }
                 $this->addPackageItems($certificate, $package);
                 $this->recalculateTotal($certificate);
+                $this->assertPayablePartHasCustomer($certificate);
             }
             if ($soldAtChanged) {
                 $this->reprice($certificate);
@@ -192,15 +204,49 @@ class CertificateManager
         });
     }
 
-    public function addItem(Certificate $certificate, Service $service, int $quantity, bool $viaBatch = false): CertificateItem
+    /**
+     * Доп. услуга. В бесплатном сертификате — бесплатная (маркетинговый расход) или платная
+     * (`$paid`: её оплачивает заказчик, нужен счёт); в платном оплачивается всё.
+     */
+    public function addItem(Certificate $certificate, Service $service, int $quantity, bool $viaBatch = false, bool $paid = false): CertificateItem
     {
-        return $this->locked($certificate, function (Certificate $certificate) use ($service, $quantity, $viaBatch) {
+        return $this->locked($certificate, function (Certificate $certificate) use ($service, $quantity, $viaBatch, $paid) {
             $this->assertNotInBatch($certificate, $viaBatch);
             $this->assertCompositionEditable($certificate);
-            $item = $this->createItem($certificate, $service, $quantity);
+            $item = $this->createItem($certificate, $service, $quantity, paid: $paid);
             $this->recalculateTotal($certificate);
+            $this->assertPayablePartHasCustomer($certificate);
             $this->history->record($certificate, HistoryEvent::ItemAdded,
-                "{$item->service_name_snapshot} × {$item->quantity}", after: $this->itemSnapshot($item));
+                "{$item->service_name_snapshot} × {$item->quantity}".($certificate->isComplimentary() ? ($item->paid_by_customer ? ' (платная)' : ' (бесплатная)') : ''),
+                after: $this->itemSnapshot($item));
+
+            return $item;
+        });
+    }
+
+    /** Платная или бесплатная доп. услуга бесплатного сертификата — до согласования и до выставления счёта. */
+    public function setItemPaid(CertificateItem $item, bool $paid, bool $viaBatch = false): CertificateItem
+    {
+        return $this->locked($item->certificate, function (Certificate $certificate) use ($item, $paid, $viaBatch) {
+            $item = CertificateItem::query()->findOrFail($item->id);
+            if (! $certificate->isComplimentary()) {
+                throw new DomainRuleViolation('В платном сертификате оплачивается весь состав.');
+            }
+            if ($item->from_package) {
+                throw new DomainRuleViolation('Услуги бесплатного пакета бесплатны: платной можно сделать только доп. услугу.');
+            }
+            $this->assertNotInBatch($certificate, $viaBatch);
+            $this->assertCompositionEditable($certificate);
+            if ($item->paid_by_customer === $paid) {
+                return $item;
+            }
+            $before = $this->itemSnapshot($item);
+            $item->update(['paid_by_customer' => $paid]);
+            $this->recalculateTotal($certificate);
+            $this->assertPayablePartHasCustomer($certificate);
+            $this->history->record($certificate, HistoryEvent::ItemChanged,
+                "{$item->service_name_snapshot} × {$item->quantity}: ".($paid ? 'платная, оплачивает заказчик' : 'бесплатная'),
+                before: $before, after: $this->itemSnapshot($item->refresh()));
 
             return $item;
         });
@@ -298,9 +344,9 @@ class CertificateManager
             if ($certificate->isComplimentary() && ! $certificate->isComplimentaryApproved()) {
                 throw new DomainRuleViolation('Бесплатный сертификат выпускается после согласования директором по продажам.');
             }
-            if (! $certificate->isComplimentary() && ! $certificate->isFullyPaid()) {
-                throw new DomainRuleViolation('Сертификат оплачен не полностью: получено '
-                    .Money::format($certificate->paidAmount()).' из '.Money::format($certificate->total_amount).'.');
+            if (! $certificate->isFullyPaid()) {
+                throw new DomainRuleViolation(($certificate->isComplimentary() ? 'Платная часть оплачена не полностью: получено ' : 'Сертификат оплачен не полностью: получено ')
+                    .Money::format($certificate->paidAmount()).' из '.Money::format($certificate->payable_amount).'.');
             }
             if ($certificate->valid_until->lt(today())) {
                 throw new DomainRuleViolation('Срок действия уже истёк — исправьте даты перед выпуском.');
@@ -455,7 +501,7 @@ class CertificateManager
         }
     }
 
-    private function createItem(Certificate $certificate, Service $service, int $quantity, bool $fromPackage = false): CertificateItem
+    private function createItem(Certificate $certificate, Service $service, int $quantity, bool $fromPackage = false, bool $paid = false): CertificateItem
     {
         if ($quantity < 1) {
             throw new DomainRuleViolation('Количество должно быть не меньше 1.');
@@ -480,6 +526,8 @@ class CertificateManager
             'requires_scheduling' => $service->requires_scheduling,
             'requires_confirmation' => $service->requires_confirmation,
             'from_package' => $fromPackage,
+            // Платный сертификат оплачивается целиком; в бесплатном платная — только отмеченная доп. услуга.
+            'paid_by_customer' => ! $certificate->isComplimentary() || (! $fromPackage && $paid),
             'position' => (int) $certificate->items()->max('position') + 1,
         ]);
     }
@@ -487,9 +535,14 @@ class CertificateManager
     private function recalculateTotal(Certificate $certificate): void
     {
         $items = $certificate->items()->get();
+        $minor = fn ($rows, string $field) => $rows->sum(fn (CertificateItem $item) => Money::toMinor($item->{$field}));
         $certificate->update([
-            'total_amount' => Money::fromMinor($items->sum(fn (CertificateItem $item) => Money::toMinor($item->line_total))),
-            'total_cost' => Money::fromMinor($items->sum(fn (CertificateItem $item) => Money::toMinor($item->line_cost))),
+            'total_amount' => Money::fromMinor($minor($items, 'line_total')),
+            'total_cost' => Money::fromMinor($minor($items, 'line_cost')),
+            // К оплате заказчиком: у продажи — всё, у бесплатного — платные доп. услуги.
+            'payable_amount' => Money::fromMinor($minor($items->where('paid_by_customer', true), 'line_total')),
+            // Маркетинговый расход: себестоимость того, что заказчик не оплачивает (только у бесплатного).
+            'marketing_cost' => $certificate->isComplimentary() ? Money::fromMinor($minor($items->where('paid_by_customer', false), 'line_cost')) : '0.00',
             'updated_by' => auth()->id(),
         ]);
     }
@@ -544,6 +597,14 @@ class CertificateManager
         }
         if ($kind === CertificateKind::Sale && ! $customerId) {
             throw new DomainRuleViolation('Для продажи укажите заказчика.');
+        }
+    }
+
+    /** Платную часть оплачивает заказчик — он должен быть указан (у бесплатного он по умолчанию необязателен). */
+    private function assertPayablePartHasCustomer(Certificate $certificate): void
+    {
+        if ($certificate->isComplimentary() && $certificate->hasPayablePart() && ! $certificate->customer_id) {
+            throw new DomainRuleViolation('В сертификате есть платные услуги — укажите заказчика, который их оплатит.');
         }
     }
 
@@ -611,6 +672,7 @@ class CertificateManager
         return [
             'service' => $item->service_name_snapshot,
             'from_package' => $item->from_package,
+            'paid_by_customer' => $item->paid_by_customer,
             'quantity' => $item->quantity,
             'unit_price' => (string) $item->unit_price,
             'line_total' => (string) $item->line_total,

@@ -15,7 +15,7 @@ class CertificateItem extends Model
 {
     protected $fillable = [
         'certificate_id', 'service_id', 'provider_id', 'price_version_id', 'service_name_snapshot', 'unit_snapshot',
-        'quantity', 'unit_price', 'line_total', 'unit_cost', 'line_cost', 'position', 'from_package',
+        'quantity', 'unit_price', 'line_total', 'unit_cost', 'line_cost', 'position', 'from_package', 'paid_by_customer',
         'requires_fulfillment', 'requires_scheduling', 'requires_confirmation',
     ];
 
@@ -28,6 +28,7 @@ class CertificateItem extends Model
             'unit_cost' => 'decimal:2',
             'line_cost' => 'decimal:2',
             'from_package' => 'boolean',
+            'paid_by_customer' => 'boolean',
             'requires_fulfillment' => 'boolean',
             'requires_scheduling' => 'boolean',
             'requires_confirmation' => 'boolean',

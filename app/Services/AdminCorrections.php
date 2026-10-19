@@ -70,7 +70,7 @@ class AdminCorrections
                 throw new DomainRuleViolation('Счёт и так ожидает оплаты.');
             }
             if ($payment->status === PaymentStatus::Cancelled) {
-                $outstanding = Money::toMinor($certificate->total_amount) - Money::toMinor($certificate->invoicedAmount());
+                $outstanding = Money::toMinor($certificate->payable_amount) - Money::toMinor($certificate->invoicedAmount());
                 if (Money::toMinor($payment->amount) > $outstanding) {
                     throw new DomainRuleViolation('Нельзя вернуть счёт: вместе с другими счетами он превысит стоимость сертификата.');
                 }

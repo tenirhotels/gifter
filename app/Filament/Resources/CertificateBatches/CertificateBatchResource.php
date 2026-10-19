@@ -90,8 +90,12 @@ class CertificateBatchResource extends Resource
             Section::make('Деньги и согласование')->columnSpan(1)->schema([
                 TextEntry::make('total')->label(fn (CertificateBatch $record) => $record->isComplimentary() ? 'Стоимость по прайсу' : 'Стоимость группы')
                     ->state(fn (CertificateBatch $record) => Money::format($record->certificates()->sum('total_amount')))->weight('bold'),
+                TextEntry::make('payable')->label('К оплате заказчиком')->weight('bold')
+                    ->state(fn (CertificateBatch $record) => Money::format($record->certificates()->sum('payable_amount')))
+                    ->helperText('Платные доп. услуги; остальное бесплатно.')
+                    ->visible(fn (CertificateBatch $record) => $record->isComplimentary() && $record->certificates()->sum('payable_amount') > 0),
                 TextEntry::make('invoice')->label('Счёт')
-                    ->visible(fn (CertificateBatch $record) => ! $record->isComplimentary())
+                    ->visible(fn (CertificateBatch $record) => ! $record->isComplimentary() || $record->certificates()->sum('payable_amount') > 0)
                     ->state(function (CertificateBatch $record) {
                         $line = $record->payments()->where('status', '!=', 'cancelled')->first();
                         if (! $line) {
@@ -102,7 +106,7 @@ class CertificateBatchResource extends Resource
                             .' · '.Money::format(app(CertificateBatchManager::class)->invoiceTotal($record)).' · '.$line->status->getLabel());
                     }),
                 TextEntry::make('marketing_cost')->label('Маркетинговый расход (себестоимость)')
-                    ->state(fn (CertificateBatch $record) => Money::format($record->certificates()->sum('total_cost')))
+                    ->state(fn (CertificateBatch $record) => Money::format($record->certificates()->sum('marketing_cost')))
                     ->visible(fn (CertificateBatch $record) => $record->isComplimentary() && auth()->user()?->can(Permission::ViewCosts)),
                 TextEntry::make('creator.name')->label('Оформил')->helperText(fn (CertificateBatch $record) => $record->created_at?->format('d.m.Y H:i')),
                 TextEntry::make('approver.name')->label('Согласовал директор')->placeholder('ждёт согласования')

@@ -13,6 +13,7 @@ use App\Support\Money;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -30,10 +31,14 @@ class ItemsRelationManager extends RelationManager
         $editable = fn (): bool => $this->certificate()->isDraft() && ! $this->certificate()->isComplimentaryApproved() && ! $this->certificate()->batch_id;
 
         return $table
-            ->description('Услуги пакета неизменны — это и есть продукт. Доп. услуги можно добавлять и убирать в черновике. Сертификат погашается только целиком.')
+            ->description('Услуги пакета неизменны — это и есть продукт. Доп. услуги можно добавлять и убирать в черновике; в бесплатном сертификате доп. услуга может быть платной — её оплачивает заказчик. Сертификат погашается только целиком.')
             ->columns([
                 TextColumn::make('service_name_snapshot')->label('Услуга')
                     ->description(fn (CertificateItem $record) => $record->from_package ? 'из пакета' : 'доп. услуга'),
+                TextColumn::make('paid_by_customer')->label('Оплата')->badge()
+                    ->state(fn (CertificateItem $record) => $record->paid_by_customer ? 'Платно' : 'Бесплатно')
+                    ->color(fn (CertificateItem $record) => $record->paid_by_customer ? 'warning' : 'success')
+                    ->visible(fn () => $this->certificate()->isComplimentary()),
                 TextColumn::make('quantity')->label('Кол-во'),
                 TextColumn::make('unit_snapshot')->label('Единица'),
                 TextColumn::make('unit_price')->label('Цена')->formatStateUsing(fn ($state) => Money::format($state)),
@@ -54,14 +59,26 @@ class ItemsRelationManager extends RelationManager
                         Select::make('service_id')->label('Услуга')->required()->searchable()->preload()
                             ->options(fn () => Service::where('is_active', true)->orderBy('name')->pluck('name', 'id')),
                         TextInput::make('quantity')->label('Количество')->integer()->minValue(1)->default(1)->required(),
+                        Toggle::make('paid')->label('Платная — оплачивает заказчик')->default(false)
+                            ->helperText('Выключено — бесплатно, идёт в маркетинговый расход. Включено — войдёт в счёт заказчику.')
+                            ->visible(fn () => $this->certificate()->isComplimentary()),
                     ])
                     ->action(function (array $data, Action $action) {
                         RunsDomainActions::run($action, fn () => app(CertificateManager::class)
-                            ->addItem($this->certificate(), Service::findOrFail($data['service_id']), (int) $data['quantity']), 'Услуга добавлена');
+                            ->addItem($this->certificate(), Service::findOrFail($data['service_id']), (int) $data['quantity'], paid: (bool) ($data['paid'] ?? false)), 'Услуга добавлена');
                         $this->refreshPage();
                     }),
             ])
             ->recordActions([
+                Action::make('togglePaid')
+                    ->label(fn (CertificateItem $record) => $record->paid_by_customer ? 'Сделать бесплатной' : 'Сделать платной')
+                    ->icon('heroicon-o-currency-dollar')->color('gray')
+                    ->visible(fn (CertificateItem $record) => $editable() && ! $record->from_package && $this->certificate()->isComplimentary())
+                    ->authorize(Permission::ComposeDrafts)
+                    ->action(function (CertificateItem $record, Action $action) {
+                        RunsDomainActions::run($action, fn () => app(CertificateManager::class)->setItemPaid($record, ! $record->paid_by_customer), 'Оплата услуги изменена');
+                        $this->refreshPage();
+                    }),
                 Action::make('remove')->label('Убрать')->icon('heroicon-o-x-mark')->color('danger')
                     ->visible(fn (CertificateItem $record) => $editable() && ! $record->from_package)
                     ->authorize(Permission::ComposeDrafts)

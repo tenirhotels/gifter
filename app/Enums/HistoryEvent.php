@@ -10,6 +10,7 @@ enum HistoryEvent: string implements HasLabel
     case Updated = 'updated';
     case RecipientChanged = 'recipient_changed';
     case ItemAdded = 'item_added';
+    case ItemChanged = 'item_changed';
     case ItemRemoved = 'item_removed';
     case PackageApplied = 'package_applied';
     case Repriced = 'repriced';
@@ -42,6 +43,7 @@ enum HistoryEvent: string implements HasLabel
             self::Updated => 'Изменены данные',
             self::RecipientChanged => 'Указан получатель',
             self::ItemAdded => 'Добавлена услуга',
+            self::ItemChanged => 'Изменена услуга',
             self::ItemRemoved => 'Удалена услуга',
             self::PackageApplied => 'Применён пакет',
             self::Repriced => 'Пересчитаны цены',

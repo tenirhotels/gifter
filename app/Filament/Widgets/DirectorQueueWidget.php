@@ -40,7 +40,7 @@ class DirectorQueueWidget extends RoleQueueWidget
                 $freeIssues > 0 ? "нужно ваше решение · в группах: {$freeIssues}" : 'нужно ваше решение', 'heroicon-o-hand-raised'),
             $this->metric('Продажи за месяц', Money::format(Money::fromMinor($revenue)),
                 (clone $sold)->count().' серт. · маржа '.Money::format(Money::fromMinor($revenue - $cost)), 'heroicon-o-chart-bar'),
-            $this->metric('Маркетинговый расход за месяц', Money::format((clone $marketing)->sum('total_cost')),
+            $this->metric('Маркетинговый расход за месяц', Money::format((clone $marketing)->sum('marketing_cost')),
                 (clone $marketing)->count().' бесплатных · по себестоимости', 'heroicon-o-megaphone'),
             $this->counter('Услуги без цены на сегодня', $q->servicesWithoutPrice(), ServiceResource::getUrl('index'), 'danger', 'не продаются', 'heroicon-o-tag'),
             $this->counter('Услуги без себестоимости', $q->servicesWithoutCost(), ServiceResource::getUrl('index'), 'warning', 'маржа неполная', 'heroicon-o-calculator'),

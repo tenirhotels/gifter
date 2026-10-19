@@ -29,7 +29,7 @@ class Certificate extends Model
 
     protected $fillable = [
         'number', 'verification_token', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'complimentary_purpose', 'batch_id', 'complimentary_approved_by', 'complimentary_approved_at', 'sold_at', 'valid_from',
-        'valid_until', 'custom_validity', 'total_amount', 'total_cost', 'currency', 'issued_at', 'cancelled_at', 'cancellation_reason',
+        'valid_until', 'custom_validity', 'total_amount', 'total_cost', 'payable_amount', 'marketing_cost', 'currency', 'issued_at', 'cancelled_at', 'cancellation_reason',
         'notes', 'created_by', 'updated_by',
         'pms_booking_number', 'booking_guest_name', 'arrival_date', 'departure_date', 'name_match', 'reservation_note',
         'reservation_review_status', 'reservation_reviewed_by', 'reservation_reviewed_at', 'reservation_review_comment',
@@ -47,6 +47,8 @@ class Certificate extends Model
             'custom_validity' => 'boolean',
             'total_amount' => 'decimal:2',
             'total_cost' => 'decimal:2',
+            'payable_amount' => 'decimal:2',
+            'marketing_cost' => 'decimal:2',
             'complimentary_approved_at' => 'datetime',
             'issued_at' => 'datetime',
             'cancelled_at' => 'datetime',
@@ -185,17 +187,28 @@ class Certificate extends Model
         return Money::fromMinor(Money::toMinor($this->payments()->where('status', '!=', PaymentStatus::Cancelled)->sum('amount')));
     }
 
-    public function isFullyPaid(): bool
+    /** Есть часть, которую оплачивает заказчик: вся продажа или платные доп. услуги бесплатного. */
+    public function hasPayablePart(): bool
     {
-        return Money::toMinor($this->paidAmount()) >= Money::toMinor($this->total_amount);
+        return Money::toMinor($this->payable_amount) > 0;
     }
 
-    /** Черновик можно выпускать: бесплатный согласован, продажа оплачена полностью. */
+    /** Платная часть оплачена полностью (если её нет — оплачивать нечего). */
+    public function isFullyPaid(): bool
+    {
+        return Money::toMinor($this->paidAmount()) >= Money::toMinor($this->payable_amount);
+    }
+
+    /** Черновик можно выпускать: бесплатный согласован, платная часть (если есть) оплачена полностью. */
     public function isReadyToIssue(): bool
     {
-        return $this->isDraft() && ($this->isComplimentary()
-            ? $this->isComplimentaryApproved()
-            : Money::toMinor($this->total_amount) > 0 && $this->isFullyPaid());
+        if (! $this->isDraft()) {
+            return false;
+        }
+
+        return $this->isComplimentary()
+            ? $this->isComplimentaryApproved() && $this->isFullyPaid()
+            : $this->hasPayablePart() && $this->isFullyPaid();
     }
 
     /** Первый выставленный и ещё не оплаченный счёт. */

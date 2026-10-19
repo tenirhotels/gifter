@@ -52,17 +52,20 @@ class CertificateInfolist
             ]),
             Section::make('Деньги')->columnSpan(1)->schema([
                 TextEntry::make('total_amount')->label(fn (Certificate $record) => $record->isComplimentary() ? 'Стоимость по прайсу' : 'Стоимость')->state(fn (Certificate $record) => Money::format($record->total_amount))->size('lg')->weight('bold'),
+                TextEntry::make('payable_amount')->label('К оплате заказчиком')->state(fn (Certificate $record) => Money::format($record->payable_amount))
+                    ->helperText('Платные доп. услуги; остальное бесплатно и идёт в маркетинговый расход.')->weight('bold')
+                    ->visible(fn (Certificate $record) => $record->isComplimentary() && $record->hasPayablePart()),
                 TextEntry::make('total_cost')->label(fn (Certificate $record) => $record->isComplimentary() ? 'Маркетинговый расход (себестоимость)' : 'Себестоимость')
-                    ->state(fn (Certificate $record) => Money::format($record->total_cost))
+                    ->state(fn (Certificate $record) => Money::format($record->isComplimentary() ? $record->marketing_cost : $record->total_cost))
                     ->helperText(fn (Certificate $record) => $record->hasUnknownCost() ? 'У части услуг себестоимость не указана — сумма неполная.' : null)
                     ->color(fn (Certificate $record) => $record->hasUnknownCost() ? 'warning' : null)
                     ->visible(fn () => auth()->user()?->can(Permission::ViewCosts)),
                 TextEntry::make('margin')->label('Маржа')
                     ->state(fn (Certificate $record) => Money::format(Money::fromMinor(Money::toMinor($record->total_amount) - Money::toMinor($record->total_cost))))
                     ->visible(fn (Certificate $record) => ! $record->isComplimentary() && auth()->user()?->can(Permission::ViewCosts)),
-                TextEntry::make('paid')->label('Оплачено')->hidden(fn (Certificate $record) => $record->isComplimentary())->state(fn (Certificate $record) => Money::format($record->paidAmount()))
-                    ->color(fn (Certificate $record) => $record->isFullyPaid() && $record->total_amount > 0 ? 'success' : 'warning'),
-                TextEntry::make('invoiced')->label('Выставлено счетов')->hidden(fn (Certificate $record) => $record->isComplimentary())->state(fn (Certificate $record) => Money::format($record->invoicedAmount())),
+                TextEntry::make('paid')->label('Оплачено')->hidden(fn (Certificate $record) => $record->isComplimentary() && ! $record->hasPayablePart())->state(fn (Certificate $record) => Money::format($record->paidAmount()))
+                    ->color(fn (Certificate $record) => $record->isFullyPaid() && $record->hasPayablePart() ? 'success' : 'warning'),
+                TextEntry::make('invoiced')->label('Выставлено счетов')->hidden(fn (Certificate $record) => $record->isComplimentary() && ! $record->hasPayablePart())->state(fn (Certificate $record) => Money::format($record->invoicedAmount())),
                 TextEntry::make('creator.name')->label('Создал')->placeholder('—')
                     ->helperText(fn (Certificate $record) => $record->created_at?->format('d.m.Y H:i')),
                 TextEntry::make('issued_at')->label('Выпущен')->dateTime('d.m.Y H:i')->placeholder('ещё не выпущен'),

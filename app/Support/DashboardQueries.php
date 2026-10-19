@@ -48,9 +48,10 @@ final class DashboardQueries
     public function readyToIssue(): Builder
     {
         return $this->drafts()->whereNull('batch_id')->where(fn (Builder $q) => $q
-            ->where(fn (Builder $q) => $q->where('kind', CertificateKind::Complimentary)->whereNotNull('complimentary_approved_at'))
-            ->orWhere(fn (Builder $q) => $q->where('kind', CertificateKind::Sale)->where('total_amount', '>', 0)
-                ->whereRaw('(select coalesce(sum(amount), 0) from payments where payments.certificate_id = certificates.id and payments.status = ?) >= certificates.total_amount', [PaymentStatus::Paid->value])));
+            ->where(fn (Builder $q) => $q->where('kind', CertificateKind::Complimentary)->whereNotNull('complimentary_approved_at')
+                ->whereRaw('(select coalesce(sum(amount), 0) from payments where payments.certificate_id = certificates.id and payments.status = ?) >= certificates.payable_amount', [PaymentStatus::Paid->value]))
+            ->orWhere(fn (Builder $q) => $q->where('kind', CertificateKind::Sale)->where('payable_amount', '>', 0)
+                ->whereRaw('(select coalesce(sum(amount), 0) from payments where payments.certificate_id = certificates.id and payments.status = ?) >= certificates.payable_amount', [PaymentStatus::Paid->value])));
     }
 
     public function withoutRecipient(): Builder

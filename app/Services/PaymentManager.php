@@ -35,15 +35,18 @@ class PaymentManager
             if ($certificate->status !== CertificateStatus::Draft) {
                 throw new DomainRuleViolation('Счёт выставляется только по черновику, до выпуска сертификата.');
             }
-            if ($certificate->isComplimentary()) {
-                throw new DomainRuleViolation('Бесплатный сертификат не оплачивается.');
+            if ($certificate->isComplimentary() && ! $certificate->hasPayablePart()) {
+                throw new DomainRuleViolation('В бесплатном сертификате нет платных услуг — счёт выставлять не на что.');
             }
-            if (Money::toMinor($certificate->total_amount) === 0) {
+            if (Money::toMinor($certificate->payable_amount) === 0) {
                 throw new DomainRuleViolation('В сертификате нет услуг — счёт выставлять не на что.');
             }
-            $outstanding = Money::toMinor($certificate->total_amount) - Money::toMinor($certificate->invoicedAmount());
+            if (! $certificate->customer_id) {
+                throw new DomainRuleViolation('Для счёта укажите заказчика.');
+            }
+            $outstanding = Money::toMinor($certificate->payable_amount) - Money::toMinor($certificate->invoicedAmount());
             if ($outstanding <= 0) {
-                throw new DomainRuleViolation('На всю сумму сертификата счета уже выставлены.');
+                throw new DomainRuleViolation('На всю платную сумму счета уже выставлены.');
             }
             $amountMinor = $amount === null ? $outstanding : Money::toMinor($amount);
             if ($amountMinor <= 0) {

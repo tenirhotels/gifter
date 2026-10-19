@@ -32,7 +32,7 @@ class PaymentsRelationManager extends RelationManager
 
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
     {
-        return ! $ownerRecord->isComplimentary() && parent::canViewForRecord($ownerRecord, $pageClass);
+        return (! $ownerRecord->isComplimentary() || $ownerRecord->hasPayablePart()) && parent::canViewForRecord($ownerRecord, $pageClass);
     }
 
     public function table(Table $table): Table
@@ -54,11 +54,11 @@ class PaymentsRelationManager extends RelationManager
             ->headerActions([
                 Action::make('invoice')->label('Выставить счёт')->icon('heroicon-o-document-text')
                     ->authorize(Permission::ManagePayments)
-                    ->visible(fn () => $this->certificate()->isDraft() && ! $this->certificate()->isComplimentary() && ! $this->certificate()->batch_id)
+                    ->visible(fn () => $this->certificate()->isDraft() && (! $this->certificate()->isComplimentary() || $this->certificate()->hasPayablePart()) && ! $this->certificate()->batch_id)
                     ->schema(fn () => [
                         Select::make('method')->label('Способ')->options(PaymentMethod::class)->required()->default(PaymentMethod::KaspiInvoice->value),
                         TextInput::make('amount')->label('Сумма, ₸')->numeric()->minValue(1)->required()
-                            ->default(fn () => Money::fromMinor(Money::toMinor($this->certificate()->total_amount) - Money::toMinor($this->certificate()->invoicedAmount())))
+                            ->default(fn () => Money::fromMinor(Money::toMinor($this->certificate()->payable_amount) - Money::toMinor($this->certificate()->invoicedAmount())))
                             ->helperText('По умолчанию — весь неоплаченный остаток.'),
                         TextInput::make('invoice_number')->label('№ счёта в банке')->maxLength(255),
                         Textarea::make('comment')->label('Комментарий'),

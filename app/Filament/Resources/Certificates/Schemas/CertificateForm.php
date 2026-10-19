@@ -78,9 +78,9 @@ class CertificateForm
             ->relationship('customer', 'full_name')->searchable(['last_name', 'first_name', 'company', 'bin'])->preload()
             ->getOptionLabelFromRecordUsing(fn (Customer $record) => $record->displayName())
             ->createOptionForm(CustomerForm::fields())
-            ->required(fn (Get $get): bool => ! self::isComplimentary($get))
+            ->required(fn (Get $get): bool => ! self::isComplimentary($get) || self::hasPaidExtras($get))
             ->helperText(fn (Get $get): ?string => self::isComplimentary($get)
-                ? 'Для бесплатного — необязательно (партнёр, блогер, компания).'
+                ? (self::hasPaidExtras($get) ? 'Есть платные услуги — заказчик, который их оплатит, обязателен.' : 'Для бесплатного — необязательно (партнёр, блогер, компания).')
                 : 'Найдите по фамилии, компании или БИН, или создайте нового (+).');
     }
 
@@ -95,6 +95,12 @@ class CertificateForm
     public static function notesField(): Textarea
     {
         return Textarea::make('notes')->label('Примечание')->columnSpanFull();
+    }
+
+    /** Есть ли в бесплатном сертификате платные доп. услуги (тумблер в мастере). */
+    public static function hasPaidExtras(Get $get): bool
+    {
+        return collect($get('extras') ?? [])->contains(fn ($extra) => ! empty($extra['paid']) && ! empty($extra['service_id']));
     }
 
     /** Бесплатный ли сертификат — по выбранному пакету. */

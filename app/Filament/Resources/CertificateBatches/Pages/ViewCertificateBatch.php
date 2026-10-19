@@ -37,7 +37,10 @@ class ViewCertificateBatch extends ViewRecord
 
     protected function getHeaderActions(): array
     {
-        $paidDraft = fn (CertificateBatch $record) => ! $record->isComplimentary() && $record->status === BatchStatus::Draft;
+        // Счёт группы: платная — в черновике; бесплатная — только если есть платные доп. услуги (до и после согласования).
+        $paidDraft = fn (CertificateBatch $record) => $record->isComplimentary()
+            ? in_array($record->status, [BatchStatus::Draft, BatchStatus::Approved], true) && $record->certificates()->sum('payable_amount') > 0
+            : $record->status === BatchStatus::Draft;
         $pendingLine = fn (CertificateBatch $record) => $record->payments()->where('status', PaymentStatus::Pending)->first();
 
         return [
@@ -46,7 +49,8 @@ class ViewCertificateBatch extends ViewRecord
                 ->visible(fn (CertificateBatch $record) => $record->isComplimentary() && $record->status === BatchStatus::Draft)
                 ->modalDescription(fn (CertificateBatch $record) => "Будет согласовано {$record->quantity} бесплатных сертификатов"
                     .($record->valid_from ? ", срок {$record->valid_from->format('d.m.Y')} — {$record->valid_until->format('d.m.Y')} (задан вручную)" : ', срок по пакету')
-                    .'. Маркетинговый расход по себестоимости: '.Money::format($record->certificates()->sum('total_cost')).'.')
+                    .'. Маркетинговый расход по себестоимости: '.Money::format($record->certificates()->sum('marketing_cost'))
+                    .($record->certificates()->sum('payable_amount') > 0 ? '. Платные услуги оплачивает заказчик: '.Money::format($record->certificates()->sum('payable_amount')).' (выпуск — после оплаты)' : '').'.')
                 ->schema([Textarea::make('comment')->label('Комментарий')])
                 ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action,
                     fn () => app(CertificateBatchManager::class)->approve($record, $data['comment'] ?? null), 'Группа согласована')),
@@ -55,7 +59,7 @@ class ViewCertificateBatch extends ViewRecord
                 ->authorize(Permission::ManagePayments)
                 ->visible(fn (CertificateBatch $record) => $paidDraft($record)
                     && ! $record->payments()->where('status', '!=', PaymentStatus::Cancelled)->exists())
-                ->modalDescription(fn (CertificateBatch $record) => 'Один счёт на всю группу: '.Money::format($record->certificates()->sum('total_amount')).'.')
+                ->modalDescription(fn (CertificateBatch $record) => 'Один счёт на всю группу: '.Money::format($record->certificates()->sum('payable_amount')).($record->isComplimentary() ? ' (только платные услуги)' : '').'.')
                 ->schema([
                     Select::make('method')->label('Способ')->options(PaymentMethod::class)->required()->default(PaymentMethod::KaspiInvoice->value),
                     TextInput::make('invoice_number')->label('№ счёта в банке')->maxLength(255),

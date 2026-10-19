@@ -88,17 +88,21 @@ class CreateCertificate extends CreateRecord
                 ]),
             Step::make('Состав')->icon('heroicon-o-list-bullet')->schema([
                 Repeater::make('extras')->label('Доп. услуги к пакету')->addActionLabel('Добавить доп. услугу')
-                    ->defaultItems(0)->live()->columns(2)->reorderable(false)
+                    ->defaultItems(0)->live()->columns(['default' => 1, 'md' => 3])->reorderable(false)
                     ->schema([
                         Select::make('service_id')->label('Услуга')->required()->searchable()->live()
                             ->options(fn () => Service::where('is_active', true)->orderBy('name')->pluck('name', 'id')),
                         TextInput::make('quantity')->label('Количество')->integer()->minValue(1)->default(1)->required()->live(onBlur: true),
+                        // В бесплатном сертификате доп. услуга может быть платной: её оплачивает заказчик по счёту.
+                        Toggle::make('paid')->label('Платная — оплачивает заказчик')->default(false)->live()
+                            ->helperText('Выключено — бесплатно, маркетинговый расход.')
+                            ->visible(fn (Get $get) => (bool) Package::find($get('../../package_id'))?->is_complimentary),
                     ]),
                 Placeholder::make('quote')->label('Расчёт по прайсу')->content(fn (Get $get) => $this->quoteTable($get)),
                 CertificateForm::notesField(),
             ]),
             Step::make('Счёт')->icon('heroicon-o-banknotes')
-                ->visible(fn (Get $get) => ! CertificateForm::isComplimentary($get))
+                ->visible(fn (Get $get) => ! CertificateForm::isComplimentary($get) || CertificateForm::hasPaidExtras($get))
                 ->schema([
                     Toggle::make('create_invoice')->live()->default(true)
                         ->label(fn (Get $get) => self::count($get) > 1 ? 'Сразу выставить один счёт на всю группу' : 'Сразу выставить счёт на всю сумму'),
@@ -120,22 +124,31 @@ class CreateCertificate extends CreateRecord
             return 'Выберите пакет на первом шаге.';
         }
         $quote = app(CertificateManager::class)->quote($package, array_values($get('extras') ?? []), Carbon::parse($get('sold_at') ?: today()));
-        $line = fn (array $l) => '<tr><td>'.e($l['name']).'</td><td class="gf-num">'.$l['quantity'].'</td><td class="gf-num">'.Money::format($l['unit_price'])
-            .'</td><td class="gf-num">'.Money::format($l['line_total']).'</td></tr>';
+        $free = (bool) $package->is_complimentary;
+        $cols = $free ? 5 : 4;
+        $line = fn (array $l) => '<tr><td>'.e($l['name']).'</td><td class="gf-num">'.$l['quantity'].'</td><td class="gf-num">'.Money::format($l['unit_price']).'</td>'
+            .($free ? '<td>'.($l['paid'] ? 'Платно' : '<span class="gf-muted">Бесплатно</span>').'</td>' : '')
+            .'<td class="gf-num">'.Money::format($l['line_total']).'</td></tr>';
         $group = fn (string $title, $lines) => $lines->isEmpty() ? ''
-            : '<tr class="gf-quote-group"><td colspan="4">'.e($title).'</td></tr>'.$lines->map($line)->implode('');
+            : '<tr class="gf-quote-group"><td colspan="'.$cols.'">'.e($title).'</td></tr>'.$lines->map($line)->implode('');
         $lines = collect($quote['lines']);
         $body = $group('Пакет «'.$package->name.'»', $lines->where('from_package', true))
             .$group('Доп. услуги', $lines->where('from_package', false));
 
         $count = self::count($get);
-        $foot = $count > 1
-            ? '<tr><td colspan="3">За 1 сертификат</td><td class="gf-num">'.Money::format($quote['total']).'</td></tr>'
-                .'<tr class="gf-quote-total"><td colspan="3">Итого за '.$count.' шт.</td><td class="gf-num">'.Money::format(Money::multiply($quote['total'], $count)).'</td></tr>'
-            : '<tr class="gf-quote-total"><td colspan="3">Итого</td><td class="gf-num">'.Money::format($quote['total']).'</td></tr>';
+        $span = $cols - 1;
+        $row = fn (string $label, string $amount, string $class = '') => '<tr'.($class ? ' class="'.$class.'"' : '').'><td colspan="'.$span.'">'.$label.'</td><td class="gf-num">'.$amount.'</td></tr>';
+        $groupNote = $count > 1 ? ' за '.$count.' шт.' : '';
+        if ($free) {
+            $foot = $row('Бесплатно по прайсу'.$groupNote, Money::format(Money::multiply($quote['free'], $count)))
+                .$row('К оплате заказчиком'.$groupNote, Money::format(Money::multiply($quote['payable'], $count)), 'gf-quote-total');
+        } else {
+            $foot = ($count > 1 ? $row('За 1 сертификат', Money::format($quote['total'])) : '')
+                .$row($count > 1 ? 'Итого за '.$count.' шт.' : 'Итого', Money::format(Money::multiply($quote['total'], $count)), 'gf-quote-total');
+        }
         $missing = $quote['missing'] ? '<p class="gf-summary-warn">Нет цены на дату продажи: '.e(implode(', ', $quote['missing'])).'. Такие услуги не войдут в сертификат, пока не задана цена.</p>' : '';
 
-        return new HtmlString('<div class="gf-quote"><table><thead><tr><th>Услуга</th><th class="gf-num">Кол-во</th><th class="gf-num">Цена</th><th class="gf-num">Сумма</th></tr></thead>'
+        return new HtmlString('<div class="gf-quote"><table><thead><tr><th>Услуга</th><th class="gf-num">Кол-во</th><th class="gf-num">Цена</th>'.($free ? '<th>Оплата</th>' : '').'<th class="gf-num">Сумма</th></tr></thead>'
             .'<tbody>'.$body.'</tbody><tfoot>'.$foot.'</tfoot></table></div>'.$missing);
     }
 
@@ -149,7 +162,8 @@ class CreateCertificate extends CreateRecord
         $count = self::count($get);
         $free = (bool) $package->is_complimentary;
         $quote = app(CertificateManager::class)->quote($package, array_values($get('extras') ?? []), Carbon::parse($get('sold_at') ?: today()));
-        $total = Money::multiply($quote['total'], $count);
+        $payable = Money::multiply($quote['payable'], $count);
+        $freePart = Money::multiply($quote['free'], $count);
         $validity = $free
             ? ValidityFields::preview($package, $get('validity'), $get('sold_at'))
             : ValidityFields::preview($package, null, $get('sold_at'));
@@ -158,15 +172,16 @@ class CreateCertificate extends CreateRecord
 
         $row = fn (string $label, string $value) => '<div class="gf-summary-row"><dt>'.e($label).'</dt><dd>'.$value.'</dd></div>';
         $rows = $row('Пакет', e($package->name))
-            .$row('Тип', $free ? 'бесплатный, после согласования директора' : 'продажа')
+            .$row('Тип', $free ? 'бесплатный, после согласования директора'.($quote['payable'] !== '0.00' ? ' и оплаты платных услуг' : '') : 'продажа')
             .$row('Срок', e($validity))
             .$row('Состав', e(collect($quote['lines'])->where('from_package', true)->map(fn (array $l) => "{$l['name']} × {$l['quantity']}")->implode(', ') ?: 'пакет без услуг'))
-            .($extras->isNotEmpty() ? $row('Доп. услуги', e($extras->map(fn (array $l) => "{$l['name']} × {$l['quantity']}")->implode(', '))) : '')
-            .$row('Заказчик', $customer ? e($customer) : '<span class="gf-muted">'.($free ? 'не обязателен' : 'не выбран').'</span>')
+            .($extras->isNotEmpty() ? $row('Доп. услуги', e($extras->map(fn (array $l) => "{$l['name']} × {$l['quantity']}".($free ? ($l['paid'] ? ' (платно)' : ' (бесплатно)') : ''))->implode(', '))) : '')
+            .($free ? $row('Бесплатно по прайсу', '<span class="gf-nowrap">'.Money::format($freePart).'</span> · маркетинговый расход') : '')
+            .$row('Заказчик', $customer ? e($customer) : '<span class="gf-muted">'.($free && $quote['payable'] === '0.00' ? 'не обязателен' : ($free ? 'обязателен — есть платные услуги' : 'не выбран')).'</span>')
             .($count > 1 ? $row('Сертификатов', $count.' шт., группа · <span class="gf-nowrap">'.Money::format($quote['total']).'</span> за 1') : '');
         $missing = $quote['missing'] ? '<p class="gf-summary-warn">Нет цены на дату продажи: '.e(implode(', ', $quote['missing'])).'</p>' : '';
 
-        return new HtmlString('<div class="gf-summary-total"><span>'.($free ? 'Стоимость по прайсу' : 'К оплате').'</span><strong>'.Money::format($total).'</strong></div>'
+        return new HtmlString('<div class="gf-summary-total"><span>К оплате</span><strong>'.Money::format($payable).'</strong></div>'
             .'<dl class="gf-summary-list">'.$rows.'</dl>'.$missing);
     }
 
@@ -185,11 +200,12 @@ class CreateCertificate extends CreateRecord
                 $certificates = app(CertificateManager::class);
                 $certificate = $certificates->createDraft($data);
                 foreach ($data['extras'] ?? [] as $extra) {
-                    $certificates->addItem($certificate, Service::findOrFail($extra['service_id']), (int) $extra['quantity']);
+                    $certificates->addItem($certificate, Service::findOrFail($extra['service_id']), (int) $extra['quantity'], paid: ! empty($extra['paid']));
                 }
-                if (! $certificate->isComplimentary() && ($data['create_invoice'] ?? false)) {
+                $certificate->refresh();
+                if ($certificate->hasPayablePart() && ($data['create_invoice'] ?? false)) {
                     $method = $data['payment_method'] instanceof PaymentMethod ? $data['payment_method'] : PaymentMethod::from($data['payment_method']);
-                    app(PaymentManager::class)->invoice($certificate->refresh(), $method, invoiceNumber: $data['invoice_number'] ?? null);
+                    app(PaymentManager::class)->invoice($certificate, $method, invoiceNumber: $data['invoice_number'] ?? null);
                 }
 
                 return $certificate->refresh();
@@ -205,7 +221,7 @@ class CreateCertificate extends CreateRecord
     {
         $batches = app(CertificateBatchManager::class);
         $batch = $batches->create(Package::findOrFail($data['package_id']), (int) $data['certificate_count'], $data);
-        if (! $batch->isComplimentary() && ($data['create_invoice'] ?? false)) {
+        if ($batch->certificates()->sum('payable_amount') > 0 && ($data['create_invoice'] ?? false)) {
             $method = $data['payment_method'] instanceof PaymentMethod ? $data['payment_method'] : PaymentMethod::from($data['payment_method']);
             $batches->invoice($batch, $method, $data['invoice_number'] ?? null);
         }

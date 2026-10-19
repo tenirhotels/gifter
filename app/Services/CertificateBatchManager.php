@@ -35,7 +35,7 @@ class CertificateBatchManager
     ) {}
 
     /**
-     * @param  array{customer_id?:int|null, complimentary_reason?:string|null, complimentary_purpose?:ComplimentaryPurpose|string|null, validity?:array|null, extras?:list<array{service_id:int|string, quantity:int|string}>, sold_at?:mixed, notes?:string|null}  $data
+     * @param  array{customer_id?:int|null, complimentary_reason?:string|null, complimentary_purpose?:ComplimentaryPurpose|string|null, validity?:array|null, extras?:list<array{service_id:int|string, quantity:int|string, paid?:bool}>, sold_at?:mixed, notes?:string|null}  $data
      */
     public function create(Package $package, int $quantity, array $data = []): CertificateBatch
     {
@@ -54,6 +54,9 @@ class CertificateBatchManager
             $purpose = $purpose instanceof ComplimentaryPurpose ? $purpose : (ComplimentaryPurpose::tryFrom((string) $purpose) ?? $package->complimentary_purpose);
             if (! $purpose) {
                 throw new DomainRuleViolation('Укажите цель бесплатных сертификатов.');
+            }
+            if (empty($data['customer_id']) && collect($data['extras'] ?? [])->contains(fn (array $extra) => ! empty($extra['paid']))) {
+                throw new DomainRuleViolation('В группе есть платные услуги — укажите заказчика, который их оплатит.');
             }
         } elseif (empty($data['customer_id'])) {
             throw new DomainRuleViolation('Для продажи укажите заказчика.');
@@ -87,7 +90,7 @@ class CertificateBatchManager
                     'notes' => $data['notes'] ?? null,
                 ]);
                 foreach ($data['extras'] ?? [] as $extra) {
-                    $this->certificates->addItem($certificate, Service::findOrFail($extra['service_id']), (int) $extra['quantity'], viaBatch: true);
+                    $this->certificates->addItem($certificate, Service::findOrFail($extra['service_id']), (int) $extra['quantity'], viaBatch: true, paid: ! empty($extra['paid']));
                 }
             }
 
@@ -95,12 +98,18 @@ class CertificateBatchManager
         });
     }
 
-    /** Один счёт на всю группу: по строке на сертификат с общим номером. */
+    /**
+     * Один счёт на всю группу: по строке на сертификат с общим номером. Бесплатной группе
+     * счёт выставляется только на платные доп. услуги — до или после согласования директором.
+     */
     public function invoice(CertificateBatch $batch, PaymentMethod $method, ?string $invoiceNumber = null, ?string $comment = null): CertificateBatch
     {
-        return $this->transition($batch, BatchStatus::Draft, function (CertificateBatch $batch) use ($method, $invoiceNumber, $comment) {
-            if ($batch->isComplimentary()) {
-                throw new DomainRuleViolation('Бесплатные сертификаты не оплачиваются.');
+        return $this->transition($batch, [BatchStatus::Draft, BatchStatus::Approved], function (CertificateBatch $batch) use ($method, $invoiceNumber, $comment) {
+            if ($batch->isComplimentary() && $batch->certificates()->sum('payable_amount') == 0) {
+                throw new DomainRuleViolation('В бесплатной группе нет платных услуг — счёт выставлять не на что.');
+            }
+            if (! $batch->isComplimentary() && $batch->status !== BatchStatus::Draft) {
+                throw new DomainRuleViolation("Группа в статусе «{$batch->statusLabel()}» — действие недоступно.");
             }
             if ($batch->payments()->where('status', '!=', PaymentStatus::Cancelled)->exists()) {
                 throw new DomainRuleViolation('Счёт по группе уже выставлен.');
@@ -144,7 +153,7 @@ class CertificateBatchManager
         });
     }
 
-    /** Бесплатная — после согласования; платная — когда оплачен каждый сертификат. */
+    /** Бесплатная — после согласования (и оплаты платных услуг, если они есть); платная — когда оплачен каждый сертификат. */
     public function issue(CertificateBatch $batch): CertificateBatch
     {
         $expected = $batch->isComplimentary() ? BatchStatus::Approved : BatchStatus::Draft;
@@ -188,11 +197,12 @@ class CertificateBatchManager
         return $line;
     }
 
-    private function transition(CertificateBatch $batch, BatchStatus $expected, callable $callback): CertificateBatch
+    /** @param  BatchStatus|list<BatchStatus>  $expected */
+    private function transition(CertificateBatch $batch, BatchStatus|array $expected, callable $callback): CertificateBatch
     {
         return DB::transaction(function () use ($batch, $expected, $callback) {
             $batch = CertificateBatch::query()->lockForUpdate()->findOrFail($batch->id);
-            if ($batch->status !== $expected) {
+            if (! in_array($batch->status, is_array($expected) ? $expected : [$expected], true)) {
                 throw new DomainRuleViolation("Группа в статусе «{$batch->statusLabel()}» — действие недоступно.");
             }
             $callback($batch);
