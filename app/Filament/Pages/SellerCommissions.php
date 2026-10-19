@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Enums\CommissionStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
+use App\Filament\Support\CommissionPeriod;
 use App\Filament\Support\RunsDomainActions;
 use App\Models\CertificateCommission;
 use App\Models\User;
@@ -18,6 +19,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Component;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -82,7 +84,8 @@ class SellerCommissions extends Page implements HasTable
                 TextColumn::make('sale_price')->label('Цена продажи')->formatStateUsing(fn ($state) => Money::format($state)),
                 TextColumn::make('rule')->label('Правило')->state(fn (CertificateCommission $record) => $record->ruleLabel())
                     ->description(fn (CertificateCommission $record) => $record->rule ? 'с '.$record->rule->valid_from->format('d.m.Y') : null),
-                TextColumn::make('amount')->label('Комиссия')->formatStateUsing(fn ($state) => Money::format($state))->weight('bold')->sortable(),
+                TextColumn::make('amount')->label('Комиссия')->formatStateUsing(fn ($state) => Money::format($state))->weight('bold')->sortable()
+                    ->summarize(Sum::make()->label('Итого')->formatStateUsing(fn ($state) => Money::format($state))),
                 TextColumn::make('status')->label('Статус')->badge()
                     ->description(fn (CertificateCommission $record) => $record->void_reason),
                 TextColumn::make('earned_at')->label('Начислена')->dateTime('d.m.Y')->placeholder('—')->sortable(),
@@ -94,6 +97,7 @@ class SellerCommissions extends Page implements HasTable
                         ? trim(($p->payer?->name ?? '').' '.($p->reference ? "· {$p->reference}" : '')) : null),
             ])
             ->filters([
+                CommissionPeriod::filter(),
                 SelectFilter::make('status')->label('Статус')->options(CommissionStatus::class)->multiple(),
             ])
             ->recordActions([

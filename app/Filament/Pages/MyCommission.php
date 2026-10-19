@@ -6,6 +6,7 @@ use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Certificates\CertificateResource;
+use App\Filament\Support\CommissionPeriod;
 use App\Filament\Widgets\MyCommissionWidget;
 use App\Models\Certificate;
 use App\Support\Money;
@@ -21,7 +22,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
-/** «Моя мотивация»: мои проданные сертификаты и комиссия по каждому. Только свои данные. */
+/** «Мои продажи»: мои проданные сертификаты и комиссия по каждому. Только свои данные. */
 class MyCommission extends Page implements HasTable
 {
     use InteractsWithTable;
@@ -34,9 +35,9 @@ class MyCommission extends Page implements HasTable
 
     protected static ?int $navigationSort = 5;
 
-    protected static ?string $navigationLabel = 'Моя мотивация';
+    protected static ?string $navigationLabel = 'Мои продажи';
 
-    protected static ?string $title = 'Моя мотивация';
+    protected static ?string $title = 'Мои продажи';
 
     protected static ?string $slug = 'my-commission';
 
@@ -76,9 +77,10 @@ class MyCommission extends Page implements HasTable
                 TextColumn::make('commission.amount')->label('Комиссия')->placeholder('—')
                     ->formatStateUsing(fn ($state) => Money::format($state))->weight('bold')
                     ->description(fn (Certificate $record) => $record->commission?->ruleLabel()),
-                TextColumn::make('commission.status')->label('Статус комиссии')->badge()->placeholder('не предусмотрена'),
+                TextColumn::make('commission.status')->label('Статус комиссии')->badge()->placeholder('нет правила на дату продажи'),
             ])
             ->filters([
+                CommissionPeriod::filter('earned_at', 'commission'),
                 SelectFilter::make('status')->label('Статус сертификата')->options(CertificateStatus::class)->multiple(),
                 Filter::make('no_reservation')->label('Активные без брони')
                     ->query(fn (Builder $query) => $query->where('status', CertificateStatus::Active)->whereNull('pms_booking_number')),

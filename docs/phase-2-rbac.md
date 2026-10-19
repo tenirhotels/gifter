@@ -76,7 +76,7 @@
 
 ## Права на комиссии (19.10.2026)
 
-`commissions.rules` — правила (администратор); `commissions.view_own` — «Моя мотивация» (продавец, менеджер); `commissions.view_all` — все комиссии (директор, Финансы); `commissions.approve` — согласование (директор); `commissions.pay` — выплата и отмена (Финансы); `certificates.assign_seller` — назначить продавца (менеджер). См. `docs/phase-7-commissions.md`.
+`commissions.rules` — правила (администратор); `commissions.view_own` — «Мои продажи» (продавец, менеджер); `commissions.view_all` — все комиссии (директор, Финансы); `commissions.approve` — согласование (директор); `commissions.pay` — выплата и отмена (Финансы); `certificates.assign_seller` — назначить продавца (менеджер). См. `docs/phase-7-commissions.md`.
 
 `reservations.exception_request` — заявка на бронь по исключению (Front Office); `reservations.exception_approve` — решение (директор по продажам).
 

@@ -277,6 +277,30 @@ class CommissionTest extends TestCase
         Livewire::test(Commissions::class)->assertSee('Айгерим')->assertCanSeeTableRecords([$this->seller, $other]);
     }
 
+    public function test_commissions_are_filtered_by_redemption_period(): void
+    {
+        $this->rule();
+        $old = $this->sold();
+        $this->redeem($old);
+        $new = $this->sold();
+        $this->redeem($new);
+        $old->commission->update(['earned_at' => now()->subMonthsNoOverflow(2)]);
+
+        $manager = app(CommissionManager::class);
+        $thisMonth = $manager->summary($this->seller->id, now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString())[$this->seller->id];
+        $this->assertSame('8000.00', Money::fromMinor($thisMonth['earned_minor']));
+        $this->assertSame(2, $manager->summary($this->seller->id)[$this->seller->id]['redeemed']);
+
+        $this->actingAs($this->seller);
+        Livewire::test(MyCommission::class)->assertSee('Мои продажи')
+            ->filterTable('period', ['preset' => 'this'])
+            ->assertCanSeeTableRecords([$new])->assertCanNotSeeTableRecords([$old]);
+        $this->actingAs(User::factory()->create(['roles' => [Role::Finance]]));
+        Livewire::test(SellerCommissions::class, ['seller' => $this->seller->id])
+            ->filterTable('period', ['preset' => 'last'])
+            ->assertCountTableRecords(0);
+    }
+
     public function test_seller_is_assigned_by_manager_in_draft_and_locked_after_issue(): void
     {
         $this->rule();

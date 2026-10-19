@@ -13,14 +13,14 @@ use App\Support\Money;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * «Моя мотивация»: свои продажи и комиссия. Комиссия начисляется при погашении сертификата,
+ * «Мои продажи»: свои продажи и комиссия. Комиссия начисляется при погашении сертификата,
  * поэтому в центре внимания — непогашенные и сертификаты без брони. Видно только свои данные.
  */
 class MyCommissionWidget extends RoleQueueWidget
 {
     protected static ?int $sort = 1;
 
-    protected ?string $heading = 'Моя мотивация';
+    protected ?string $heading = 'Мои продажи';
 
     protected static function roles(): array
     {

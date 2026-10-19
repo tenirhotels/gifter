@@ -263,11 +263,11 @@ class CommissionManager
     /**
      * Сводка по продавцам (или одному): продано, погашено, не погашено, без брони, истекло, комиссия.
      * «Продано» — выпущенные продажи без аннулированных; «не погашено» — продано минус погашено;
-     * «без брони» — «Активен» без брони.
+     * «без брони» — «Активен» без брони. Период (`$from`–`$to`, даты) отбирает комиссии по месяцу погашения (`earned_at`).
      *
      * @return array<int, array<string, int|string>>
      */
-    public function summary(?int $sellerId = null): array
+    public function summary(?int $sellerId = null, ?string $from = null, ?string $to = null): array
     {
         $rows = [];
         $certificates = Certificate::query()->where('kind', CertificateKind::Sale)->whereNotNull('issued_at')
@@ -293,7 +293,8 @@ class CommissionManager
             unset($r);
         }
 
-        $commissions = CertificateCommission::query()->when($sellerId, fn ($q) => $q->where('seller_id', $sellerId))->get(['seller_id', 'status', 'amount']);
+        $commissions = CertificateCommission::query()->when($sellerId, fn ($q) => $q->where('seller_id', $sellerId))
+            ->when($from, fn ($q) => $q->whereDate('earned_at', '>=', $from))->when($to, fn ($q) => $q->whereDate('earned_at', '<=', $to))->get(['seller_id', 'status', 'amount']);
         foreach ($commissions as $commission) {
             $r = &$rows[$commission->seller_id];
             $r ??= $this->emptyRow();

@@ -53,7 +53,7 @@ enum Permission: string
     // Комиссии продавцов
     /** Правила комиссии по пакетам (версии). Только администратор. */
     case ManageCommissionRules = 'commissions.rules';
-    /** Свои продажи и своя комиссия («Моя мотивация»). */
+    /** Свои продажи и своя комиссия («Мои продажи»). */
     case ViewOwnCommissions = 'commissions.view_own';
     /** Комиссии всех продавцов. */
     case ViewAllCommissions = 'commissions.view_all';

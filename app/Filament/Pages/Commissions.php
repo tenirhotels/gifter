@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Enums\Permission;
+use App\Filament\Support\CommissionPeriod;
 use App\Models\Certificate;
 use App\Models\User;
 use App\Services\CommissionManager;
@@ -58,7 +59,8 @@ class Commissions extends Page implements HasTable
     /** @return array<string, int> */
     private function row(int $sellerId): array
     {
-        $this->rows ??= app(CommissionManager::class)->summary();
+        [$from, $to] = CommissionPeriod::range($this->getTableFilterState('period'));
+        $this->rows ??= app(CommissionManager::class)->summary(null, $from, $to);
 
         return $this->rows[$sellerId] ?? ['sold' => 0, 'sales_minor' => 0, 'redeemed' => 0, 'not_redeemed' => 0, 'no_reservation' => 0, 'expired' => 0,
             'earned_minor' => 0, 'pending_minor' => 0, 'to_approve_minor' => 0, 'approved_minor' => 0, 'paid_minor' => 0];
@@ -86,6 +88,10 @@ class Commissions extends Page implements HasTable
                         ? 'согласовать: '.$money($r['to_approve_minor']).' · выплатить: '.$money($r['approved_minor']) : null)
                     ->color(fn (User $record) => $this->row($record->id)['pending_minor'] > 0 ? 'warning' : null),
                 TextColumn::make('paid')->label('Выплачено')->state(fn (User $record) => $money($this->row($record->id)['paid_minor']))->color('success'),
+            ])
+            ->filters([
+                // Период действует на суммы комиссий (по месяцу погашения); строки по продажам остаются полными.
+                CommissionPeriod::filter()->query(fn ($query) => $query),
             ])
             ->recordActions([
                 Action::make('certificates')->label('Сертификаты')->icon('heroicon-o-list-bullet')
