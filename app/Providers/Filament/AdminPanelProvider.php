@@ -34,11 +34,11 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            // Двухфакторный вход обязателен всем: без настроенного приложения в панель не попасть.
+            // Двухфакторный вход обязателен всем (GIFTER_REQUIRE_2FA=true по умолчанию); на время теста отключается в .env, страница «Безопасность» покажет ошибку.
             ->profile(EditProfile::class, isSimple: false)
             ->multiFactorAuthentication([
                 AppAuthentication::make()->brandName('Gifter')->recoverable(),
-            ], isRequired: fn (): bool => config('gifter.security.require_two_factor') || ! app()->isLocal())
+            ], isRequired: fn (): bool => (bool) config('gifter.security.require_two_factor'))
             ->brandName('Gifter')
             ->colors([
                 'primary' => Color::Amber,
