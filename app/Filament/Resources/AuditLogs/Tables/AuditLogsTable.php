@@ -15,9 +15,9 @@ class AuditLogsTable
         return $table
             ->columns([
                 TextColumn::make('created_at')->label('Когда')->dateTime('d.m.Y H:i:s')->sortable(),
-                TextColumn::make('user.name')->label('Кто')->placeholder('система'),
+                TextColumn::make('user.name')->label('Кто')->placeholder(__('система')),
                 TextColumn::make('event')->label('Событие')->badge()->formatStateUsing(fn (string $state) => match ($state) {
-                    'created' => 'создание', 'updated' => 'изменение', 'deleted' => 'удаление', default => $state,
+                    'created' => __('создание'), 'updated' => __('изменение'), 'deleted' => __('удаление'), default => $state,
                 }),
                 TextColumn::make('auditable_type')->label('Объект')->formatStateUsing(fn (string $state, AuditLog $record) => class_basename($state).' #'.$record->auditable_id),
                 TextColumn::make('after')->label('Изменения')->state(fn (AuditLog $record) => collect($record->after ?? $record->before ?? [])

@@ -41,7 +41,7 @@ class AdminOverviewWidget extends RoleQueueWidget
         $sold = $q->soldThisMonth();
 
         return [
-            $this->metric('Продажи за месяц', Money::format((clone $sold)->sum('total_amount')), (clone $sold)->count().' серт.', 'heroicon-o-chart-bar'),
+            $this->metric('Продажи за месяц', Money::format((clone $sold)->sum('total_amount')), __(':p1 серт.', ['p1' => (clone $sold)->count()]), 'heroicon-o-chart-bar'),
             $this->counter('Активные', $q->status(CertificateStatus::Active), $list(['status' => ['values' => ['active']]]), 'info', 'действуют сейчас', 'heroicon-o-ticket'),
             $this->counter('Черновики', $q->drafts(), $list(['status' => ['values' => ['draft']]]), 'gray', 'не выпущены', 'heroicon-o-pencil-square'),
             $this->counter('Истекают ≤ 14 дней', $q->expiringSoon(), $list(['expiring' => ['isActive' => true]]), 'danger', 'активные и забронированные', 'heroicon-o-exclamation-triangle'),
@@ -59,8 +59,8 @@ class AdminOverviewWidget extends RoleQueueWidget
         $problems = Security::problems();
         $checked = app(SecurityAudit::class)->lastResult() !== null;
 
-        return $this->tile(Stat::make('Безопасность', $checked ? $problems : '—')
-            ->description($checked ? ($problems ? 'ошибок в настройках' : 'критичных ошибок нет') : 'проверка не запускалась')
+        return $this->tile(Stat::make(__('Безопасность'), $checked ? $problems : '—')
+            ->description($checked ? ($problems ? __('ошибок в настройках') : __('критичных ошибок нет')) : __('проверка не запускалась'))
             ->url(Security::getUrl()), 'heroicon-o-lock-closed', $problems ? 'danger' : 'zero', $problems > 0);
     }
 }

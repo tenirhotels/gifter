@@ -82,11 +82,11 @@ class ArrivalSync
     public function checkIn(Certificate $certificate, bool $auto = false, ?PmsBooking $booking = null): bool
     {
         if ($certificate->status !== CertificateStatus::Reserved) {
-            throw new DomainRuleViolation("Заезд — из статуса «Забронирован» (сейчас: «{$certificate->status->getLabel()}»).");
+            throw new DomainRuleViolation(__('Заезд — из статуса «Забронирован» (сейчас: «:p1»).', ['p1' => $certificate->status->getLabel()]));
         }
         // Раньше даты заезда запрос в PMS не нужен.
         if ($certificate->arrival_date->gt(today()->addDay())) {
-            throw new DomainRuleViolation('Заезд по брони — с '.$certificate->arrival_date->format('d.m.Y').'.');
+            throw new DomainRuleViolation(__('Заезд по брони — с :p1.', ['p1' => $certificate->arrival_date->format('d.m.Y')]));
         }
 
         $result = $this->inspect($certificate, $booking);
@@ -94,13 +94,13 @@ class ArrivalSync
             if ($auto) {
                 return false;
             }
-            throw new DomainRuleViolation('Заезд не отмечен: '.$result['message'].' Бронь отправлена на проверку Финансам.');
+            throw new DomainRuleViolation(__('Заезд не отмечен: :p1 Бронь отправлена на проверку Финансам.', ['p1' => $result['message']]));
         }
         if ($result['status'] === self::UNAVAILABLE) {
             if ($auto) {
                 return false;
             }
-            throw new DomainRuleViolation($result['message'].' Заезд не отмечен.');
+            throw new DomainRuleViolation(__(':p1 Заезд не отмечен.', ['p1' => $result['message']]));
         }
         if ($auto && ! $result['checked_in']) {
             return false;
@@ -110,11 +110,11 @@ class ArrivalSync
             if ($auto) {
                 return false;
             }
-            throw new DomainRuleViolation('Даты брони в PMS изменились: заезд — с '.$certificate->arrival_date->format('d.m.Y').'.');
+            throw new DomainRuleViolation(__('Даты брони в PMS изменились: заезд — с :p1.', ['p1' => $certificate->arrival_date->format('d.m.Y')]));
         }
 
         $this->certificates->transition($certificate, CertificateStatus::InUse,
-            $auto ? 'Заезд по данным PMS (автоматически)' : 'Заезд, бронь проверена по PMS');
+            $auto ? __('Заезд по данным PMS (автоматически)') : __('Заезд, бронь проверена по PMS'));
 
         return true;
     }
@@ -238,7 +238,7 @@ class ArrivalSync
             }
             try {
                 $this->certificates->transition($certificate, CertificateStatus::Used,
-                    $hub ? 'Отмечен использованным автоматически: выезд по данным PMS' : 'Отмечен использованным автоматически: день после планового выезда, бронь сверена по PMS');
+                    $hub ? __('Отмечен использованным автоматически: выезд по данным PMS') : __('Отмечен использованным автоматически: день после планового выезда, бронь сверена по PMS'));
                 $stats['redeemed']++;
             } catch (DomainRuleViolation) {
                 // Спор, возврат на рассмотрении и т. п. — оставляем сотруднику.

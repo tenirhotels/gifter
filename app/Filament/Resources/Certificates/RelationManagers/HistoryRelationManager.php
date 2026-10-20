@@ -27,7 +27,7 @@ class HistoryRelationManager extends RelationManager
         return $table
             ->columns([
                 TextColumn::make('created_at')->label('Когда')->dateTime('d.m.Y H:i'),
-                TextColumn::make('user.name')->label('Кто')->placeholder('система'),
+                TextColumn::make('user.name')->label('Кто')->placeholder(__('система')),
                 TextColumn::make('event')->label('Событие')->badge(),
                 TextColumn::make('description')->label('Подробности')->placeholder('—')->wrap(),
                 TextColumn::make('changes')->label('Было → стало')->wrap()->state(fn (CertificateHistory $record) => self::changes($record)),
@@ -35,13 +35,17 @@ class HistoryRelationManager extends RelationManager
             ->defaultSort('id', 'desc');
     }
 
-    private const LABELS = [
-        'status' => 'статус', 'customer_id' => 'заказчик', 'recipient_id' => 'получатель', 'sold_at' => 'продан',
-        'valid_from' => 'действует с', 'valid_until' => 'действует по', 'notes' => 'примечание', 'package_id' => 'пакет',
-        'method' => 'способ', 'amount' => 'сумма', 'invoice_number' => '№ счёта', 'paid_at' => 'оплачен',
-        'service' => 'услуга', 'quantity' => 'кол-во', 'unit_price' => 'цена', 'line_total' => 'сумма',
-        'refund_status' => 'возврат', 'reconciled' => 'сверено',
-    ];
+    /** @return array<string, string> */
+    private static function labels(): array
+    {
+        return [
+            'status' => __('статус'), 'customer_id' => __('заказчик'), 'recipient_id' => __('получатель'), 'sold_at' => __('продан'),
+            'valid_from' => __('действует с'), 'valid_until' => __('действует по'), 'notes' => __('примечание'), 'package_id' => __('пакет'),
+            'method' => __('способ'), 'amount' => __('сумма'), 'invoice_number' => __('№ счёта'), 'paid_at' => __('оплачен'),
+            'service' => __('услуга'), 'quantity' => __('кол-во'), 'unit_price' => __('цена'), 'line_total' => __('сумма'),
+            'refund_status' => __('возврат'), 'reconciled' => __('сверено'),
+        ];
+    }
 
     private static function changes(CertificateHistory $record): ?string
     {
@@ -51,10 +55,10 @@ class HistoryRelationManager extends RelationManager
         foreach (array_unique([...array_keys($before), ...array_keys($after)]) as $key) {
             $old = $before[$key] ?? null;
             $new = $after[$key] ?? null;
-            if (! isset(self::LABELS[$key]) || is_array($old) || is_array($new) || $old === $new) {
+            if (! isset(self::labels()[$key]) || is_array($old) || is_array($new) || $old === $new) {
                 continue;
             }
-            $lines[] = self::LABELS[$key].': '.($old === null ? '' : self::value($key, $old).' → ').self::value($key, $new);
+            $lines[] = self::labels()[$key].': '.($old === null ? '' : self::value($key, $old).' → ').self::value($key, $new);
         }
 
         return $lines ? implode('; ', $lines) : null;
@@ -65,7 +69,7 @@ class HistoryRelationManager extends RelationManager
         return match (true) {
             $value === null || $value === '' => '—',
             $key === 'refund_status' => RefundStatus::tryFrom($value)?->getLabel() ?? (string) $value,
-            $key === 'reconciled' => $value ? 'да' : 'нет',
+            $key === 'reconciled' => $value ? __('да') : __('нет'),
             $key === 'status' => CertificateStatus::tryFrom($value)?->getLabel() ?? PaymentStatus::tryFrom($value)?->getLabel() ?? (string) $value,
             $key === 'method' => PaymentMethod::tryFrom($value)?->getLabel() ?? (string) $value,
             in_array($key, ['amount', 'unit_price', 'line_total'], true) => Money::format($value),

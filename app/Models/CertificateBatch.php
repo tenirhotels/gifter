@@ -89,13 +89,13 @@ class CertificateBatch extends Model
     /** «Платная» / «Бесплатная». */
     public function kindLabel(): string
     {
-        return $this->isComplimentary() ? 'Бесплатная' : 'Платная';
+        return $this->isComplimentary() ? __('Бесплатная') : __('Платная');
     }
 
     /** «Группа №4». */
     public function shortLabel(): string
     {
-        return 'Группа №'.$this->id;
+        return __('Группа №:p1', ['p1' => $this->id]);
     }
 
     /** «Группа №4 · Романтический уикенд × 10» (бесплатная — с целью). */

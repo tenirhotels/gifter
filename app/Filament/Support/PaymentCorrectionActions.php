@@ -21,10 +21,10 @@ final class PaymentCorrectionActions
             Action::make('adminReopenPayment')->label('Вернуть в «Ожидает оплаты»')->icon('heroicon-o-arrow-uturn-left')->color('danger')
                 ->authorize(Permission::AdminCorrections)
                 ->visible(fn (Payment $record) => $record->status !== PaymentStatus::Pending)
-                ->modalDescription('Исправление ошибочной отметки оплаты или отмены счёта. Запись попадёт в историю сертификата.')
+                ->modalDescription(__('Исправление ошибочной отметки оплаты или отмены счёта. Запись попадёт в историю сертификата.'))
                 ->schema([Textarea::make('reason')->label('Причина')->required()])
                 ->action(function (Payment $record, array $data, Action $action) use ($after) {
-                    RunsDomainActions::run($action, fn () => app(AdminCorrections::class)->reopenPayment($record, $data['reason']), 'Счёт возвращён');
+                    RunsDomainActions::run($action, fn () => app(AdminCorrections::class)->reopenPayment($record, $data['reason']), __('Счёт возвращён'));
                     $after();
                 }),
             Action::make('adminUnreconcile')->label('Снять сверку')->icon('heroicon-o-arrow-uturn-left')->color('danger')
@@ -32,7 +32,7 @@ final class PaymentCorrectionActions
                 ->visible(fn (Payment $record) => $record->isReconciled())
                 ->schema([Textarea::make('reason')->label('Причина')->required()])
                 ->action(function (Payment $record, array $data, Action $action) use ($after) {
-                    RunsDomainActions::run($action, fn () => app(AdminCorrections::class)->unreconcile($record, $data['reason']), 'Сверка снята');
+                    RunsDomainActions::run($action, fn () => app(AdminCorrections::class)->unreconcile($record, $data['reason']), __('Сверка снята'));
                     $after();
                 }),
         ];

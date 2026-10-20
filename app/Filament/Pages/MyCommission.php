@@ -71,8 +71,8 @@ class MyCommission extends Page implements HasTable
                 TextColumn::make('status')->label('Статус')->badge(),
                 TextColumn::make('reservation')->label('Бронирование')
                     ->state(fn (Certificate $record) => match (true) {
-                        ! $record->hasReservation() => 'Бронь не создана',
-                        $record->pms_check_status === 'cancelled' => 'Бронь отменена',
+                        ! $record->hasReservation() => __('Бронь не создана'),
+                        $record->pms_check_status === 'cancelled' => __('Бронь отменена'),
                         default => '№ '.$record->pms_booking_number,
                     })
                     ->description(fn (Certificate $record) => $record->hasReservation() && $record->pms_check_status !== 'cancelled' && $record->arrival_date && $record->departure_date
@@ -84,13 +84,13 @@ class MyCommission extends Page implements HasTable
                     ->description(fn (Certificate $record) => self::commissionNote($record)),
                 TextColumn::make('commission.status')->label('Выплата')->placeholder('—')
                     ->state(fn (Certificate $record) => $record->commission ? match ($record->commission->status) {
-                        CommissionStatus::Earned => 'Начислена',
-                        CommissionStatus::Approved => 'К выплате',
-                        CommissionStatus::Paid => 'Выплачена',
-                        default => 'Не начислена',
+                        CommissionStatus::Earned => __('Начислена'),
+                        CommissionStatus::Approved => __('К выплате'),
+                        CommissionStatus::Paid => __('Выплачена'),
+                        default => __('Не начислена'),
                     } : null)
                     ->badge()->color(fn (?string $state) => match ($state) {
-                        'Выплачена' => 'success', 'К выплате' => 'warning', 'Начислена' => 'info', default => 'gray',
+                        __('Выплачена') => 'success', __('К выплате') => 'warning', __('Начислена') => 'info', default => 'gray',
                     }),
             ])
             ->filters([
@@ -100,8 +100,8 @@ class MyCommission extends Page implements HasTable
                     ->query(fn (Builder $query) => $query->where(fn (Builder $q) => $q->where(fn (Builder $a) => $a->where('status', CertificateStatus::Active)->whereNull('pms_booking_number'))->orWhere('status', CertificateStatus::Expired))),
             ])
             ->defaultSort('sold_at', 'desc')
-            ->emptyStateHeading('Выпущенных продаж пока нет')
-            ->emptyStateDescription('Комиссия начисляется, когда сертификат использован.');
+            ->emptyStateHeading(__('Выпущенных продаж пока нет'))
+            ->emptyStateDescription(__('Комиссия начисляется, когда сертификат использован.'));
     }
 
     /** Состояние комиссии простыми словами: ожидается, начислено, к выплате, выплачено. */
@@ -109,16 +109,16 @@ class MyCommission extends Page implements HasTable
     {
         $commission = $certificate->commission;
         if (! $commission) {
-            return 'не предусмотрена';
+            return __('не предусмотрена');
         }
 
         return match (true) {
-            $commission->status === CommissionStatus::PendingRedemption => 'ожидается',
-            $commission->status === CommissionStatus::Earned => 'начислено',
-            $commission->status === CommissionStatus::Approved => 'к выплате',
-            $commission->status === CommissionStatus::Paid => 'выплачено',
-            $certificate->status === CertificateStatus::Expired => 'не начислены (истёк без использования)',
-            default => 'не начислены',
+            $commission->status === CommissionStatus::PendingRedemption => __('ожидается'),
+            $commission->status === CommissionStatus::Earned => __('начислено'),
+            $commission->status === CommissionStatus::Approved => __('к выплате'),
+            $commission->status === CommissionStatus::Paid => __('выплачено'),
+            $certificate->status === CertificateStatus::Expired => __('не начислены (истёк без использования)'),
+            default => __('не начислены'),
         };
     }
 }

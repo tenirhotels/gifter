@@ -47,7 +47,7 @@ final class PhoneNumber
     public static function assertValid(?string $phone): void
     {
         if (! self::isValid($phone)) {
-            throw new DomainRuleViolation('Телефон '.self::HINT.'.');
+            throw new DomainRuleViolation(__('Телефон :p1.', ['p1' => __(self::HINT)]));
         }
     }
 }

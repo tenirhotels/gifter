@@ -19,7 +19,7 @@ class ErrorReportMail extends Mailable
 
     public function content(): Content
     {
-        $rows = collect($this->info)->map(fn ($value, $key) => '<tr><td><b>'.e(['class' => 'Класс ошибки', 'file' => 'Файл', 'url' => 'Адрес'][$key] ?? $key).'</b></td><td>'.e($value).'</td></tr>')->implode('');
+        $rows = collect($this->info)->map(fn ($value, $key) => '<tr><td><b>'.e(['class' => __('Класс ошибки'), 'file' => __('Файл'), 'url' => __('Адрес')][$key] ?? $key).'</b></td><td>'.e($value).'</td></tr>')->implode('');
 
         return new Content(htmlString: '<p>Необработанная ошибка. Подробности — в журнале сервера (storage/logs).</p><table cellpadding="4">'.$rows.'</table>');
     }

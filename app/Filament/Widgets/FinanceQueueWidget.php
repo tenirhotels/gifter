@@ -42,8 +42,8 @@ class FinanceQueueWidget extends RoleQueueWidget
             $this->counter('Брони на проверке', $q->reservationsUnderReview(), ReservationReviews::getUrl(), 'warning', 'имя не совпало или поздняя бронь', 'heroicon-o-shield-check'),
             $this->counter('Возвраты на согласовании', $q->refunds(RefundStatus::Requested), $refunds('requested'), 'danger', 'нужно ваше решение', 'heroicon-o-receipt-refund'),
             $this->counter('Возвраты ждут выплаты', $q->refunds(RefundStatus::Approved), $refunds('approved'), 'warning', 'отметить выплату', 'heroicon-o-arrow-uturn-left'),
-            $this->commissionTile('approved_minor', 'Комиссии к выплате', 'согласованы директором · отметить выплату'),
-            $this->metric('Поступило за месяц', Money::format((clone $received)->sum('amount')), (clone $received)->count().' оплат', 'heroicon-o-banknotes'),
+            $this->commissionTile('approved_minor', 'Комиссии к выплате', __('согласованы директором · отметить выплату')),
+            $this->metric('Поступило за месяц', Money::format((clone $received)->sum('amount')), __(':p1 оплат', ['p1' => (clone $received)->count()]), 'heroicon-o-banknotes'),
         ];
     }
 

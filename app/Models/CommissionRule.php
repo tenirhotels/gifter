@@ -38,7 +38,7 @@ class CommissionRule extends Model
     {
         static::updating(function (self $rule) {
             if ($rule->isDirty(['package_id', 'type', 'rate', 'fixed_amount', 'valid_from'])) {
-                throw new DomainRuleViolation('Правило комиссии не правится — добавьте новую версию.');
+                throw new DomainRuleViolation(__('Правило комиссии не правится — добавьте новую версию.'));
             }
         });
     }

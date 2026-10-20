@@ -80,14 +80,14 @@ class Security extends Page
             Action::make('check')->label('Проверить сейчас')->icon('heroicon-o-arrow-path')
                 ->action(function () {
                     app(SecurityAudit::class)->run();
-                    Notification::make()->success()->title('Проверка выполнена')->send();
+                    Notification::make()->success()->title(__('Проверка выполнена'))->send();
                 }),
             Action::make('download')->label('Скачать последнюю копию')->icon('heroicon-o-arrow-down-tray')->color('gray')
                 ->visible(fn (): bool => Backups::latest() !== null)
                 ->requiresConfirmation()
-                ->modalHeading('Скачать резервную копию базы')
-                ->modalDescription('Архив зашифрован паролем BACKUP_ARCHIVE_PASSWORD. Храните его вне хостинга (облако, внешний диск). Скачивание записывается в журнал аудита.')
-                ->modalSubmitActionLabel('Скачать')
+                ->modalHeading(__('Скачать резервную копию базы'))
+                ->modalDescription(__('Архив зашифрован паролем BACKUP_ARCHIVE_PASSWORD. Храните его вне хостинга (облако, внешний диск). Скачивание записывается в журнал аудита.'))
+                ->modalSubmitActionLabel(__('Скачать'))
                 ->action(function (): ?BinaryFileResponse {
                     $backup = Backups::latest();
                     if (! $backup) {

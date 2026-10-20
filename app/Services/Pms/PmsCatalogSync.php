@@ -80,10 +80,10 @@ class PmsCatalogSync
         return DB::transaction(function () use ($pms, $allowed) {
             $pms = PmsService::query()->lockForUpdate()->findOrFail($pms->id);
             if ($allowed && $pms->isMissing()) {
-                throw new DomainRuleViolation('Услуги больше нет в PMS — включить её в сертификат нельзя.');
+                throw new DomainRuleViolation(__('Услуги больше нет в PMS — включить её в сертификат нельзя.'));
             }
             if ($allowed && ! $pms->service_id) {
-                $service = Service::create(['name' => $pms->name, 'unit' => 'шт', 'is_active' => true]);
+                $service = Service::create(['name' => $pms->name, 'unit' => __('шт'), 'is_active' => true]);
                 $pms->service_id = $service->id;
             }
             $pms->allowed_in_certificate = $allowed;
@@ -98,7 +98,7 @@ class PmsCatalogSync
     public function link(PmsService $pms, Service $service): PmsService
     {
         if (PmsService::query()->where('service_id', $service->id)->whereKeyNot($pms->id)->exists()) {
-            throw new DomainRuleViolation('Эта услуга Gifter уже связана с другой услугой PMS.');
+            throw new DomainRuleViolation(__('Эта услуга Gifter уже связана с другой услугой PMS.'));
         }
         $pms->update(['service_id' => $service->id, 'allowed_in_certificate' => true]);
         $service->update(['is_active' => true]);

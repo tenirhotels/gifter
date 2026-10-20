@@ -11,7 +11,7 @@ class AuditLogInfolist
     {
         return $schema->components([
             TextEntry::make('created_at')->label('Когда')->dateTime('d.m.Y H:i:s'),
-            TextEntry::make('user.name')->label('Кто')->placeholder('система'),
+            TextEntry::make('user.name')->label('Кто')->placeholder(__('система')),
             TextEntry::make('event')->label('Событие'),
             TextEntry::make('auditable_type')->label('Объект')->formatStateUsing(fn ($state, $record) => class_basename($state).' #'.$record->auditable_id),
             TextEntry::make('ip_address')->label('IP')->placeholder('—'),

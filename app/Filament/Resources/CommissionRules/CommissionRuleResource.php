@@ -64,7 +64,7 @@ class CommissionRuleResource extends Resource
         return $schema->components([
             Select::make('package_id')->label('Пакет')->required()->searchable()
                 ->options(fn () => Package::query()->where('is_complimentary', false)->orderBy('name')->pluck('name', 'id'))
-                ->helperText('Бесплатные пакеты комиссию не дают.'),
+                ->helperText(__('Бесплатные пакеты комиссию не дают.')),
             Select::make('type')->label('Вид комиссии')->options(CommissionType::class)->required()->live()->default(CommissionType::Percent->value),
             // Процент — по умолчанию (пока вид не выбран или выбран «процент»), сумма — только при «фиксированной».
             TextInput::make('rate')->label('Процент от цены продажи')->numeric()->minValue(0.01)->maxValue(100)->suffix('%')->dehydratedWhenHidden()
@@ -74,8 +74,8 @@ class CommissionRuleResource extends Resource
                 ->visible(fn (Get $get) => self::isFixed($get))
                 ->required(fn (Get $get) => self::isFixed($get)),
             DatePicker::make('valid_from')->label('Действует с')->required()->default(today())
-                ->helperText('Правило применяется по дате продажи сертификата. Открытое прежнее правило закроется днём раньше.'),
-            DatePicker::make('valid_until')->label('Действует до')->helperText('Пусто — без окончания.'),
+                ->helperText(__('Правило применяется по дате продажи сертификата. Открытое прежнее правило закроется днём раньше.')),
+            DatePicker::make('valid_until')->label('Действует до')->helperText(__('Пусто — без окончания.')),
         ])->columns(2);
     }
 
@@ -94,20 +94,20 @@ class CommissionRuleResource extends Resource
                 TextColumn::make('type')->label('Вид')->badge(),
                 TextColumn::make('value')->label('Комиссия')->state(fn (CommissionRule $record) => $record->describe())->weight('bold'),
                 TextColumn::make('valid_from')->label('С')->date('d.m.Y')->sortable(),
-                TextColumn::make('valid_until')->label('До')->date('d.m.Y')->placeholder('без окончания'),
+                TextColumn::make('valid_until')->label('До')->date('d.m.Y')->placeholder(__('без окончания')),
                 TextColumn::make('state')->label('Состояние')->badge()
-                    ->state(fn (CommissionRule $record) => $record->valid_from->isFuture() ? 'Ещё не действует'
-                        : ($record->valid_until && $record->valid_until->isPast() ? 'Архив' : 'Действует'))
+                    ->state(fn (CommissionRule $record) => $record->valid_from->isFuture() ? __('Ещё не действует')
+                        : ($record->valid_until && $record->valid_until->isPast() ? __('Архив') : __('Действует')))
                     ->color(fn (string $state) => match ($state) {
-                        'Действует' => 'success', 'Архив' => 'gray', default => 'info'
+                        __('Действует') => 'success', __('Архив') => 'gray', default => 'info'
                     }),
                 TextColumn::make('commissions_count')->label('Сертификатов')->counts('commissions'),
                 TextColumn::make('creator.name')->label('Кто добавил')->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([SelectFilter::make('package_id')->label('Пакет')->relationship('package', 'name')])
             ->defaultSort('valid_from', 'desc')
-            ->emptyStateHeading('Правил комиссии нет — продавцам пока ничего не начисляется')
-            ->emptyStateDescription('Добавьте правило для пакета: процент или фиксированную сумму за сертификат.');
+            ->emptyStateHeading(__('Правил комиссии нет — продавцам пока ничего не начисляется'))
+            ->emptyStateDescription(__('Добавьте правило для пакета: процент или фиксированную сумму за сертификат.'));
     }
 
     public static function getPages(): array

@@ -52,12 +52,12 @@ class MyCommissionWidget extends RoleQueueWidget implements HasActions
             ->color($this->period === $key ? 'primary' : 'gray')->outlined($this->period !== $key)
             ->action(fn () => $this->period = $key);
 
-        return parent::getSectionContentComponent()->headerActions([$button('month', 'Месяц'), $button('year', 'Год')]);
+        return parent::getSectionContentComponent()->headerActions([$button('month', __('Месяц')), $button('year', __('Год'))]);
     }
 
     protected function getHeading(): ?string
     {
-        return 'Мои продажи — '.($this->period === 'year' ? now()->format('Y').' год' : now()->translatedFormat('F Y'));
+        return $this->period === 'year' ? __('Мои продажи — :p1 год', ['p1' => now()->format('Y')]) : __('Мои продажи — :p1', ['p1' => now()->translatedFormat('F Y')]);
     }
 
     /** Продано за период по дате продажи; комиссия — по месяцу погашения (`earned_at`). */
@@ -85,23 +85,23 @@ class MyCommissionWidget extends RoleQueueWidget implements HasActions
         $url = MyCommission::getUrl(['filters' => ['no_reservation' => ['isActive' => true]]]);
 
         $commissionNote = match (true) {
-            $sold->isEmpty() => 'за этот период продаж нет',
-            ! $hasCommission => 'правило комиссии не задано — обратитесь к администратору',
-            default => 'Ожидается: '.$money($expected),
+            $sold->isEmpty() => __('за этот период продаж нет'),
+            ! $hasCommission => __('правило комиссии не задано — обратитесь к администратору'),
+            default => __('Ожидается: :p1', ['p1' => $money($expected)]),
         };
 
         return [
-            $this->metric('Продано', $sold->count(), $sold->isEmpty() ? 'за этот период продаж нет' : 'на '.$money($soldMinor).' · использовано '.$used, 'heroicon-o-ticket'),
-            $this->metric('Использовано', $used, $sold->isEmpty() ? 'за этот период продаж нет' : 'из '.$sold->count().' проданных сертификатов', 'heroicon-o-check-badge'),
+            $this->metric('Продано', $sold->count(), $sold->isEmpty() ? __('за этот период продаж нет') : __('на :p1 · использовано :p2', ['p1' => $money($soldMinor), 'p2' => $used]), 'heroicon-o-ticket'),
+            $this->metric('Использовано', $used, $sold->isEmpty() ? __('за этот период продаж нет') : __('из :p1 проданных сертификатов', ['p1' => $sold->count()]), 'heroicon-o-check-badge'),
             $this->tile(
-                Stat::make('Комиссионные', $money($row['earned_minor']))
-                    ->description(new HtmlString('к выплате '.e($money($row['pending_minor'])).' · выплачено '.e($money($row['paid_minor'])).'<br><strong>'.e($commissionNote).'</strong>')),
+                Stat::make(__('Комиссионные'), $money($row['earned_minor']))
+                    ->description(new HtmlString(e(__('к выплате :p1 · выплачено :p2', ['p1' => $money($row['pending_minor']), 'p2' => $money($row['paid_minor'])])).'<br><strong>'.e($commissionNote).'</strong>')),
                 'heroicon-o-banknotes', 'metric', false),
             $this->tile(
-                Stat::make('Требуют внимания', $attention)->url($attention ? $url : null)
+                Stat::make(__('Требуют внимания'), $attention)->url($attention ? $url : null)
                     ->description($attention
-                        ? collect([$needBooking ? 'без брони: '.$needBooking : null, $expired ? 'истёк без использования: '.$expired.' — даты брони согласует директор по продажам' : null])->filter()->implode(' · ')
-                        : 'нет сертификатов, требующих действий'),
+                        ? collect([$needBooking ? __('без брони: :p1', ['p1' => $needBooking]) : null, $expired ? __('истёк без использования: :p1 — даты брони согласует директор по продажам', ['p1' => $expired]) : null])->filter()->implode(' · ')
+                        : __('нет сертификатов, требующих действий')),
                 'heroicon-o-calendar', $attention > 0 ? 'warning' : 'zero', $attention > 0),
         ];
     }

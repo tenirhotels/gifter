@@ -67,10 +67,10 @@ class ReservationExceptions extends Page implements HasTable
             ->columns([
                 TextColumn::make('certificate.number')->label('Сертификат')->searchable()
                     ->url(fn (ReservationException $record) => CertificateResource::getUrl('view', ['record' => $record->certificate_id]))
-                    ->description(fn (ReservationException $record) => 'истёк '.$record->certificate->valid_until->format('d.m.Y').' · продавец: '.($record->certificate->seller?->name ?? '—')),
+                    ->description(fn (ReservationException $record) => __('истёк :p1 · продавец: :p2', ['p1' => $record->certificate->valid_until->format('d.m.Y'), 'p2' => $record->certificate->seller?->name ?? '—'])),
                 TextColumn::make('booking_number')->label('Номер брони')->searchable()
                     ->description(fn (ReservationException $record) => $record->arrival_date->format('d.m').'–'.$record->departure_date->format('d.m.Y')),
-                TextColumn::make('guest_name')->label('Гость')->description(fn (ReservationException $record) => 'получатель: '.($record->certificate->recipient?->full_name ?? '—')),
+                TextColumn::make('guest_name')->label('Гость')->description(fn (ReservationException $record) => __('получатель: :p1', ['p1' => $record->certificate->recipient?->full_name ?? '—'])),
                 TextColumn::make('reason')->label('Причина')->wrap()->limit(120),
                 TextColumn::make('requester.name')->label('Заявку подал')->description(fn (ReservationException $record) => $record->created_at?->format('d.m.Y H:i')),
                 TextColumn::make('status')->label('Решение')->badge()
@@ -81,19 +81,19 @@ class ReservationExceptions extends Page implements HasTable
                 Action::make('approve')->label('Согласовать')->icon('heroicon-o-hand-thumb-up')->color('success')
                     ->authorize(Permission::ApproveReservationException)
                     ->visible(fn (ReservationException $record) => $record->status === ExceptionStatus::Pending)
-                    ->modalDescription('Сертификат вернётся в работу до даты выезда, бронь привяжется; комиссия продавца начислится при использовании сертификата.')
+                    ->modalDescription(__('Сертификат вернётся в работу до даты выезда, бронь привяжется; комиссия продавца начислится при использовании сертификата.'))
                     ->schema([Textarea::make('comment')->label('Комментарий')])
                     ->action(fn (ReservationException $record, array $data, Action $action) => RunsDomainActions::run($action,
-                        fn () => $manager()->approve($record, $data['comment'] ?? null), 'Исключение согласовано')),
+                        fn () => $manager()->approve($record, $data['comment'] ?? null), __('Исключение согласовано'))),
                 Action::make('reject')->label('Отклонить')->icon('heroicon-o-hand-thumb-down')->color('danger')
                     ->authorize(Permission::ApproveReservationException)
                     ->visible(fn (ReservationException $record) => $record->status === ExceptionStatus::Pending)
                     ->schema([Textarea::make('comment')->label('Причина отказа')->required()])
                     ->action(fn (ReservationException $record, array $data, Action $action) => RunsDomainActions::run($action,
-                        fn () => $manager()->reject($record, $data['comment']), 'Заявка отклонена')),
+                        fn () => $manager()->reject($record, $data['comment']), __('Заявка отклонена'))),
             ])
             ->defaultSort('created_at', 'desc')
-            ->emptyStateHeading('Заявок нет')
-            ->emptyStateDescription('Заявку оформляют в карточке истёкшего сертификата: «Бронь по исключению».');
+            ->emptyStateHeading(__('Заявок нет'))
+            ->emptyStateDescription(__('Заявку оформляют в карточке истёкшего сертификата: «Бронь по исключению».'));
     }
 }

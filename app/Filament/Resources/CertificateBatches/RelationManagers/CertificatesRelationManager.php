@@ -24,7 +24,7 @@ class CertificatesRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('number')->label('Номер')->searchable(),
                 TextColumn::make('status')->label('Статус')->badge(),
-                TextColumn::make('recipient.full_name')->label('Получатель')->placeholder('не указан'),
+                TextColumn::make('recipient.full_name')->label('Получатель')->placeholder(__('не указан')),
                 TextColumn::make('valid_until')->label('Действует по')->date('d.m.Y'),
             ])
             ->filters([Filter::make('no_recipient')->label('Без получателя')->query(fn ($query) => $query->whereNull('recipient_id'))])

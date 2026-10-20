@@ -61,7 +61,7 @@ class PaymentsRelationManager extends RelationManager
                         Select::make('method')->label('Способ')->options(PaymentMethod::class)->required()->default(PaymentMethod::KaspiInvoice->value),
                         TextInput::make('amount')->label('Сумма, ₸')->numeric()->minValue(1)->required()
                             ->default(fn () => Money::fromMinor(Money::toMinor($this->certificate()->payable_amount) - Money::toMinor($this->certificate()->invoicedAmount())))
-                            ->helperText('По умолчанию — весь неоплаченный остаток.'),
+                            ->helperText(__('По умолчанию — весь неоплаченный остаток.')),
                         TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255),
                         Textarea::make('comment')->label('Комментарий'),
                     ])
@@ -69,7 +69,7 @@ class PaymentsRelationManager extends RelationManager
                         RunsDomainActions::run($action, fn () => app(PaymentManager::class)->invoice(
                             $this->certificate(), PaymentMethod::from($data['method'] instanceof PaymentMethod ? $data['method']->value : $data['method']),
                             (string) $data['amount'], $data['invoice_number'] ?? null, $data['comment'] ?? null,
-                        ), 'Счёт выставлен');
+                        ), __('Счёт выставлен'));
                         $this->refreshPage();
                     }),
             ])
@@ -79,19 +79,19 @@ class PaymentsRelationManager extends RelationManager
                         ? Permission::ReceiveBankTransfers : Permission::ReceivePayments))
                     ->visible(fn (Payment $record) => $record->status === PaymentStatus::Pending && ! $record->batch_id)
                     ->modalDescription(fn (Payment $record) => $record->method->requiresFinanceConfirmation()
-                        ? 'Перечисление на р/с: отметка Финансов по выписке одновременно считается сверкой.' : null)
+                        ? __('Перечисление на р/с: отметка Финансов по выписке одновременно считается сверкой.') : null)
                     ->schema([DateTimePicker::make('paid_at')->label('Дата поступления')->default(now())->required()->maxDate(now())])
                     ->action(function (Payment $record, array $data, Action $action) {
-                        RunsDomainActions::run($action, fn () => app(PaymentManager::class)->markPaid($record, Carbon::parse($data['paid_at'])), 'Оплата отмечена');
+                        RunsDomainActions::run($action, fn () => app(PaymentManager::class)->markPaid($record, Carbon::parse($data['paid_at'])), __('Оплата отмечена'));
                         $this->refreshPage();
                     }),
                 Action::make('reconcile')->label('Сверено')->icon('heroicon-o-document-check')->color('gray')
                     ->authorize(Permission::ReconcilePayments)
                     ->visible(fn (Payment $record) => $record->status === PaymentStatus::Paid && ! $record->isReconciled())
-                    ->modalDescription(fn (Payment $record) => $record->batch_id ? 'Строка общего счёта группы: сверяется весь счёт группы.' : null)
+                    ->modalDescription(fn (Payment $record) => $record->batch_id ? __('Строка общего счёта группы: сверяется весь счёт группы.') : null)
                     ->schema([Textarea::make('comment')->label('Комментарий (необязательно)')])
                     ->action(function (Payment $record, array $data, Action $action) {
-                        RunsDomainActions::run($action, fn () => app(PaymentManager::class)->reconcile($record, $data['comment'] ?? null), 'Оплата сверена');
+                        RunsDomainActions::run($action, fn () => app(PaymentManager::class)->reconcile($record, $data['comment'] ?? null), __('Оплата сверена'));
                         $this->refreshPage();
                     }),
                 Action::make('cancelPayment')->label('Отменить')->icon('heroicon-o-x-mark')->color('danger')
@@ -99,7 +99,7 @@ class PaymentsRelationManager extends RelationManager
                     ->visible(fn (Payment $record) => $record->status === PaymentStatus::Pending && ! $record->batch_id)
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->action(function (Payment $record, array $data, Action $action) {
-                        RunsDomainActions::run($action, fn () => app(PaymentManager::class)->cancel($record, $data['reason']), 'Счёт отменён');
+                        RunsDomainActions::run($action, fn () => app(PaymentManager::class)->cancel($record, $data['reason']), __('Счёт отменён'));
                         $this->refreshPage();
                     }),
                 ...PaymentCorrectionActions::make(fn () => $this->refreshPage()),

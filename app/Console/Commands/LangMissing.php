@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
-/** Русские подписи (`->label('…')`, `__('…')`), которых ещё нет в lang/kk.json и lang/en.json — список для перевода. */
+/** Русские тексты (`->label('…')`, `__('…')`, плитки), которых ещё нет в lang/kk.json и lang/en.json — список для перевода. */
 class LangMissing extends Command
 {
     protected $signature = 'gifter:lang-missing {--lang=kk : kk или en}';
@@ -23,10 +23,11 @@ class LangMissing extends Command
         }
         $have = array_keys(json_decode(File::get($path), true) ?? []);
         $found = [];
-        foreach (File::allFiles(app_path()) as $file) {
-            if (preg_match_all("/(?:->label\\(|__\\()'([^'\\\\]*[А-Яа-яЁё][^'\\\\]*)'/u", File::get($file->getPathname()), $m)) {
+        $pattern = "/(?:->label\\(|__\\(|counter\\(|metric\\(|commissionTile\\('[a-z_]+', )'((?:[^'\\\\]|\\\\.)*[А-Яа-яЁё](?:[^'\\\\]|\\\\.)*)'/u";
+        foreach ([...File::allFiles(app_path()), ...File::allFiles(resource_path('views'))] as $file) {
+            if (preg_match_all($pattern, File::get($file->getPathname()), $m)) {
                 foreach ($m[1] as $text) {
-                    $found[$text] = true;
+                    $found[stripcslashes($text)] = true;
                 }
             }
         }

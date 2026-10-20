@@ -84,25 +84,25 @@ class CertificateBatchResource extends Resource
                 TextEntry::make('package.name')->label('Пакет')->helperText(fn (CertificateBatch $record) => $record->package?->validityLabel()),
                 TextEntry::make('validity')->label('Срок действия')
                     ->state(fn (CertificateBatch $record) => $record->valid_from && $record->valid_until
-                        ? $record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y').' (задан вручную)' : 'по пакету'),
+                        ? $record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y').' '.__('(задан вручную)') : __('по пакету')),
                 TextEntry::make('customer_name')->label('Заказчик')->placeholder('—')
                     ->state(fn (CertificateBatch $record) => $record->customer?->displayName()),
                 TextEntry::make('purpose')->label('Цель')->visible(fn (CertificateBatch $record) => $record->isComplimentary()),
                 TextEntry::make('reason')->label('Основание')->columnSpan(2)->visible(fn (CertificateBatch $record) => $record->isComplimentary()),
             ]),
             Section::make('Деньги и согласование')->columnSpan(1)->schema([
-                TextEntry::make('total')->label(fn (CertificateBatch $record) => $record->isComplimentary() ? 'Стоимость по прайсу' : 'Стоимость группы')
+                TextEntry::make('total')->label(fn (CertificateBatch $record) => $record->isComplimentary() ? __('Стоимость по прайсу') : __('Стоимость группы'))
                     ->state(fn (CertificateBatch $record) => Money::format($record->certificates()->sum('total_amount')))->weight('bold'),
                 TextEntry::make('payable')->label('К оплате заказчиком')->weight('bold')
                     ->state(fn (CertificateBatch $record) => Money::format($record->certificates()->sum('payable_amount')))
-                    ->helperText('Только платные допуслуги; остальное бесплатно.')
+                    ->helperText(__('Только платные допуслуги; остальное бесплатно.'))
                     ->visible(fn (CertificateBatch $record) => $record->isComplimentary() && $record->certificates()->sum('payable_amount') > 0),
                 TextEntry::make('invoice')->label('Счёт')
                     ->visible(fn (CertificateBatch $record) => ! $record->isComplimentary() || $record->certificates()->sum('payable_amount') > 0)
                     ->state(function (CertificateBatch $record) {
                         $line = $record->payments()->where('status', '!=', 'cancelled')->first();
                         if (! $line) {
-                            return 'не выставлен';
+                            return __('не выставлен');
                         }
 
                         return trim("{$line->method->getLabel()} ".($line->invoice_number ? "№ {$line->invoice_number}" : '')
@@ -112,10 +112,10 @@ class CertificateBatchResource extends Resource
                     ->state(fn (CertificateBatch $record) => Money::format($record->certificates()->sum('marketing_cost')))
                     ->visible(fn (CertificateBatch $record) => $record->isComplimentary() && auth()->user()?->can(Permission::ViewCosts)),
                 TextEntry::make('creator.name')->label('Оформил')->helperText(fn (CertificateBatch $record) => $record->created_at?->format('d.m.Y H:i')),
-                TextEntry::make('approver.name')->label('Согласовал директор')->placeholder('ждёт согласования')
+                TextEntry::make('approver.name')->label('Согласовал директор')->placeholder(__('ждёт согласования'))
                     ->helperText(fn (CertificateBatch $record) => $record->approved_at?->format('d.m.Y H:i'))
                     ->visible(fn (CertificateBatch $record) => $record->isComplimentary()),
-                TextEntry::make('issued_at')->label('Выпущена')->dateTime('d.m.Y H:i')->placeholder('ещё не выпущена'),
+                TextEntry::make('issued_at')->label('Выпущена')->dateTime('d.m.Y H:i')->placeholder(__('ещё не выпущена')),
             ]),
         ]);
     }
@@ -133,7 +133,7 @@ class CertificateBatchResource extends Resource
                 TextColumn::make('created_at')->label('Оформлена')->date('d.m.Y'),
             ])
             ->filters([
-                SelectFilter::make('kind')->label('Тип')->options([CertificateKind::Sale->value => 'Платная', CertificateKind::Complimentary->value => 'Бесплатная']),
+                SelectFilter::make('kind')->label('Тип')->options([CertificateKind::Sale->value => __('Платная'), CertificateKind::Complimentary->value => __('Бесплатная')]),
                 Filter::make('awaiting_approval')->label('Бесплатные: ждут согласования директора')
                     ->query(fn (Builder $query) => $query->awaitingApproval()),
                 Filter::make('ready')->label('Можно выпускать')

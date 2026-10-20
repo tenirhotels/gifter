@@ -37,10 +37,10 @@ class AdminCorrections
             $certificate = Certificate::query()->lockForUpdate()->findOrFail($certificate->id);
             $from = $certificate->status;
             if ($from === $target) {
-                throw new DomainRuleViolation('Сертификат уже в этом статусе.');
+                throw new DomainRuleViolation(__('Сертификат уже в этом статусе.'));
             }
             if ($certificate->hasPendingRefund()) {
-                throw new DomainRuleViolation('Сначала решите или верните запрос на возврат.');
+                throw new DomainRuleViolation(__('Сначала решите или верните запрос на возврат.'));
             }
             $changes = ['status' => $target, 'updated_by' => auth()->id()];
             if ($from === CertificateStatus::Cancelled) {
@@ -88,12 +88,12 @@ class AdminCorrections
             $certificate = Certificate::query()->lockForUpdate()->findOrFail($payment->certificate_id);
             $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             if ($payment->status === PaymentStatus::Pending) {
-                throw new DomainRuleViolation('Счёт и так ожидает оплаты.');
+                throw new DomainRuleViolation(__('Счёт и так ожидает оплаты.'));
             }
             if ($payment->status === PaymentStatus::Cancelled) {
                 $outstanding = Money::toMinor($certificate->payable_amount) - Money::toMinor($certificate->invoicedAmount());
                 if (Money::toMinor($payment->amount) > $outstanding) {
-                    throw new DomainRuleViolation('Нельзя вернуть счёт: вместе с другими счетами он превысит стоимость сертификата.');
+                    throw new DomainRuleViolation(__('Нельзя вернуть счёт: вместе с другими счетами он превысит стоимость сертификата.'));
                 }
             }
             $before = ['status' => $payment->status->value, 'paid_at' => $payment->paid_at?->toDateTimeString(), 'reconciled' => $payment->isReconciled()];
@@ -110,7 +110,7 @@ class AdminCorrections
         return $this->inTransaction($reason, function () use ($payment, $reason) {
             $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             if (! $payment->isReconciled()) {
-                throw new DomainRuleViolation('Оплата не сверена.');
+                throw new DomainRuleViolation(__('Оплата не сверена.'));
             }
             $payment->update(['reconciled_at' => null, 'reconciled_by' => null]);
             $this->record($payment->certificate, 'Снята сверка оплаты '.Money::format($payment->amount), $reason,
@@ -130,7 +130,7 @@ class AdminCorrections
             $certificate = Certificate::query()->lockForUpdate()->findOrFail($refund->certificate_id);
             $refund = Refund::query()->lockForUpdate()->findOrFail($refund->id);
             if ($refund->status === RefundStatus::Requested) {
-                throw new DomainRuleViolation('Запрос и так на согласовании.');
+                throw new DomainRuleViolation(__('Запрос и так на согласовании.'));
             }
             $from = $refund->status;
             if (in_array($from, [RefundStatus::Approved, RefundStatus::Completed], true)) {
@@ -156,7 +156,7 @@ class AdminCorrections
         return $this->inTransaction($reason, function () use ($certificate, $reason) {
             $certificate = Certificate::query()->lockForUpdate()->findOrFail($certificate->id);
             if (! $certificate->isDraft() || ! $certificate->isComplimentaryApproved()) {
-                throw new DomainRuleViolation('Отозвать можно только согласование ещё не выпущенного бесплатного сертификата.');
+                throw new DomainRuleViolation(__('Отозвать можно только согласование ещё не выпущенного бесплатного сертификата.'));
             }
             $certificate->update(['complimentary_approved_by' => null, 'complimentary_approved_at' => null, 'updated_by' => auth()->id()]);
             $this->record($certificate, 'Отозвано согласование бесплатного сертификата', $reason);
@@ -168,7 +168,7 @@ class AdminCorrections
     private function inTransaction(string $reason, callable $callback): mixed
     {
         if (trim($reason) === '') {
-            throw new DomainRuleViolation('Укажите причину исправления.');
+            throw new DomainRuleViolation(__('Укажите причину исправления.'));
         }
 
         return DB::transaction($callback);

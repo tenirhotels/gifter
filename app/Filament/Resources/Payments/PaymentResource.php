@@ -89,7 +89,7 @@ class PaymentResource extends Resource
             ->columns([
                 TextColumn::make('certificate.number')->label('Сертификат')->searchable()
                     ->url(fn (Payment $record) => CertificateResource::getUrl('view', ['record' => $record->certificate_id]))
-                    ->description(fn (Payment $record) => $record->batch_id ? "Группа №{$record->batch_id} (из {$record->batch->quantity})" : null),
+                    ->description(fn (Payment $record) => $record->batch_id ? __('Группа №:p1 (из :p2)', ['p1' => $record->batch_id, 'p2' => $record->batch->quantity]) : null),
                 TextColumn::make('certificate.customer.full_name')->label('Плательщик')->placeholder('—')->searchable(),
                 TextColumn::make('method')->label('Способ оплаты'),
                 TextColumn::make('amount')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state))->sortable(),
@@ -97,7 +97,7 @@ class PaymentResource extends Resource
                 TextColumn::make('invoice_number')->label('Номер счёта')->placeholder('—')->searchable(),
                 TextColumn::make('invoiced_at')->label('Дата выставления')->dateTime('d.m.Y')->sortable(),
                 TextColumn::make('paid_at')->label('Дата оплаты')->dateTime('d.m.Y H:i')->placeholder('—')->sortable(),
-                TextColumn::make('reconciled_at')->label('Сверка')->dateTime('d.m.Y')->placeholder('не сверено')
+                TextColumn::make('reconciled_at')->label('Сверка')->dateTime('d.m.Y')->placeholder(__('не сверено'))
                     ->description(fn (Payment $record) => $record->reconciler?->name),
             ])
             ->filters([
@@ -109,20 +109,20 @@ class PaymentResource extends Resource
                 SelectFilter::make('status')->label('Статус оплаты')->options(PaymentStatus::class),
             ])
             ->recordActions([
-                Action::make('receiveTransfer')->label(fn (Payment $record) => $record->method === PaymentMethod::Cash ? 'Принято в кассе' : 'Поступило на р/с')->icon('heroicon-o-banknotes')->color('success')
+                Action::make('receiveTransfer')->label(fn (Payment $record) => $record->method === PaymentMethod::Cash ? __('Принято в кассе') : __('Поступило на р/с'))->icon('heroicon-o-banknotes')->color('success')
                     ->authorize(Permission::ReceiveBankTransfers)
                     ->visible(fn (Payment $record) => $record->status === PaymentStatus::Pending && $record->method->requiresFinanceConfirmation())
-                    ->modalDescription(fn (Payment $record) => $record->batch_id ? 'Общий счёт группы: отметка относится ко всем его строкам.' : null)
+                    ->modalDescription(fn (Payment $record) => $record->batch_id ? __('Общий счёт группы: отметка относится ко всем его строкам.') : null)
                     ->schema([DateTimePicker::make('paid_at')->label('Дата поступления (выписка или касса)')->default(now())->maxDate(now())->required()])
                     ->action(fn (Payment $record, array $data, Action $action) => RunsDomainActions::run($action,
-                        fn () => app(PaymentManager::class)->markPaid($record, Carbon::parse($data['paid_at'])), 'Поступление отмечено и сверено')),
+                        fn () => app(PaymentManager::class)->markPaid($record, Carbon::parse($data['paid_at'])), __('Поступление отмечено и сверено'))),
                 Action::make('reconcile')->label('Сверка')->icon('heroicon-o-document-check')
                     ->authorize(Permission::ReconcilePayments)
                     ->visible(fn (Payment $record) => $record->status === PaymentStatus::Paid && ! $record->isReconciled())
                     ->requiresConfirmation()
-                    ->modalDescription(fn (Payment $record) => $record->batch_id ? 'Общий счёт группы: сверяются все его строки.' : null)
+                    ->modalDescription(fn (Payment $record) => $record->batch_id ? __('Общий счёт группы: сверяются все его строки.') : null)
                     ->action(fn (Payment $record, Action $action) => RunsDomainActions::run($action,
-                        fn () => app(PaymentManager::class)->reconcile($record), 'Оплата сверена')),
+                        fn () => app(PaymentManager::class)->reconcile($record), __('Оплата сверена'))),
                 ...PaymentCorrectionActions::make(),
             ])
             ->toolbarActions([
@@ -139,7 +139,7 @@ class PaymentResource extends Resource
                                 $done++;
                             }
                         }
-                        Notification::make()->success()->title("Сверено оплат: {$done}")->send();
+                        Notification::make()->success()->title(__('Сверено оплат: :p1', ['p1' => $done]))->send();
                     })
                     ->deselectRecordsAfterCompletion(),
             ])

@@ -59,12 +59,12 @@ class SellerCommissions extends Page implements HasTable
 
     public function getTitle(): string|Htmlable
     {
-        return 'Комиссии: '.$this->sellerModel->name;
+        return __('Комиссии: :p1', ['p1' => $this->sellerModel->name]);
     }
 
     public function getBreadcrumbs(): array
     {
-        return [Commissions::getUrl() => 'Комиссии', $this->sellerModel->name];
+        return [Commissions::getUrl() => __('Комиссии'), $this->sellerModel->name];
     }
 
     public function table(Table $table): Table
@@ -85,7 +85,7 @@ class SellerCommissions extends Page implements HasTable
                 TextColumn::make('certificate.status')->label('Статус сертификата')->badge(),
                 TextColumn::make('sale_price')->label('Цена продажи')->formatStateUsing(fn ($state) => Money::format($state)),
                 TextColumn::make('rule')->label('Правило')->state(fn (CertificateCommission $record) => $record->ruleLabel())
-                    ->description(fn (CertificateCommission $record) => $record->rule ? 'с '.$record->rule->valid_from->format('d.m.Y') : null),
+                    ->description(fn (CertificateCommission $record) => $record->rule ? __('с :p1', ['p1' => $record->rule->valid_from->format('d.m.Y')]) : null),
                 TextColumn::make('amount')->label('Комиссия')->formatStateUsing(fn ($state) => Money::format($state))->weight('bold')->sortable()
                     ->summarize(Sum::make()->label('Итого')->formatStateUsing(fn ($state) => Money::format($state))),
                 TextColumn::make('status')->label('Статус')->badge()
@@ -108,41 +108,41 @@ class SellerCommissions extends Page implements HasTable
                     ->visible(fn (CertificateCommission $record) => $record->status === CommissionStatus::Earned)
                     ->requiresConfirmation()
                     ->action(fn (CertificateCommission $record, Action $action) => RunsDomainActions::run($action,
-                        fn () => $manager()->approve($record), 'Комиссия согласована к выплате')),
+                        fn () => $manager()->approve($record), __('Комиссия согласована к выплате'))),
                 Action::make('pay')->label('Выплачено')->icon('heroicon-o-banknotes')->color('success')
                     ->authorize(Permission::PayCommissions)
                     ->visible(fn (CertificateCommission $record) => $record->status === CommissionStatus::Approved)
-                    ->modalDescription(fn (CertificateCommission $record) => 'Сумма '.Money::format($record->amount).' · '.$record->certificate->number)
+                    ->modalDescription(fn (CertificateCommission $record) => __('Сумма :p1 · :p2', ['p1' => Money::format($record->amount), 'p2' => $record->certificate->number]))
                     ->schema(self::paymentFields())
                     ->action(fn (CertificateCommission $record, array $data, Action $action) => RunsDomainActions::run($action,
-                        fn () => $manager()->pay($record, Carbon::parse($data['paid_at']), $data['reference'] ?? null, $data['comment'] ?? null), 'Выплата отмечена')),
+                        fn () => $manager()->pay($record, Carbon::parse($data['paid_at']), $data['reference'] ?? null, $data['comment'] ?? null), __('Выплата отмечена'))),
                 Action::make('unapprove')->label('Снять согласование')->icon('heroicon-o-arrow-uturn-left')->color('gray')
                     ->authorize(Permission::ApproveCommissions)
                     ->visible(fn (CertificateCommission $record) => $record->status === CommissionStatus::Approved)
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->action(fn (CertificateCommission $record, array $data, Action $action) => RunsDomainActions::run($action,
-                        fn () => $manager()->unapprove($record, $data['reason']), 'Согласование снято')),
+                        fn () => $manager()->unapprove($record, $data['reason']), __('Согласование снято'))),
                 Action::make('reverse')->label('Отменить выплату')->icon('heroicon-o-x-mark')->color('danger')
                     ->authorize(Permission::PayCommissions)
                     ->visible(fn (CertificateCommission $record) => $record->status === CommissionStatus::Paid)
-                    ->modalDescription('Запись выплаты сохранится с причиной отмены; комиссия вернётся в «Согласована к выплате».')
+                    ->modalDescription(__('Запись выплаты сохранится с причиной отмены; комиссия вернётся в «Согласована к выплате».'))
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->action(fn (CertificateCommission $record, array $data, Action $action) => RunsDomainActions::run($action,
-                        fn () => $manager()->reversePayment($record, $data['reason']), 'Выплата отменена')),
+                        fn () => $manager()->reversePayment($record, $data['reason']), __('Выплата отменена'))),
             ])
             ->toolbarActions([
                 BulkAction::make('approveSelected')->label('Согласовать выбранные')->icon('heroicon-o-hand-thumb-up')->color('success')
                     ->authorize(Permission::ApproveCommissions)->deselectRecordsAfterCompletion()->requiresConfirmation()
-                    ->action(fn (Collection $records) => $report($manager()->each($records, fn ($c) => $manager()->approve($c)), 'Согласовано')),
+                    ->action(fn (Collection $records) => $report($manager()->each($records, fn ($c) => $manager()->approve($c)), __('Согласовано'))),
                 BulkAction::make('paySelected')->label('Отметить выплату')->icon('heroicon-o-banknotes')->color('success')
                     ->authorize(Permission::PayCommissions)->deselectRecordsAfterCompletion()
-                    ->modalDescription('Одна дата и один номер или комментарий на все выбранные комиссии.')
+                    ->modalDescription(__('Одна дата и один номер или комментарий на все выбранные комиссии.'))
                     ->schema(self::paymentFields())
                     ->action(fn (Collection $records, array $data) => $report($manager()->each($records, fn ($c) => $manager()->pay($c,
-                        Carbon::parse($data['paid_at']), $data['reference'] ?? null, $data['comment'] ?? null)), 'Выплачено')),
+                        Carbon::parse($data['paid_at']), $data['reference'] ?? null, $data['comment'] ?? null)), __('Выплачено'))),
             ])
             ->defaultSort('earned_at', 'desc')
-            ->emptyStateHeading('По этому продавцу комиссий пока нет');
+            ->emptyStateHeading(__('По этому продавцу комиссий пока нет'));
     }
 
     /** @return list<Component> */

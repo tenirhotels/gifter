@@ -30,30 +30,30 @@ class PaymentManager
         return DB::transaction(function () use ($certificate, $method, $amount, $invoiceNumber, $comment, $batchId) {
             $certificate = Certificate::query()->lockForUpdate()->findOrFail($certificate->id);
             if ($certificate->batch_id && $batchId !== $certificate->batch_id) {
-                throw new DomainRuleViolation('Сертификат входит в группу — счёт выставляется на всю группу на её странице.');
+                throw new DomainRuleViolation(__('Сертификат входит в группу — счёт выставляется на всю группу на её странице.'));
             }
             if ($certificate->status !== CertificateStatus::Draft) {
-                throw new DomainRuleViolation('Счёт выставляется только по черновику, до выпуска сертификата.');
+                throw new DomainRuleViolation(__('Счёт выставляется только по черновику, до выпуска сертификата.'));
             }
             if ($certificate->isComplimentary() && ! $certificate->hasPayablePart()) {
-                throw new DomainRuleViolation('В бесплатном сертификате нет платных услуг — счёт выставлять не на что.');
+                throw new DomainRuleViolation(__('В бесплатном сертификате нет платных услуг — счёт выставлять не на что.'));
             }
             if (Money::toMinor($certificate->payable_amount) === 0) {
-                throw new DomainRuleViolation('В сертификате нет услуг — счёт выставлять не на что.');
+                throw new DomainRuleViolation(__('В сертификате нет услуг — счёт выставлять не на что.'));
             }
             if (! $certificate->customer_id) {
-                throw new DomainRuleViolation('Для счёта укажите заказчика.');
+                throw new DomainRuleViolation(__('Для счёта укажите заказчика.'));
             }
             $outstanding = Money::toMinor($certificate->payable_amount) - Money::toMinor($certificate->invoicedAmount());
             if ($outstanding <= 0) {
-                throw new DomainRuleViolation('Счета уже выставлены на всю платную сумму.');
+                throw new DomainRuleViolation(__('Счета уже выставлены на всю платную сумму.'));
             }
             $amountMinor = $amount === null ? $outstanding : Money::toMinor($amount);
             if ($amountMinor <= 0) {
-                throw new DomainRuleViolation('Сумма счёта должна быть больше нуля.');
+                throw new DomainRuleViolation(__('Сумма счёта должна быть больше нуля.'));
             }
             if ($amountMinor > $outstanding) {
-                throw new DomainRuleViolation('Сумма счёта больше неоплаченного остатка ('.Money::format(Money::fromMinor($outstanding)).').');
+                throw new DomainRuleViolation(__('Сумма счёта больше неоплаченного остатка (:p1).', ['p1' => Money::format(Money::fromMinor($outstanding))]));
             }
 
             $payment = $certificate->payments()->create([
@@ -120,7 +120,7 @@ class PaymentManager
     {
         return $this->lockedPending($payment, function (Payment $payment) use ($reason) {
             if (trim($reason) === '') {
-                throw new DomainRuleViolation('Укажите причину отмены счёта.');
+                throw new DomainRuleViolation(__('Укажите причину отмены счёта.'));
             }
             $before = $this->snapshot($payment);
             $payment->update([
@@ -149,10 +149,10 @@ class PaymentManager
         return DB::transaction(function () use ($payment, $comment) {
             $fresh = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             if ($fresh->status !== PaymentStatus::Paid) {
-                throw new DomainRuleViolation('Сверить можно только поступившую оплату.');
+                throw new DomainRuleViolation(__('Сверить можно только поступившую оплату.'));
             }
             if ($fresh->isReconciled()) {
-                throw new DomainRuleViolation('Оплата уже сверена.');
+                throw new DomainRuleViolation(__('Оплата уже сверена.'));
             }
             $fresh->update([
                 'reconciled_at' => now(),
@@ -177,7 +177,7 @@ class PaymentManager
             $lines = Payment::query()->where('batch_id', $payment->batch_id)->where('invoice_number', $payment->invoice_number)
                 ->where('status', $status)->when($onlyUnreconciled, fn ($q) => $q->whereNull('reconciled_at'))->orderBy('id')->get();
             if ($lines->isEmpty()) {
-                throw new DomainRuleViolation("Счёт в статусе «{$payment->status->getLabel()}» изменить нельзя.");
+                throw new DomainRuleViolation(__('Счёт в статусе «:p1» изменить нельзя.', ['p1' => $payment->status->getLabel()]));
             }
             foreach ($lines as $line) {
                 $callback($line);
@@ -194,7 +194,7 @@ class PaymentManager
             Certificate::query()->lockForUpdate()->findOrFail($payment->certificate_id);
             $fresh = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             if ($fresh->status !== PaymentStatus::Pending) {
-                throw new DomainRuleViolation("Счёт в статусе «{$fresh->status->getLabel()}» изменить нельзя.");
+                throw new DomainRuleViolation(__('Счёт в статусе «:p1» изменить нельзя.', ['p1' => $fresh->status->getLabel()]));
             }
             $result = $callback($fresh);
             $payment->setRawAttributes($fresh->getAttributes(), true);

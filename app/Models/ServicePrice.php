@@ -29,7 +29,7 @@ class ServicePrice extends Model
         // Цена, уже попавшая в сертификаты, не переписывается: нужна новая версия.
         static::updating(function (self $price) {
             if ($price->isDirty(['price', 'cost', 'valid_from', 'service_id']) && $price->certificateItems()->exists()) {
-                throw new DomainRuleViolation('Цена уже использована в сертификатах — добавьте новую версию цены.');
+                throw new DomainRuleViolation(__('Цена уже использована в сертификатах — добавьте новую версию цены.'));
             }
         });
     }

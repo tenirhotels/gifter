@@ -64,14 +64,14 @@ class SecurityAudit
         }
         $verified = Cache::get(BackupVerify::KEY);
         $add('Копия базы проверена (открывается, дамп читается)', ($verified['ok'] ?? false) && now()->parse($verified['at'])->gt(now()->subDays(10)),
-            $verified && ! $verified['ok'] ? 'Последняя проверка: '.$verified['error'] : 'Проверка раз в неделю (gifter:backup-verify) ещё не выполнялась.', false);
+            $verified && ! $verified['ok'] ? 'Последняя проверка: '.$verified['error'] : __('Проверка раз в неделю (gifter:backup-verify) ещё не выполнялась.'), false);
         $add('Папка storage доступна для записи', is_writable(storage_path('framework')) && is_writable(storage_path('logs')),
             'Права на storage/ и bootstrap/cache — запись для пользователя сайта.');
 
         $add('Пароль архива бэкапа задан', filled(config('backup.backup.password')), 'BACKUP_ARCHIVE_PASSWORD — длинная случайная строка.');
         $backup = Backups::latest();
         $add('Свежий бэкап (не старше 2 суток)', $backup !== null && $backup['created_at']->gt(now()->subDays(2)),
-            $backup ? 'Последний: '.$backup['created_at']->format('d.m.Y H:i').'. Проверьте cron (schedule:run).' : 'Бэкапов нет: php artisan backup:run --only-db.');
+            $backup ? 'Последний: '.$backup['created_at']->format('d.m.Y H:i').'. Проверьте cron (schedule:run).' : __('Бэкапов нет: php artisan backup:run --only-db.'));
         $add('Копия вне хостинга', filled(config('gifter.backup.mail_to')),
             'BACKUP_MAIL_TO — почта, куда раз в неделю уходит архив; или скачивайте копию вручную.', false);
 

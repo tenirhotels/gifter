@@ -34,20 +34,20 @@ class ReservationExceptionManager
         return DB::transaction(function () use ($certificate, $data) {
             $fresh = Certificate::query()->lockForUpdate()->findOrFail($certificate->id);
             if ($fresh->status !== CertificateStatus::Expired) {
-                throw new DomainRuleViolation('Бронь по исключению — только для истёкшего сертификата.');
+                throw new DomainRuleViolation(__('Бронь по исключению — только для истёкшего сертификата.'));
             }
             if ($fresh->hasPendingException()) {
-                throw new DomainRuleViolation('Заявка по этому сертификату уже ждёт решения директора.');
+                throw new DomainRuleViolation(__('Заявка по этому сертификату уже ждёт решения директора.'));
             }
             if (! $fresh->recipient_id) {
-                throw new DomainRuleViolation('Для брони укажите получателя (гостя).');
+                throw new DomainRuleViolation(__('Для брони укажите получателя (гостя).'));
             }
             $booking = trim((string) ($data['booking_number'] ?? ''));
             $reason = trim((string) ($data['reason'] ?? ''));
             if (PmsClient::make()->isActive()) {
                 // Бронь подтверждается по PMS: гость и даты — оттуда.
                 if ($booking === '') {
-                    throw new DomainRuleViolation('Укажите номер брони PMS.');
+                    throw new DomainRuleViolation(__('Укажите номер брони PMS.'));
                 }
                 $pms = $this->reservations->resolveFromPms($fresh, $booking, fresh: true);
                 $guest = $pms['guest'];
@@ -56,19 +56,19 @@ class ReservationExceptionManager
             } else {
                 $guest = trim((string) ($data['guest_name'] ?? ''));
                 if ($booking === '' || $guest === '') {
-                    throw new DomainRuleViolation('Укажите номер брони PMS и имя гостя, как в брони.');
+                    throw new DomainRuleViolation(__('Укажите номер брони PMS и имя гостя, как в брони.'));
                 }
                 $arrival = Carbon::parse($data['arrival'])->startOfDay();
                 $departure = Carbon::parse($data['departure'])->startOfDay();
             }
             if ($reason === '') {
-                throw new DomainRuleViolation('Укажите причину исключения для директора.');
+                throw new DomainRuleViolation(__('Укажите причину исключения для директора.'));
             }
             if ($departure->lte($arrival)) {
-                throw new DomainRuleViolation('Дата выезда должна быть позже даты заезда.');
+                throw new DomainRuleViolation(__('Дата выезда должна быть позже даты заезда.'));
             }
             if ($arrival->lt(today())) {
-                throw new DomainRuleViolation('Бронь по исключению — на свободную дату не раньше сегодняшней.');
+                throw new DomainRuleViolation(__('Бронь по исключению — на свободную дату не раньше сегодняшней.'));
             }
             $this->reservations->assertBookingFree($fresh, $booking);
 
@@ -89,14 +89,14 @@ class ReservationExceptionManager
         return DB::transaction(function () use ($exception, $comment) {
             $exception = ReservationException::query()->lockForUpdate()->findOrFail($exception->id);
             if ($exception->status !== ExceptionStatus::Pending) {
-                throw new DomainRuleViolation('Заявка уже рассмотрена.');
+                throw new DomainRuleViolation(__('Заявка уже рассмотрена.'));
             }
             $certificate = Certificate::query()->lockForUpdate()->findOrFail($exception->certificate_id);
             if ($certificate->status !== CertificateStatus::Expired) {
-                throw new DomainRuleViolation("Сертификат в статусе «{$certificate->status->getLabel()}» — исключение уже не нужно.");
+                throw new DomainRuleViolation(__('Сертификат в статусе «:p1» — исключение уже не нужно.', ['p1' => $certificate->status->getLabel()]));
             }
             if ($exception->arrival_date->lt(today())) {
-                throw new DomainRuleViolation('Дата заезда в заявке уже прошла — отклоните заявку, пусть Front Office оформит новую.');
+                throw new DomainRuleViolation(__('Дата заезда в заявке уже прошла — отклоните заявку, пусть Front Office оформит новую.'));
             }
 
             // Возврат в работу: срок — до выезда, затем обычная отметка брони (спор по имени остаётся проверкой Финансов).
@@ -126,12 +126,12 @@ class ReservationExceptionManager
 
     public function reject(ReservationException $exception, string $comment): ReservationException
     {
-        $comment = trim($comment) ?: throw new DomainRuleViolation('Укажите причину отказа.');
+        $comment = trim($comment) ?: throw new DomainRuleViolation(__('Укажите причину отказа.'));
 
         return DB::transaction(function () use ($exception, $comment) {
             $exception = ReservationException::query()->lockForUpdate()->findOrFail($exception->id);
             if ($exception->status !== ExceptionStatus::Pending) {
-                throw new DomainRuleViolation('Заявка уже рассмотрена.');
+                throw new DomainRuleViolation(__('Заявка уже рассмотрена.'));
             }
             $exception->update(['status' => ExceptionStatus::Rejected, 'decided_by' => auth()->id(), 'decided_at' => now(), 'decision_comment' => $comment]);
             $this->history->record($exception->certificate, HistoryEvent::ReservationChanged, "Бронь по исключению отклонена директором. {$comment}");

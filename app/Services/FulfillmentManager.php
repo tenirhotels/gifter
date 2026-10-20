@@ -39,10 +39,10 @@ class FulfillmentManager
             return;
         }
         $this->cancelOpen($certificate, $reason ?? match ($certificate->status) {
-            CertificateStatus::Active => 'Бронь снята',
-            CertificateStatus::Used => 'Сертификат использован, услуга не выполнена',
-            CertificateStatus::Expired => 'Срок действия сертификата истёк',
-            CertificateStatus::Cancelled => 'Сертификат аннулирован',
+            CertificateStatus::Active => __('Бронь снята'),
+            CertificateStatus::Used => __('Сертификат использован, услуга не выполнена'),
+            CertificateStatus::Expired => __('Срок действия сертификата истёк'),
+            CertificateStatus::Cancelled => __('Сертификат аннулирован'),
             default => "Статус сертификата: {$certificate->status->getLabel()}",
         });
     }
@@ -61,7 +61,7 @@ class FulfillmentManager
     {
         $time = $this->clean($time);
         if ($time !== null && ! preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $time)) {
-            throw new DomainRuleViolation('Время — в формате ЧЧ:ММ, например 19:00.');
+            throw new DomainRuleViolation(__('Время — в формате ЧЧ:ММ, например 19:00.'));
         }
 
         return $this->change($fulfillment, [FulfillmentStatus::Pending, FulfillmentStatus::Requested, FulfillmentStatus::Scheduled, FulfillmentStatus::Confirmed],
@@ -69,8 +69,7 @@ class FulfillmentManager
                 $validFrom = $f->certificate->valid_from->copy()->startOfDay();
                 $validUntil = $f->certificate->valid_until->copy()->endOfDay();
                 if ($date->lt($validFrom) || $date->gt($validUntil)) {
-                    throw new DomainRuleViolation('Дата — в пределах срока действия сертификата: '
-                        .$f->certificate->valid_from->format('d.m.Y').' — '.$f->certificate->valid_until->format('d.m.Y').'.');
+                    throw new DomainRuleViolation(__('Дата — в пределах срока действия сертификата: :p1 — :p2.', ['p1' => $f->certificate->valid_from->format('d.m.Y'), 'p2' => $f->certificate->valid_until->format('d.m.Y')]));
                 }
 
                 return ['scheduled_date' => $date->toDateString(), 'scheduled_time' => $time, 'confirmed_at' => null,
@@ -83,7 +82,7 @@ class FulfillmentManager
         return $this->change($fulfillment, [FulfillmentStatus::Requested, FulfillmentStatus::Scheduled], FulfillmentStatus::Confirmed,
             function (ServiceFulfillment $f) use ($note) {
                 if ($f->requires_scheduling && ! $f->scheduled_date) {
-                    throw new DomainRuleViolation('Сначала назначьте дату и время — услуга требует расписания.');
+                    throw new DomainRuleViolation(__('Сначала назначьте дату и время — услуга требует расписания.'));
                 }
 
                 return ['confirmed_at' => now(), 'notes' => $this->appendNote($f->notes, $note)];
@@ -95,10 +94,10 @@ class FulfillmentManager
         return $this->change($fulfillment, [FulfillmentStatus::Requested, FulfillmentStatus::Scheduled, FulfillmentStatus::Confirmed],
             FulfillmentStatus::Completed, function (ServiceFulfillment $f) use ($note) {
                 if ($f->certificate->status !== CertificateStatus::InUse) {
-                    throw new DomainRuleViolation('Выполнение отмечается во время проживания (после «Заезд»).');
+                    throw new DomainRuleViolation(__('Выполнение отмечается во время проживания (после «Заезд»).'));
                 }
                 if ($f->requires_confirmation && $f->status !== FulfillmentStatus::Confirmed) {
-                    throw new DomainRuleViolation('Услуга требует подтверждения поставщика — сначала «Подтверждено».');
+                    throw new DomainRuleViolation(__('Услуга требует подтверждения поставщика — сначала «Подтверждено».'));
                 }
 
                 return ['completed_at' => now(), 'notes' => $this->appendNote($f->notes, $note)];
@@ -111,11 +110,11 @@ class FulfillmentManager
      */
     public function revert(ServiceFulfillment $fulfillment, string $reason): ServiceFulfillment
     {
-        $reason = $this->clean($reason) ?? throw new DomainRuleViolation('Укажите причину.');
+        $reason = $this->clean($reason) ?? throw new DomainRuleViolation(__('Укажите причину.'));
         $target = match ($fulfillment->status) {
             FulfillmentStatus::Confirmed => $fulfillment->scheduled_date ? FulfillmentStatus::Scheduled : FulfillmentStatus::Requested,
             FulfillmentStatus::Requested, FulfillmentStatus::Scheduled => FulfillmentStatus::Pending,
-            default => throw new DomainRuleViolation("Заявка в статусе «{$fulfillment->status->getLabel()}»: отменять нечего."),
+            default => throw new DomainRuleViolation(__('Заявка в статусе «:p1»: отменять нечего.', ['p1' => $fulfillment->status->getLabel()])),
         };
 
         return $this->change($fulfillment, [$fulfillment->status], $target, function (ServiceFulfillment $f) use ($target, $reason) {
@@ -132,8 +131,8 @@ class FulfillmentManager
     public static function revertLabel(FulfillmentStatus $status): ?string
     {
         return match ($status) {
-            FulfillmentStatus::Confirmed => 'Снять подтверждение',
-            FulfillmentStatus::Requested, FulfillmentStatus::Scheduled => 'Отозвать заявку',
+            FulfillmentStatus::Confirmed => __('Снять подтверждение'),
+            FulfillmentStatus::Requested, FulfillmentStatus::Scheduled => __('Отозвать заявку'),
             default => null,
         };
     }
@@ -179,10 +178,10 @@ class FulfillmentManager
             $fresh = ServiceFulfillment::query()->lockForUpdate()->with(['certificate', 'item'])->findOrFail($fulfillment->id);
             $from = $fresh->status;
             if (! in_array($from, $allowedFrom, true)) {
-                throw new DomainRuleViolation("Заявка в статусе «{$from->getLabel()}»: действие недоступно.");
+                throw new DomainRuleViolation(__('Заявка в статусе «:p1»: действие недоступно.', ['p1' => $from->getLabel()]));
             }
             if ($requireActiveCertificate && ! in_array($fresh->certificate->status, [CertificateStatus::Reserved, CertificateStatus::InUse], true)) {
-                throw new DomainRuleViolation("Сертификат в статусе «{$fresh->certificate->status->getLabel()}»: заявки ведутся только при брони и проживании.");
+                throw new DomainRuleViolation(__('Сертификат в статусе «:p1»: заявки ведутся только при брони и проживании.', ['p1' => $fresh->certificate->status->getLabel()]));
             }
             $fresh->update(['status' => $target, 'updated_by' => auth()->id()] + $changes($fresh));
             $this->history->record($fresh->certificate, HistoryEvent::FulfillmentChanged,

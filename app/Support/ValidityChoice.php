@@ -53,31 +53,31 @@ final class ValidityChoice
             return [$soldAt, $package->validUntil($soldAt)];
         }
         if (! $package->is_complimentary) {
-            throw new DomainRuleViolation('Срок платного сертификата задаёт пакет — менять его при продаже нельзя.');
+            throw new DomainRuleViolation(__('Срок платного сертификата задаёт пакет — менять его при продаже нельзя.'));
         }
 
         $from = $this->from ?? $soldAt;
         if ($from->lt($soldAt)) {
-            throw new DomainRuleViolation('Срок не может начинаться раньше даты выпуска.');
+            throw new DomainRuleViolation(__('Срок не может начинаться раньше даты выпуска.'));
         }
 
         if ($this->mode === ValidityMode::Duration) {
             if (! $this->unit || ! $this->value || $this->value < 1 || $this->value > 1000) {
-                throw new DomainRuleViolation('Укажите длительность: от 1 до 1000 дней или месяцев.');
+                throw new DomainRuleViolation(__('Укажите длительность: от 1 до 1000 дней или месяцев.'));
             }
             $until = $this->unit->validUntil($from, $this->value);
         } else {
             if (! $this->until) {
-                throw new DomainRuleViolation('Укажите последний день действия.');
+                throw new DomainRuleViolation(__('Укажите последний день действия.'));
             }
             $until = $this->until;
         }
 
         if ($until->lt($from)) {
-            throw new DomainRuleViolation('Последний день действия раньше даты начала.');
+            throw new DomainRuleViolation(__('Последний день действия раньше даты начала.'));
         }
         if ($until->lt(today())) {
-            throw new DomainRuleViolation('Последний день действия уже прошёл.');
+            throw new DomainRuleViolation(__('Последний день действия уже прошёл.'));
         }
 
         return [$from, $until];
@@ -86,6 +86,6 @@ final class ValidityChoice
     /** «с 01.11.2026 по 30.11.2026, срок задан вручную» — для истории. */
     public function describe(Carbon $from, Carbon $until): string
     {
-        return 'с '.$from->format('d.m.Y').' по '.$until->format('d.m.Y').($this->isCustom() ? ', срок задан вручную' : '');
+        return 'с '.$from->format('d.m.Y').' по '.$until->format('d.m.Y').($this->isCustom() ? __(', срок задан вручную') : '');
     }
 }

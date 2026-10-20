@@ -37,7 +37,7 @@ class CreateService extends CreateRecord
                 if ($source === 'pms') {
                     $pms = PmsService::query()->where('external_id', (string) $pmsId)->lockForUpdate()->first();
                     if (! $pms || $pms->service_id || $pms->isMissing()) {
-                        throw new DomainRuleViolation('Эта услуга из PMS недоступна: уже заведена в Gifter или пропала в PMS.');
+                        throw new DomainRuleViolation(__('Эта услуга из PMS недоступна: уже заведена в Gifter или пропала в PMS.'));
                     }
                 }
                 /** @var Service $service */

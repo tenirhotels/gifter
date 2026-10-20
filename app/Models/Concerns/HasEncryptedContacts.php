@@ -50,7 +50,7 @@ trait HasEncryptedContacts
     {
         foreach ([...self::ENCRYPTED_CONTACTS, 'phone_hash', 'email_hash'] as $key) {
             if (array_key_exists($key, $attributes)) {
-                $attributes[$key] = $attributes[$key] === null ? null : '[скрыто]';
+                $attributes[$key] = $attributes[$key] === null ? null : __('[скрыто]');
             }
         }
 

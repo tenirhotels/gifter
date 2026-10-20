@@ -69,7 +69,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             if ($wasAdmin && ! ($user->is_active && $user->isSuperAdmin())) {
                 $others = static::query()->whereKeyNot($user->id)->where('is_active', true)->get()->contains(fn (self $u) => $u->isSuperAdmin());
                 if (! $others) {
-                    throw new DomainRuleViolation('Это последний активный администратор — сначала назначьте другого.');
+                    throw new DomainRuleViolation(__('Это последний активный администратор — сначала назначьте другого.'));
                 }
             }
         });

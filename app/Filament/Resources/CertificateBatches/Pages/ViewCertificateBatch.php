@@ -47,19 +47,19 @@ class ViewCertificateBatch extends ViewRecord
             Action::make('approveBatch')->label('Согласовать')->icon('heroicon-o-hand-thumb-up')->color('success')
                 ->authorize(Permission::ApproveComplimentary)
                 ->visible(fn (CertificateBatch $record) => $record->isComplimentary() && $record->status === BatchStatus::Draft)
-                ->modalDescription(fn (CertificateBatch $record) => "Будет согласовано {$record->quantity} бесплатных сертификатов"
-                    .($record->valid_from ? ", срок {$record->valid_from->format('d.m.Y')} — {$record->valid_until->format('d.m.Y')} (задан вручную)" : ', срок по пакету')
-                    .'. Маркетинговый расход по себестоимости: '.Money::format($record->certificates()->sum('marketing_cost'))
-                    .($record->certificates()->sum('payable_amount') > 0 ? '. Платные услуги оплачивает заказчик: '.Money::format($record->certificates()->sum('payable_amount')).' (выпуск — после оплаты)' : '').'.')
+                ->modalDescription(fn (CertificateBatch $record) => __('Будет согласовано :p1 бесплатных сертификатов', ['p1' => $record->quantity])
+                    .($record->valid_from ? __(', срок :p1 — :p2 (задан вручную)', ['p1' => $record->valid_from->format('d.m.Y'), 'p2' => $record->valid_until->format('d.m.Y')]) : __(', срок по пакету'))
+                    .__('. Маркетинговый расход по себестоимости: :p1', ['p1' => Money::format($record->certificates()->sum('marketing_cost'))])
+                    .($record->certificates()->sum('payable_amount') > 0 ? __('. Платные услуги оплачивает заказчик: :p1 (выпуск — после оплаты)', ['p1' => Money::format($record->certificates()->sum('payable_amount'))]) : '').'.')
                 ->schema([Textarea::make('comment')->label('Комментарий')])
                 ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action,
-                    fn () => app(CertificateBatchManager::class)->approve($record, $data['comment'] ?? null), 'Группа согласована')),
+                    fn () => app(CertificateBatchManager::class)->approve($record, $data['comment'] ?? null), __('Группа согласована'))),
 
             Action::make('invoiceBatch')->label('Выставить счёт')->icon('heroicon-o-document-text')
                 ->authorize(Permission::ManagePayments)
                 ->visible(fn (CertificateBatch $record) => $paidDraft($record)
                     && ! $record->payments()->where('status', '!=', PaymentStatus::Cancelled)->exists())
-                ->modalDescription(fn (CertificateBatch $record) => 'Один счёт на всю группу: '.Money::format($record->certificates()->sum('payable_amount')).($record->isComplimentary() ? ' (только платные услуги)' : '').'.')
+                ->modalDescription(fn (CertificateBatch $record) => __('Один счёт на всю группу: :p1', ['p1' => Money::format($record->certificates()->sum('payable_amount'))]).($record->isComplimentary() ? __(' (только платные услуги)') : '').'.')
                 ->schema([
                     Select::make('method')->label('Способ')->options(PaymentMethod::class)->required()->default(PaymentMethod::KaspiInvoice->value),
                     TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255),
@@ -67,7 +67,7 @@ class ViewCertificateBatch extends ViewRecord
                 ])
                 ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action, fn () => app(CertificateBatchManager::class)->invoice(
                     $record, $data['method'] instanceof PaymentMethod ? $data['method'] : PaymentMethod::from($data['method']),
-                    $data['invoice_number'] ?? null, $data['comment'] ?? null), 'Счёт выставлен')),
+                    $data['invoice_number'] ?? null, $data['comment'] ?? null), __('Счёт выставлен'))),
 
             Action::make('markBatchPaid')->label('Оплачен')->icon('heroicon-o-check')->color('success')
                 ->visible(fn (CertificateBatch $record) => $paidDraft($record) && $pendingLine($record) !== null)
@@ -75,16 +75,16 @@ class ViewCertificateBatch extends ViewRecord
                     ? Permission::ReceiveBankTransfers : Permission::ReceivePayments))
                 ->schema([DateTimePicker::make('paid_at')->label('Дата поступления')->default(now())->maxDate(now())->required()])
                 ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action,
-                    fn () => app(CertificateBatchManager::class)->markPaid($record, Carbon::parse($data['paid_at'])), 'Оплата отмечена')),
+                    fn () => app(CertificateBatchManager::class)->markPaid($record, Carbon::parse($data['paid_at'])), __('Оплата отмечена'))),
 
             Action::make('issueBatch')->label('Выпустить')->icon('heroicon-o-check-badge')->color('success')
                 ->authorize(fn (CertificateBatch $record) => auth()->user()->can($record->isComplimentary() ? Permission::CreateComplimentary : Permission::IssueCertificates))
                 // Платную — только когда оплачен каждый сертификат (кнопка не показывается раньше времени).
                 ->visible(fn (CertificateBatch $record) => CertificateBatch::query()->whereKey($record->getKey())->readyToIssue()->exists())
                 ->requiresConfirmation()
-                ->modalDescription(fn (CertificateBatch $record) => "Будут выпущены все {$record->quantity} сертификатов: {$record->shortLabel()}.")
+                ->modalDescription(fn (CertificateBatch $record) => __('Будут выпущены все :p1 сертификатов: :p2.', ['p1' => $record->quantity, 'p2' => $record->shortLabel()]))
                 ->action(fn (CertificateBatch $record, Action $action) => $this->run($action,
-                    fn () => app(CertificateBatchManager::class)->issue($record), 'Сертификаты выпущены')),
+                    fn () => app(CertificateBatchManager::class)->issue($record), __('Сертификаты выпущены'))),
 
             Action::make('downloadBatchPdf')->label('PDF всех')->icon('heroicon-o-arrow-down-tray')->color('gray')
                 ->visible(fn (CertificateBatch $record) => $record->status === BatchStatus::Issued)
@@ -100,19 +100,19 @@ class ViewCertificateBatch extends ViewRecord
                     ->visible(fn (CertificateBatch $record) => $record->payments()->where('status', PaymentStatus::Paid)->whereNull('reconciled_at')->exists())
                     ->requiresConfirmation()
                     ->action(fn (CertificateBatch $record, Action $action) => $this->run($action, fn () => app(PaymentManager::class)
-                        ->reconcile($record->payments()->where('status', PaymentStatus::Paid)->whereNull('reconciled_at')->firstOrFail()), 'Счёт группы сверен')),
+                        ->reconcile($record->payments()->where('status', PaymentStatus::Paid)->whereNull('reconciled_at')->firstOrFail()), __('Счёт группы сверен'))),
                 Action::make('cancelBatchInvoice')->label('Отменить счёт')->icon('heroicon-o-x-mark')
                     ->authorize(Permission::ManagePayments)
                     ->visible(fn (CertificateBatch $record) => $paidDraft($record) && $pendingLine($record) !== null)
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action,
-                        fn () => app(CertificateBatchManager::class)->cancelInvoice($record, $data['reason']), 'Счёт отменён')),
-                Action::make('cancelBatch')->label(fn (CertificateBatch $record) => 'Аннулировать '.$record->term('acc'))->icon('heroicon-o-no-symbol')->color('danger')
+                        fn () => app(CertificateBatchManager::class)->cancelInvoice($record, $data['reason']), __('Счёт отменён'))),
+                Action::make('cancelBatch')->label(fn (CertificateBatch $record) => __('Аннулировать группу'))->icon('heroicon-o-no-symbol')->color('danger')
                     ->authorize(fn (CertificateBatch $record) => auth()->user()->can($record->isComplimentary() ? Permission::CreateComplimentary : Permission::CancelCertificates))
                     ->visible(fn (CertificateBatch $record) => in_array($record->status, [BatchStatus::Draft, BatchStatus::Approved], true))
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action,
-                        fn () => app(CertificateBatchManager::class)->cancel($record, $data['reason']), 'Сертификаты аннулированы')),
+                        fn () => app(CertificateBatchManager::class)->cancel($record, $data['reason']), __('Сертификаты аннулированы'))),
             ])->label('Ещё')->button()->color('gray'),
         ];
     }

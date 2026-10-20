@@ -32,7 +32,7 @@ final class ValidityFields
                 ->default(ValidityMode::Package->value)->live()->columnSpanFull(),
             DatePicker::make('from')->label('Действует с')->default(today())->live()
                 ->visible(fn (Get $get) => $mode($get) !== ValidityMode::Package)
-                ->helperText('Например, дата мероприятия или начала акции.'),
+                ->helperText(__('Например, дата мероприятия или начала акции.')),
             TextInput::make('value')->label('Длительность')->integer()->minValue(1)->maxValue(1000)->default(1)->live(onBlur: true)
                 ->visible(fn (Get $get) => $mode($get) === ValidityMode::Duration)->required(fn (Get $get) => $mode($get) === ValidityMode::Duration),
             Select::make('unit')->label('Единица')->options(ValidityUnit::class)->default(ValidityUnit::Months->value)->live()
@@ -48,7 +48,7 @@ final class ValidityFields
     public static function preview(?Package $package, ?array $validity, mixed $soldAt = null): string
     {
         if (! $package) {
-            return 'по выбранному пакету';
+            return __('по выбранному пакету');
         }
         $choice = ValidityChoice::fromArray($validity);
         try {
@@ -57,6 +57,6 @@ final class ValidityFields
             return $e->getMessage();
         }
 
-        return $from->format('d.m.Y').' — '.$until->format('d.m.Y').($choice->isCustom() ? ' (задан вручную)' : ' (по пакету)');
+        return $from->format('d.m.Y').' — '.$until->format('d.m.Y').($choice->isCustom() ? __(' (задан вручную)') : __(' (по пакету)'));
     }
 }

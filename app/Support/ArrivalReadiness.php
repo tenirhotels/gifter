@@ -23,10 +23,10 @@ final class ArrivalReadiness
     public static function for(Certificate $certificate): array
     {
         $exceptions = array_values(array_filter([
-            $certificate->reservation_review_status === ReservationReview::Pending ? 'бронь на проверке Финансов' : null,
-            $certificate->reservation_review_status === ReservationReview::Disputed ? 'бронь оспорена Финансами' : null,
+            $certificate->reservation_review_status === ReservationReview::Pending ? __('бронь на проверке Финансов') : null,
+            $certificate->reservation_review_status === ReservationReview::Disputed ? __('бронь оспорена Финансами') : null,
             $certificate->departure_date && $certificate->departure_date->gt($certificate->valid_until)
-                ? 'срок сертификата кончается '.$certificate->valid_until->format('d.m.Y').', до выезда' : null,
+                ? __('срок сертификата кончается :p1, до выезда', ['p1' => $certificate->valid_until->format('d.m.Y')]) : null,
         ]));
         if ($exceptions !== []) {
             return ['level' => ArrivalReadinessLevel::Exception, 'reasons' => $exceptions];

@@ -29,7 +29,7 @@ class ProviderForm
             Grid::make(3)->columnSpanFull()->visible($external)->schema([
                 Select::make('legal_form')->label('Правовая форма')->options(LegalForm::class)->required($external)->live(),
                 TextInput::make('legal_name')->label('Юридическое наименование')->required($external)->maxLength(255)
-                    ->placeholder('как в документах, без «ТОО»'),
+                    ->placeholder(__('как в документах, без «ТОО»')),
                 TextInput::make('tax_id')->required($external)->length(12)
                     ->label(fn (Get $get) => self::legalForm($get('legal_form'))?->taxIdLabel() ?? 'ИИН / БИН')
                     ->rule(fn () => function (string $attribute, $value, Closure $fail) {

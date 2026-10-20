@@ -23,7 +23,7 @@ class SalesQueueWidget extends RoleQueueWidget
 
     protected function getHeading(): ?string
     {
-        return auth()->user()->hasRole(Role::SalesManager) ? 'Продажи — все сертификаты' : 'Мои продажи';
+        return auth()->user()->hasRole(Role::SalesManager) ? __('Продажи — все сертификаты') : __('Мои продажи');
     }
 
     protected function headingIcon(): string
@@ -41,7 +41,7 @@ class SalesQueueWidget extends RoleQueueWidget
             $this->counter('Ждут оплаты', $q->awaitingPayment(), $list(['status' => ['values' => ['draft']]]), 'warning', 'выставлен счёт, денег нет', 'heroicon-o-clock'),
             $this->counter('Готовы к выпуску', $q->readyToIssue(), $list(['status' => ['values' => ['draft']]]), 'success', 'оплачены — нажмите «Выпустить»', 'heroicon-o-check-badge'),
             $this->counter('Без получателя', $q->withoutRecipient(), $list(['no_recipient' => ['isActive' => true]]), 'warning', 'нужен для брони', 'heroicon-o-user-plus'),
-            $this->counter('Истекают ≤ 14 дней', $q->expiringSoon(), $list(['expiring' => ['isActive' => true]]), 'danger', 'напомнить гостю', 'heroicon-o-exclamation-triangle'),
+            $this->counter('Истекают за 14 дней', $q->expiringSoon(), $list(['expiring' => ['isActive' => true]]), 'danger', 'напомнить гостю', 'heroicon-o-exclamation-triangle'),
             $this->counter('Черновики', $q->drafts(), $list(['status' => ['values' => ['draft']]]), 'gray', 'не выпущены', 'heroicon-o-pencil-square'),
             $this->metric('Продано в этом месяце', (clone $sold)->count(), Money::format((clone $sold)->sum('total_amount')), 'heroicon-o-chart-bar'),
         ];

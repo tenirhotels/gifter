@@ -73,7 +73,7 @@ class PmsServices extends Page implements HasTable
                 ->action(function () {
                     try {
                         $stats = app(PmsCatalogSync::class)->run();
-                        Notification::make()->success()->title("Услуг в PMS: {$stats['total']}, новых: {$stats['new']}, изменено: {$stats['updated']}, пропало: {$stats['missing']}")->send();
+                        Notification::make()->success()->title(__('Услуг в PMS: :p1, новых: :p2, изменено: :p3, пропало: :p4', ['p1' => $stats['total'], 'p2' => $stats['new'], 'p3' => $stats['updated'], 'p4' => $stats['missing']]))->send();
                     } catch (PmsException $e) {
                         Notification::make()->danger()->title($e->getMessage())->send();
                     }
@@ -89,7 +89,7 @@ class PmsServices extends Page implements HasTable
                 TextColumn::make('name')->label('Название в PMS')->searchable()->sortable()
                     ->description(fn (PmsService $record) => 'ID '.$record->external_id.($record->kind ? ' · '.$record->kind : '')),
                 IconColumn::make('allowed_in_certificate')->label('В сертификат')->boolean(),
-                TextColumn::make('service.name')->label('Услуга в Gifter')->placeholder('не заведена')
+                TextColumn::make('service.name')->label('Услуга в Gifter')->placeholder(__('не заведена'))
                     ->url(fn (PmsService $record) => $record->service_id ? ServiceResource::getUrl('edit', ['record' => $record->service_id]) : null),
                 TextColumn::make('missing_since')->label('Статус в PMS')->badge()
                     ->state(fn (PmsService $record) => $record->isMissing() ? __('Пропала в PMS') : ($record->status ?: __('Есть')))
@@ -107,13 +107,13 @@ class PmsServices extends Page implements HasTable
                 Action::make('link')->label('Связать с услугой Gifter')->icon('heroicon-o-link')->color('gray')
                     ->authorize(Permission::ManageCatalog)
                     ->visible(fn (PmsService $record) => ! $record->service_id && ! $record->isMissing())
-                    ->modalDescription('Если такая услуга уже есть в Gifter — свяжите её, чтобы не создавать дубль.')
+                    ->modalDescription(__('Если такая услуга уже есть в Gifter — свяжите её, чтобы не создавать дубль.'))
                     ->schema([Select::make('service_id')->label('Услуга Gifter')->required()->searchable()
                         ->options(fn () => Service::query()->whereDoesntHave('pmsService')->orderBy('name')->pluck('name', 'id'))])
                     ->action(function (PmsService $record, array $data, Action $action) {
                         try {
                             app(PmsCatalogSync::class)->link($record, Service::findOrFail($data['service_id']));
-                            Notification::make()->success()->title('Услуга связана')->send();
+                            Notification::make()->success()->title(__('Услуга связана'))->send();
                         } catch (DomainRuleViolation $e) {
                             Notification::make()->danger()->title($e->getMessage())->send();
                             $action->halt();
@@ -121,7 +121,7 @@ class PmsServices extends Page implements HasTable
                     }),
             ])
             ->defaultSort('name')
-            ->emptyStateHeading('Услуги ещё не загружены')
-            ->emptyStateDescription('Нажмите «Обновить услуги из PMS». Нужны подключение Exely и доступ ключей к списку услуг.');
+            ->emptyStateHeading(__('Услуги ещё не загружены'))
+            ->emptyStateDescription(__('Нажмите «Обновить услуги из PMS». Нужны подключение Exely и доступ ключей к списку услуг.'));
     }
 }

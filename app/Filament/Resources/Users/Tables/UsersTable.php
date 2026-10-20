@@ -25,7 +25,7 @@ class UsersTable
                 IconColumn::make('is_active')->label('Активен')->boolean(),
                 IconColumn::make('two_factor')->label('2FA')->boolean()
                     ->state(fn (User $record): bool => $record->hasTwoFactor())
-                    ->tooltip(fn (User $record): string => $record->hasTwoFactor() ? 'Двухфакторный вход настроен' : 'Настроит при следующем входе'),
+                    ->tooltip(fn (User $record): string => $record->hasTwoFactor() ? __('Двухфакторный вход настроен') : __('Настроит при следующем входе')),
                 TextColumn::make('created_at')->label('Создан')->dateTime('d.m.Y')->sortable(),
             ])
             ->recordActions([EditAction::make(), self::resetTwoFactorAction()])
@@ -37,11 +37,11 @@ class UsersTable
         return Action::make('resetTwoFactor')->label('Сбросить 2FA')->icon('heroicon-o-device-phone-mobile')->color('danger')
             ->authorize(Permission::ManageUsers)
             ->visible(fn (User $record): bool => $record->hasTwoFactor() && ! $record->is(auth()->user()))
-            ->modalHeading(fn (User $record): string => "Сбросить двухфакторный вход: {$record->name}")
-            ->modalDescription('Например, сотрудник потерял телефон. При следующем входе он настроит приложение заново. Сброс записывается в журнал аудита.')
+            ->modalHeading(fn (User $record): string => __('Сбросить двухфакторный вход: :p1', ['p1' => $record->name]))
+            ->modalDescription(__('Например, сотрудник потерял телефон. При следующем входе он настроит приложение заново. Сброс записывается в журнал аудита.'))
             ->schema([Textarea::make('reason')->label('Причина')->required()->maxLength(500)])
-            ->modalSubmitActionLabel('Сбросить')
+            ->modalSubmitActionLabel(__('Сбросить'))
             ->action(fn (User $record, array $data, Action $action) => RunsDomainActions::run($action,
-                fn () => app(UserSecurity::class)->resetTwoFactor($record, $data['reason']), 'Двухфакторный вход сброшен'));
+                fn () => app(UserSecurity::class)->resetTwoFactor($record, $data['reason']), __('Двухфакторный вход сброшен')));
     }
 }

@@ -68,10 +68,10 @@ class ReservationManager
         $client = PmsClient::make();
         $booking = $fresh ? $client->find($number) : $client->preview($number);
         if ($booking->cancelled) {
-            throw new PmsException("Бронь № {$number} отменена в PMS — привязать её нельзя.");
+            throw new PmsException(__('Бронь № :p1 отменена в PMS — привязать её нельзя.', ['p1' => $number]));
         }
         if (! $booking->arrival || ! $booking->departure) {
-            throw new PmsException("В брони № {$number} нет дат проживания — обратитесь в бронирование.");
+            throw new PmsException(__('В брони № :p1 нет дат проживания — обратитесь в бронирование.', ['p1' => $number]));
         }
 
         return $this->evaluate($certificate, $booking);
@@ -100,7 +100,7 @@ class ReservationManager
             }
         }
         if ($best === null) {
-            throw new PmsException("В брони № {$number} нет имени гостя — обратитесь в бронирование.");
+            throw new PmsException(__('В брони № :p1 нет имени гостя — обратитесь в бронирование.', ['p1' => $number]));
         }
         if ($best['match'] === NameMatch::Mismatch) {
             $best['guest'] = GuestName::masked($best['person']['first'], $best['person']['last']);
@@ -120,16 +120,16 @@ class ReservationManager
         $nightsOk = $included === null || $nights <= $included;
         $checks = [
             ['key' => 'name', 'ok' => $match !== NameMatch::Mismatch, 'text' => $match === NameMatch::Mismatch
-                ? 'Имя гостя не совпадает ни с получателем, ни с заказчиком' : $match->getLabel()],
+                ? __('Имя гостя не совпадает ни с получателем, ни с заказчиком') : $match->getLabel()],
             ['key' => 'arrival', 'ok' => $arrivalOk, 'text' => $arrivalOk
-                ? 'Заезд '.$booking->arrival->format('d.m.Y').' — в сроке сертификата (до '.$certificate->valid_until->format('d.m.Y').')'
-                : 'Заезд '.$booking->arrival->format('d.m.Y').' вне срока сертификата ('.$certificate->valid_from->format('d.m.Y').' — '.$certificate->valid_until->format('d.m.Y').')'],
+                ? __('Заезд :p1 — в сроке сертификата (до :p2)', ['p1' => $booking->arrival->format('d.m.Y'), 'p2' => $certificate->valid_until->format('d.m.Y')])
+                : __('Заезд :p1 вне срока сертификата (:p2 — :p3)', ['p1' => $booking->arrival->format('d.m.Y'), 'p2' => $certificate->valid_from->format('d.m.Y'), 'p3' => $certificate->valid_until->format('d.m.Y')])],
         ];
         if ($included !== null) {
-            $word = fn (int $n) => $n.' '.($n % 10 === 1 && $n % 100 !== 11 ? 'ночь' : (in_array($n % 10, [2, 3, 4], true) && ! in_array($n % 100, [12, 13, 14], true) ? 'ночи' : 'ночей'));
+            $word = fn (int $n) => $n.' '.($n % 10 === 1 && $n % 100 !== 11 ? __('ночь') : (in_array($n % 10, [2, 3, 4], true) && ! in_array($n % 100, [12, 13, 14], true) ? __('ночи') : __('ночей')));
             $checks[] = ['key' => 'nights', 'ok' => $nightsOk, 'text' => $nightsOk
-                ? 'В брони '.$word($nights).' ('.$booking->arrival->format('d.m').'–'.$booking->departure->format('d.m').') — в рамках сертификата (до '.$word($included).')'
-                : 'В брони '.$word($nights).' ('.$booking->arrival->format('d.m').'–'.$booking->departure->format('d.m').'), а сертификат даёт '.$word($included).' (с учётом доп. ночей)'];
+                ? __('В брони :p1 (:p2–:p3) — в рамках сертификата (до :p4)', ['p1' => $word($nights), 'p2' => $booking->arrival->format('d.m'), 'p3' => $booking->departure->format('d.m'), 'p4' => $word($included)])
+                : __('В брони :p1 (:p2–:p3), а сертификат даёт :p4 (с учётом доп. ночей)', ['p1' => $word($nights), 'p2' => $booking->arrival->format('d.m'), 'p3' => $booking->departure->format('d.m'), 'p4' => $word($included)])];
         }
 
         return $checks;
@@ -156,7 +156,7 @@ class ReservationManager
         try {
             return Cache::lock('gifter:booking:'.$number, 20)->block((int) config('gifter.pms.booking_lock_wait', 10), fn () => $this->saveLocked($certificate, $data));
         } catch (LockTimeoutException) {
-            throw new DomainRuleViolation('Эту бронь сейчас привязывает другой сотрудник — повторите через несколько секунд.');
+            throw new DomainRuleViolation(__('Эту бронь сейчас привязывает другой сотрудник — повторите через несколько секунд.'));
         }
     }
 
@@ -166,15 +166,15 @@ class ReservationManager
         return DB::transaction(function () use ($certificate, $data) {
             $fresh = Certificate::query()->lockForUpdate()->with(['recipient', 'customer'])->findOrFail($certificate->id);
             if ($fresh->hasPendingRefund()) {
-                throw new DomainRuleViolation('По сертификату ждёт решения запрос на возврат — действия заблокированы.');
+                throw new DomainRuleViolation(__('По сертификату ждёт решения запрос на возврат — действия заблокированы.'));
             }
             $from = $fresh->status;
             $isNew = $from === CertificateStatus::Active;
             if (! $isNew && ! in_array($from, [CertificateStatus::Reserved, CertificateStatus::InUse], true)) {
-                throw new DomainRuleViolation("Сертификат в статусе «{$from->getLabel()}»: бронь отметить нельзя.");
+                throw new DomainRuleViolation(__('Сертификат в статусе «:p1»: бронь отметить нельзя.', ['p1' => $from->getLabel()]));
             }
             if (! $fresh->recipient_id) {
-                throw new DomainRuleViolation('Для брони укажите получателя (гостя).');
+                throw new DomainRuleViolation(__('Для брони укажите получателя (гостя).'));
             }
 
             $booking = trim((string) ($data['booking_number'] ?? ''));
@@ -183,7 +183,7 @@ class ReservationManager
             if (PmsClient::make()->isActive()) {
                 // Интеграция включена: бронь подтверждается по PMS строго — гость и даты берутся из PMS, а не вводятся.
                 if ($booking === '') {
-                    throw new DomainRuleViolation('Укажите номер брони PMS.');
+                    throw new DomainRuleViolation(__('Укажите номер брони PMS.'));
                 }
                 $pms = $this->resolveFromPms($fresh, $booking, fresh: true);
                 $guest = $pms['guest'];
@@ -192,7 +192,7 @@ class ReservationManager
             } else {
                 $guest = trim(preg_replace('/\s+/u', ' ', (string) ($data['guest_name'] ?? '')) ?? '');
                 if ($booking === '' || $guest === '') {
-                    throw new DomainRuleViolation('Укажите номер брони PMS и имя гостя, как в брони.');
+                    throw new DomainRuleViolation(__('Укажите номер брони PMS и имя гостя, как в брони.'));
                 }
                 $arrival = Carbon::parse($data['arrival'])->startOfDay();
                 $departure = Carbon::parse($data['departure'])->startOfDay();
@@ -207,7 +207,7 @@ class ReservationManager
             $needsReview = $match === NameMatch::Mismatch || $risk || $discrepancies !== [];
             if ($needsReview && $note === '') {
                 throw new DomainRuleViolation($discrepancies !== [] || $match === NameMatch::Mismatch
-                    ? 'Есть расхождения: '.($discrepancies !== [] ? implode('; ', $discrepancies) : 'имя в брони не совпадает ни с получателем, ни с заказчиком').' — укажите причину (её проверят Финансы).'
+                    ? 'Есть расхождения: '.($discrepancies !== [] ? implode('; ', $discrepancies) : __('имя в брони не совпадает ни с получателем, ни с заказчиком')).' — укажите причину (её проверят Финансы).'
                     : 'Бронь в последние '.self::RISK_DAYS.' дней срока — укажите комментарий (бронь проверят Финансы).');
             }
             if ($discrepancies !== []) {
@@ -237,7 +237,7 @@ class ReservationManager
             $description = $fresh->reservationLabel().'. '.$match->getLabel()
                 .($pms ? '. Подтверждена по PMS'.($pms['booking']->stale ? ' (данные устарели: '.($pms['booking']->dataAgeMinutes ?? '?').' мин)' : '') : '')
                 .($risk ? '. За '.max(0, today()->diffInDays($fresh->valid_until, false)).' дн. до конца срока' : '')
-                .($note !== '' ? ". {$note}" : '').($review === ReservationReview::Pending ? '. На проверке Финансов' : '');
+                .($note !== '' ? ". {$note}" : '').($review === ReservationReview::Pending ? __('. На проверке Финансов') : '');
             $this->history->record($fresh, $isNew ? HistoryEvent::Reserved : HistoryEvent::ReservationChanged, $description, $before, $this->snapshot($fresh));
             if ($isNew) {
                 $this->fulfillments->syncWithCertificate($fresh);
@@ -253,13 +253,13 @@ class ReservationManager
     {
         $reason = trim($reason);
         if ($reason === '') {
-            throw new DomainRuleViolation('Укажите причину снятия брони.');
+            throw new DomainRuleViolation(__('Укажите причину снятия брони.'));
         }
 
         return DB::transaction(function () use ($certificate, $reason) {
             $fresh = Certificate::query()->lockForUpdate()->findOrFail($certificate->id);
             if ($fresh->status !== CertificateStatus::Reserved) {
-                throw new DomainRuleViolation("Сертификат в статусе «{$fresh->status->getLabel()}»: снять бронь нельзя.");
+                throw new DomainRuleViolation(__('Сертификат в статусе «:p1»: снять бронь нельзя.', ['p1' => $fresh->status->getLabel()]));
             }
             $before = $this->snapshot($fresh);
             $label = $fresh->reservationLabel();
@@ -283,7 +283,7 @@ class ReservationManager
     {
         $comment = trim($comment);
         if ($comment === '') {
-            throw new DomainRuleViolation('Укажите, что не так с бронью.');
+            throw new DomainRuleViolation(__('Укажите, что не так с бронью.'));
         }
 
         return $this->review($certificate, ReservationReview::Disputed, $comment);
@@ -297,7 +297,7 @@ class ReservationManager
                 ? [ReservationReview::Pending, ReservationReview::Disputed]
                 : [ReservationReview::Pending, ReservationReview::Approved];
             if (! in_array($fresh->reservation_review_status, $allowed, true)) {
-                throw new DomainRuleViolation('Бронь не на проверке.');
+                throw new DomainRuleViolation(__('Бронь не на проверке.'));
             }
             $from = $fresh->reservation_review_status;
             $fresh->update([
@@ -318,14 +318,13 @@ class ReservationManager
     private function assertDates(Certificate $certificate, Carbon $arrival, Carbon $departure, bool $isNew): void
     {
         if ($departure->lte($arrival)) {
-            throw new DomainRuleViolation('Дата выезда должна быть позже даты заезда.');
+            throw new DomainRuleViolation(__('Дата выезда должна быть позже даты заезда.'));
         }
         if ($arrival->lt($certificate->valid_from) || $arrival->gt($certificate->valid_until)) {
-            throw new DomainRuleViolation('Заезд — в пределах срока действия сертификата: '
-                .$certificate->valid_from->format('d.m.Y').' — '.$certificate->valid_until->format('d.m.Y').'.');
+            throw new DomainRuleViolation(__('Заезд — в пределах срока действия сертификата: :p1 — :p2.', ['p1' => $certificate->valid_from->format('d.m.Y'), 'p2' => $certificate->valid_until->format('d.m.Y')]));
         }
         if ($isNew && $arrival->lt(today()->subDay())) {
-            throw new DomainRuleViolation('Дата заезда уже прошла — проверьте даты брони.');
+            throw new DomainRuleViolation(__('Дата заезда уже прошла — проверьте даты брони.'));
         }
     }
 
@@ -337,7 +336,7 @@ class ReservationManager
             ->when($certificate->batch_id, fn ($q) => $q->where(fn ($q) => $q->whereNull('batch_id')->orWhere('batch_id', '!=', $certificate->batch_id)))
             ->value('number');
         if ($taken) {
-            throw new DomainRuleViolation("Бронь № {$booking} уже привязана к сертификату {$taken}.");
+            throw new DomainRuleViolation(__('Бронь № :p1 уже привязана к сертификату :p2.', ['p1' => $booking, 'p2' => $taken]));
         }
     }
 

@@ -84,7 +84,7 @@ class ServiceFulfillmentResource extends Resource
 
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return 'Ждут отправки поставщику';
+        return __('Ждут отправки поставщику');
     }
 
     public static function table(Table $table): Table
@@ -95,7 +95,7 @@ class ServiceFulfillmentResource extends Resource
                 TextColumn::make('certificate.number')->label('Сертификат')->searchable()
                     ->url(fn (ServiceFulfillment $record) => CertificateResource::getUrl('view', ['record' => $record->certificate_id]))
                     ->description(fn (ServiceFulfillment $record) => $record->certificate->status->getLabel()),
-                TextColumn::make('certificate.recipient.full_name')->label('Гость')->placeholder('не указан')->searchable(),
+                TextColumn::make('certificate.recipient.full_name')->label('Гость')->placeholder(__('не указан'))->searchable(),
                 ...FulfillmentActions::columns(),
             ])
             ->filters([
@@ -107,7 +107,7 @@ class ServiceFulfillmentResource extends Resource
                         ->orWhere(fn (Builder $q) => $q->where('requires_confirmation', true)->whereIn('status', [FulfillmentStatus::Requested, FulfillmentStatus::Scheduled]))
                         ->orWhere(fn (Builder $q) => $q->where('requires_scheduling', true)->whereNull('scheduled_date')->whereIn('status', FulfillmentStatus::open())))),
                 SelectFilter::make('when')->label('Когда')
-                    ->options(['today' => 'Сегодня', 'tomorrow' => 'Завтра', 'week' => 'Ближайшие 7 дней', 'none' => 'Дата не назначена'])
+                    ->options(['today' => __('Сегодня'), 'tomorrow' => __('Завтра'), 'week' => __('Ближайшие 7 дней'), 'none' => __('Дата не назначена')])
                     ->query(fn (Builder $query, array $data) => match ($data['value'] ?? null) {
                         'today' => $query->whereDate('scheduled_date', today()->toDateString()),
                         'tomorrow' => $query->whereDate('scheduled_date', today()->addDay()->toDateString()),

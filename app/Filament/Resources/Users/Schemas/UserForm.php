@@ -20,11 +20,11 @@ class UserForm
                 ->rule(Password::default())
                 ->required(fn (string $operation): bool => $operation === 'create')
                 ->dehydrated(fn (?string $state): bool => filled($state))
-                ->helperText(fn (string $operation): ?string => $operation === 'edit' ? 'Оставьте пустым, чтобы не менять.' : null),
+                ->helperText(fn (string $operation): ?string => $operation === 'edit' ? __('Оставьте пустым, чтобы не менять.') : null),
             CheckboxList::make('roles')->label('Роли')->options(Role::class)->required()->columns(2)->columnSpanFull()
-                ->helperText('Без роли вход в панель закрыт.'),
+                ->helperText(__('Без роли вход в панель закрыт.')),
             Toggle::make('is_active')->label('Активен')->default(true)
-                ->helperText('Неактивный пользователь не может войти. Удаления пользователей нет — только отключение.'),
+                ->helperText(__('Неактивный пользователь не может войти. Удаления пользователей нет — только отключение.')),
         ]);
     }
 }

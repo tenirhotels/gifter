@@ -10,6 +10,7 @@ use App\Support\Money;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
+use Illuminate\Contracts\Support\Htmlable;
 
 /** Незавершённые продажи: что оплачено, что нет, что можно выпускать. */
 class DraftsWidget extends TableWidget
@@ -19,6 +20,11 @@ class DraftsWidget extends TableWidget
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Незавершённые продажи (черновики)';
+
+    protected function getTableHeading(): string|Htmlable|null
+    {
+        return static::$heading ? __(static::$heading) : null;
+    }
 
     public static function canView(): bool
     {
@@ -34,7 +40,7 @@ class DraftsWidget extends TableWidget
                 ->withSum(['payments as paid_sum' => fn ($q) => $q->where('status', 'paid')], 'amount'))
             ->defaultSort('id', 'desc')
             ->paginated([5, 10, 25])->defaultPaginationPageOption(5)
-            ->emptyStateHeading('Незавершённых продаж нет')
+            ->emptyStateHeading(__('Незавершённых продаж нет'))
             ->recordUrl(fn (Certificate $record) => CertificateResource::getUrl('view', ['record' => $record]))
             ->columns([
                 TextColumn::make('number')->label('Номер'),

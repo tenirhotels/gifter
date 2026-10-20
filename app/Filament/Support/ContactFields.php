@@ -46,7 +46,7 @@ final class ContactFields
         return TextInput::make($name)->label('Телефон')->tel()->telRegex('/^[\d\s()+\-.]+$/')->maxLength(32)->placeholder('+7 701 123 45 67')
             ->rule(fn () => function (string $attribute, mixed $value, \Closure $fail) {
                 if (! PhoneNumber::isValid($value)) {
-                    $fail(PhoneNumber::HINT.'.');
+                    $fail(__(PhoneNumber::HINT).'.');
                 }
             })
             ->dehydrateStateUsing(fn (?string $state) => PhoneNumber::normalize($state));
@@ -72,7 +72,7 @@ final class ContactFields
             ->authorize(Permission::RevealContacts)
             ->visible(fn (Model $record) => $person($record) !== null)
             ->modalHeading(fn (Model $record) => $person($record)?->full_name)
-            ->modalDescription('Просмотр контактов фиксируется: сохраняется, кто и когда их открыл.')
+            ->modalDescription(__('Просмотр контактов фиксируется: сохраняется, кто и когда их открыл.'))
             ->mountUsing(function (Model $record, Action $action) use ($person) {
                 if (! self::logReveal($person($record))) {
                     Notification::make()->danger()->title(self::limitMessage())->send();
@@ -95,6 +95,6 @@ final class ContactFields
 
     public static function limitMessage(): string
     {
-        return 'Дневной лимит открытия контактов исчерпан ('.config('gifter.security.reveal_daily_limit').' клиентов). Попытка записана в журнал; нужен доступ — обратитесь к администратору.';
+        return __('Дневной лимит открытия контактов исчерпан (:p1 клиентов). Попытка записана в журнал; нужен доступ — обратитесь к администратору.', ['p1' => config('gifter.security.reveal_daily_limit')]);
     }
 }

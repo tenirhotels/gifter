@@ -29,8 +29,8 @@ class PricesRelationManager extends RelationManager
         return $table
             ->columns([
                 TextColumn::make('valid_from')->label('С')->date('d.m.Y'),
-                TextColumn::make('valid_until')->label('По')->date('d.m.Y')->placeholder('бессрочно'),
-                TextColumn::make('cost')->label('Себестоимость')->placeholder('не указана')
+                TextColumn::make('valid_until')->label('По')->date('d.m.Y')->placeholder(__('бессрочно')),
+                TextColumn::make('cost')->label('Себестоимость')->placeholder(__('не указана'))
                     ->formatStateUsing(fn ($state) => Money::format($state))
                     ->visible(fn () => auth()->user()?->can(Permission::ViewCosts)),
                 TextColumn::make('price')->label('Цена')->formatStateUsing(fn ($state) => Money::format($state)),
@@ -41,14 +41,14 @@ class PricesRelationManager extends RelationManager
                 TextColumn::make('created_at')->label('Добавлено')->dateTime('d.m.Y H:i'),
             ])
             ->defaultSort('valid_from', 'desc')
-            ->description('Добавленную сегодня цену можно исправить, пока она не попала в сертификаты. Более ранние версии не меняются — добавьте новую.')
+            ->description(__('Добавленную сегодня цену можно исправить, пока она не попала в сертификаты. Более ранние версии не меняются — добавьте новую.'))
             ->recordActions([
                 Action::make('approvePrice')->label('Подтвердить цену')->icon('heroicon-o-check-badge')->color('success')
                     ->authorize(Permission::AdminCorrections)
                     ->visible(fn (ServicePrice $record) => ! $record->isApproved())
                     ->requiresConfirmation()
-                    ->modalDescription(fn (ServicePrice $record) => 'Цена '.Money::format($record->price).' вступит в силу с '.$record->valid_from->format('d.m.Y').'; предыдущая закроется днём раньше.')
-                    ->action(fn (ServicePrice $record, Action $action) => RunsDomainActions::run($action, fn () => app(ServicePricing::class)->approve($record), 'Цена подтверждена')),
+                    ->modalDescription(fn (ServicePrice $record) => __('Цена :p1 вступит в силу с :p2; предыдущая закроется днём раньше.', ['p1' => Money::format($record->price), 'p2' => $record->valid_from->format('d.m.Y')]))
+                    ->action(fn (ServicePrice $record, Action $action) => RunsDomainActions::run($action, fn () => app(ServicePricing::class)->approve($record), __('Цена подтверждена'))),
                 Action::make('fixPrice')->label('Исправить')->icon('heroicon-o-pencil-square')
                     ->authorize(Permission::ManagePrices)
                     ->visible(fn (ServicePrice $record) => app(ServicePricing::class)->isEditable($record))
@@ -64,7 +64,7 @@ class PricesRelationManager extends RelationManager
                             Carbon::parse($data['valid_from']),
                             filled($data['valid_until'] ?? null) ? Carbon::parse($data['valid_until']) : null,
                             filled($data['cost'] ?? null) ? (string) $data['cost'] : null,
-                        ), 'Цена исправлена');
+                        ), __('Цена исправлена'));
                     }),
             ])
             ->headerActions([
@@ -80,7 +80,7 @@ class PricesRelationManager extends RelationManager
                             Carbon::parse($data['valid_from']),
                             filled($data['valid_until'] ?? null) ? Carbon::parse($data['valid_until']) : null,
                             filled($data['cost'] ?? null) ? (string) $data['cost'] : null,
-                        ), 'Цена добавлена');
+                        ), __('Цена добавлена'));
                     }),
             ]);
     }
@@ -92,9 +92,9 @@ class PricesRelationManager extends RelationManager
             TextInput::make('price')->label('Цена продажи, ₸')->numeric()->minValue(1)->required(),
             TextInput::make('cost')->label('Себестоимость, ₸')->numeric()->minValue(0)
                 ->visible(fn () => auth()->user()?->can(Permission::ViewCosts))
-                ->helperText('Во что услуга обходится отелю (билеты, продукты, оплата поставщику). Нужна для маржи и маркетинговых расходов.'),
+                ->helperText(__('Во что услуга обходится отелю (билеты, продукты, оплата поставщику). Нужна для маржи и маркетинговых расходов.')),
             DatePicker::make('valid_from')->label('Действует с')->required()->default(today()),
-            DatePicker::make('valid_until')->label('Действует по')->helperText('Пусто — бессрочно. Открытая предыдущая цена закроется автоматически.'),
+            DatePicker::make('valid_until')->label('Действует по')->helperText(__('Пусто — бессрочно. Открытая предыдущая цена закроется автоматически.')),
         ];
     }
 

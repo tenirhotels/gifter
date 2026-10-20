@@ -11,7 +11,7 @@ trait AppendOnly
 {
     public static function bootAppendOnly(): void
     {
-        static::updating(fn () => throw new DomainRuleViolation('Журнальную запись нельзя изменить.'));
-        static::deleting(fn () => throw new DomainRuleViolation('Журнальную запись нельзя удалить.'));
+        static::updating(fn () => throw new DomainRuleViolation(__('Журнальную запись нельзя изменить.')));
+        static::deleting(fn () => throw new DomainRuleViolation(__('Журнальную запись нельзя удалить.')));
     }
 }

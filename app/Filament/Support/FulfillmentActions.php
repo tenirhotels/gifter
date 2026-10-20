@@ -46,7 +46,7 @@ final class FulfillmentActions
                 ->authorize(Permission::ManageFulfillments)
                 ->visible(fn (ServiceFulfillment $record) => $active($record) && $record->status === FulfillmentStatus::Pending)
                 ->modalDescription(fn (ServiceFulfillment $record) => self::providerContacts($record))
-                ->modalSubmitActionLabel('Заявка отправлена')
+                ->modalSubmitActionLabel(__('Заявка отправлена'))
                 ->fillForm(function (ServiceFulfillment $record) {
                     $guests = $record->guests ?? self::defaultGuests($record);
 
@@ -55,19 +55,19 @@ final class FulfillmentActions
                 })
                 ->schema([
                     TextInput::make('guests')->label('Гости')->required()->maxLength(255)
-                        ->helperText('Имена, как в брони; при необходимости — количество человек.')
+                        ->helperText(__('Имена, как в брони; при необходимости — количество человек.'))
                         ->live(onBlur: true)->afterStateUpdated(fn (Set $set, Get $get, ServiceFulfillment $record) => $set('request_details',
                             self::requestTemplate($record, $get('guests'), $get('location')))),
                     TextInput::make('location')->label('Место')->maxLength(255)
-                        ->placeholder('Трансфер: аэропорт, рейс, адрес')
+                        ->placeholder(__('Трансфер: аэропорт, рейс, адрес'))
                         ->live(onBlur: true)->afterStateUpdated(fn (Set $set, Get $get, ServiceFulfillment $record) => $set('request_details',
                             self::requestTemplate($record, $get('guests'), $get('location')))),
                     Textarea::make('request_details')->label('Текст заявки поставщику')->rows(6)
-                        ->helperText('Только то, что нужно исполнителю, без цен. Отправьте любым способом и сохраните.'),
+                        ->helperText(__('Только то, что нужно исполнителю, без цен. Отправьте любым способом и сохраните.')),
                 ])
                 ->action(fn (ServiceFulfillment $record, array $data, Action $action) => $run($action,
                     fn () => $manager()->request($record, $data['request_details'] ?? null, $data['guests'] ?? null, $data['location'] ?? null),
-                    'Заявка отмечена как отправленная')),
+                    __('Заявка отмечена как отправленная'))),
 
             self::scheduleAction('scheduleFulfillment', 'Назначить время',
                 fn (ServiceFulfillment $record) => $record->scheduled_date === null && $record->status !== FulfillmentStatus::Pending, $active, $run),
@@ -78,33 +78,33 @@ final class FulfillmentActions
                     && ! ($record->requires_scheduling && ! $record->scheduled_date))
                 ->schema([Textarea::make('note')->label('Комментарий (кто подтвердил, номер)')])
                 ->action(fn (ServiceFulfillment $record, array $data, Action $action) => $run($action,
-                    fn () => $manager()->confirm($record, $data['note'] ?? null), 'Подтверждено поставщиком')),
+                    fn () => $manager()->confirm($record, $data['note'] ?? null), __('Подтверждено поставщиком'))),
 
             Action::make('completeFulfillment')->label('Выполнено')->icon('heroicon-o-check-badge')->color('success')
                 ->authorize(Permission::ManageFulfillments)
                 ->visible(fn (ServiceFulfillment $record) => $record->certificate?->status === CertificateStatus::InUse
                     && in_array($record->status, [FulfillmentStatus::Requested, FulfillmentStatus::Scheduled, FulfillmentStatus::Confirmed], true))
-                ->modalDescription('Отмечает, что услуга оказана гостю. Сертификат при этом не закрывается — он используется только целиком.')
+                ->modalDescription(__('Отмечает, что услуга оказана гостю. Сертификат при этом не закрывается — он используется только целиком.'))
                 ->schema([Textarea::make('note')->label('Комментарий')])
                 ->action(fn (ServiceFulfillment $record, array $data, Action $action) => $run($action,
-                    fn () => $manager()->complete($record, $data['note'] ?? null), 'Услуга выполнена')),
+                    fn () => $manager()->complete($record, $data['note'] ?? null), __('Услуга выполнена'))),
 
             // Следующий шаг — в строке; перенос и отмена — в меню, чтобы строка не расползалась.
             ActionGroup::make([
-                self::scheduleAction('rescheduleFulfillment', fn (ServiceFulfillment $record) => $record->scheduled_date ? 'Перенести' : 'Назначить время',
+                self::scheduleAction('rescheduleFulfillment', fn (ServiceFulfillment $record) => $record->scheduled_date ? __('Перенести') : __('Назначить время'),
                     fn (ServiceFulfillment $record) => $record->scheduled_date !== null || $record->status === FulfillmentStatus::Pending, $active, $run),
                 Action::make('revertFulfillment')
-                    ->label(fn (ServiceFulfillment $record) => FulfillmentManager::revertLabel($record->status) ?? 'Отменить')
+                    ->label(fn (ServiceFulfillment $record) => FulfillmentManager::revertLabel($record->status) ?? __('Отменить'))
                     ->icon('heroicon-o-arrow-uturn-left')->color('danger')
                     ->authorize(Permission::ManageFulfillments)
                     ->visible(fn (ServiceFulfillment $record) => $active($record) && FulfillmentManager::revertLabel($record->status) !== null)
                     ->modalDescription(fn (ServiceFulfillment $record) => $record->status === FulfillmentStatus::Confirmed
-                        ? 'Услуга остаётся в сертификате; заявка вернётся в «'.($record->scheduled_date ? 'Время назначено' : 'Заявка отправлена').'» — подтверждение нужно получить заново.'
-                        : 'Услуга остаётся в сертификате; заявка вернётся в «Ожидает», дата и время сбросятся — отправьте заявку заново (тому же или другому исполнителю).')
+                        ? __('Услуга остаётся в сертификате; заявка вернётся в «:p1» — подтверждение нужно получить заново.', ['p1' => $record->scheduled_date ? __('Время назначено') : __('Заявка отправлена')])
+                        : __('Услуга остаётся в сертификате; заявка вернётся в «Ожидает», дата и время сбросятся — отправьте заявку заново (тому же или другому исполнителю).'))
                     ->schema([Textarea::make('reason')->label('Причина')->required()
-                        ->placeholder('Например: гость попросил другое время')])
+                        ->placeholder(__('Например: гость попросил другое время'))])
                     ->action(fn (ServiceFulfillment $record, array $data, Action $action) => $run($action,
-                        fn () => $manager()->revert($record, $data['reason']), 'Статус заявки возвращён')),
+                        fn () => $manager()->revert($record, $data['reason']), __('Статус заявки возвращён'))),
             ])->label('Ещё')->icon('heroicon-m-ellipsis-vertical')->color('gray'),
         ];
     }
@@ -116,17 +116,17 @@ final class FulfillmentActions
             ->authorize(Permission::ManageFulfillments)
             ->visible(fn (ServiceFulfillment $record) => $active($record) && $record->status->isOpen() && $when($record))
             ->modalDescription(fn (ServiceFulfillment $record) => $record->status === FulfillmentStatus::Confirmed
-                ? 'Услуга уже подтверждена: после переноса подтверждение нужно получить заново.' : null)
+                ? __('Услуга уже подтверждена: после переноса подтверждение нужно получить заново.') : null)
             ->fillForm(fn (ServiceFulfillment $record) => ['date' => $record->scheduled_date, 'time' => $record->scheduled_time])
             ->schema([
                 DatePicker::make('date')->label('Дата')->required(),
                 // Список времени с шагом 5 минут и поиском («19» → 19:00, 19:05…): одинаково на любом компьютере, без AM/PM.
-                Select::make('time')->label('Время')->options(self::timeSlots())->searchable()->placeholder('Выберите или введите часы: 19')
+                Select::make('time')->label('Время')->options(self::timeSlots())->searchable()->placeholder(__('Выберите или введите часы: 19'))
                     ->required(fn (ServiceFulfillment $record) => $record->requires_scheduling),
                 Textarea::make('note')->label('Комментарий'),
             ])
             ->action(fn (ServiceFulfillment $record, array $data, Action $action) => $run($action,
-                fn () => app(FulfillmentManager::class)->schedule($record, Carbon::parse($data['date']), $data['time'] ?? null, $data['note'] ?? null), 'Время назначено'));
+                fn () => app(FulfillmentManager::class)->schedule($record, Carbon::parse($data['date']), $data['time'] ?? null, $data['note'] ?? null), __('Время назначено')));
     }
 
     /** @return array<string, string> 00:00 … 23:55 */
@@ -147,18 +147,18 @@ final class FulfillmentActions
         return [
             TextColumn::make('service')->label('Услуга')->state(fn (ServiceFulfillment $record) => $record->serviceLabel())->wrap()
                 ->description(fn (ServiceFulfillment $record) => ($needs = collect([
-                    $record->requires_scheduling ? 'время' : null,
-                    $record->requires_confirmation ? 'подтверждение' : null,
-                ])->filter()->implode(', ')) ? "нужно: {$needs}" : null),
+                    $record->requires_scheduling ? __('время') : null,
+                    $record->requires_confirmation ? __('подтверждение') : null,
+                ])->filter()->implode(', ')) ? __('нужно: :p1', ['p1' => $needs]) : null),
             TextColumn::make('provider.name')->label('Поставщик')->placeholder('—')->wrap(),
             TextColumn::make('status')->label('Статус')->badge(),
-            TextColumn::make('when')->label('Когда')->state(fn (ServiceFulfillment $record) => $record->whenLabel())->placeholder('не назначено')
+            TextColumn::make('when')->label('Когда')->state(fn (ServiceFulfillment $record) => $record->whenLabel())->placeholder(__('не назначено'))
                 ->description(fn (ServiceFulfillment $record) => $record->location)->wrap()
                 ->sortable(query: fn ($query, string $direction) => $query->orderBy('scheduled_date', $direction)->orderBy('scheduled_time', $direction)),
             TextColumn::make('updated_at')->label('Изменено')->dateTime('d.m.Y H:i')->description(fn (ServiceFulfillment $record) => $record->updater?->name)->toggleable(isToggledHiddenByDefault: true),
             TextColumn::make('request_details')->label('Заявка')->placeholder('—')->wrap()->limit(80)->toggleable(isToggledHiddenByDefault: true),
             TextColumn::make('notes')->label('Комментарии')->placeholder('—')->wrap()->limit(80)
-                ->state(fn (ServiceFulfillment $record) => $record->cancellation_reason ? 'Отмена: '.$record->cancellation_reason : $record->notes)->toggleable(isToggledHiddenByDefault: true),
+                ->state(fn (ServiceFulfillment $record) => $record->cancellation_reason ? __('Отмена: :p1', ['p1' => $record->cancellation_reason]) : $record->notes)->toggleable(isToggledHiddenByDefault: true),
         ];
     }
 
@@ -182,9 +182,9 @@ final class FulfillmentActions
         return collect([
             'Заявка от '.config('gifter.certificate.hotel_name'),
             'Услуга: '.$record->serviceLabel(),
-            'Гости: '.(filled($guests) ? $guests : 'уточняется'),
+            'Гости: '.(filled($guests) ? $guests : __('уточняется')),
             $stay,
-            'Когда: '.($record->whenLabel() ?? 'уточним'),
+            'Когда: '.($record->whenLabel() ?? __('уточним')),
             filled($location) ? "Место: {$location}" : null,
             filled(config('gifter.certificate.hotel_contacts')) ? 'Контакты отеля: '.config('gifter.certificate.hotel_contacts') : null,
         ])->filter()->implode("\n");
@@ -194,7 +194,7 @@ final class FulfillmentActions
     {
         $provider = $record->provider;
         if (! $provider) {
-            return 'Поставщик у услуги не указан.';
+            return __('Поставщик у услуги не указан.');
         }
 
         return collect([$provider->name, $provider->contact_person ?? null, PhoneNumber::format($provider->phone), $provider->email ?? null])

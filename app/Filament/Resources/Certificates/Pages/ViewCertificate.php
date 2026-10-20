@@ -53,7 +53,7 @@ class ViewCertificate extends ViewRecord
 
     public function getTitle(): string
     {
-        return 'Сертификат '.$this->getRecord()->number;
+        return __('Сертификат :p1', ['p1' => $this->getRecord()->number]);
     }
 
     protected function getHeaderActions(): array
@@ -63,7 +63,7 @@ class ViewCertificate extends ViewRecord
 
             // У черновика из группы счёт, оплата, согласование, состав и выпуск — на её странице.
             Action::make('openBatch')->icon('heroicon-o-rectangle-stack')
-                ->label(fn (Certificate $record) => $record->batch->shortLabel().($record->isDraft() ? ($record->batch->isComplimentary() ? ': согласование, выпуск' : ': счёт, оплата, выпуск') : ''))
+                ->label(fn (Certificate $record) => $record->batch->shortLabel().($record->isDraft() ? ($record->batch->isComplimentary() ? __(': согласование, выпуск') : __(': счёт, оплата, выпуск')) : ''))
                 ->color(fn (Certificate $record) => $record->isDraft() ? 'primary' : 'gray')
                 ->visible(fn (Certificate $record) => $record->batch_id && auth()->user()?->can('view', $record->batch))
                 ->url(fn (Certificate $record) => CertificateBatchResource::getUrl('view', ['record' => $record->batch_id])),
@@ -72,8 +72,8 @@ class ViewCertificate extends ViewRecord
             Action::make('requestException')->label('Бронь по исключению')->icon('heroicon-o-calendar-days')->color('warning')
                 ->authorize(Permission::RequestReservationException)
                 ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Expired && ! $record->hasPendingException())
-                ->modalDescription('Сертификат истёк без брони. Выберите свободные даты и внесите бронь из PMS: заявку согласует директор по продажам, после чего сертификат вернётся в работу.')
-                ->modalSubmitActionLabel('Отправить директору')
+                ->modalDescription(__('Сертификат истёк без брони. Выберите свободные даты и внесите бронь из PMS: заявку согласует директор по продажам, после чего сертификат вернётся в работу.'))
+                ->modalSubmitActionLabel(__('Отправить директору'))
                 ->fillForm(fn (Certificate $record) => ['guest_name' => trim($record->recipient?->last_name.' '.$record->recipient?->first_name)])
                 ->schema([
                     TextInput::make('booking_number')->label('Номер брони PMS')->required()->maxLength(64)->live(onBlur: true),
@@ -85,50 +85,50 @@ class ViewCertificate extends ViewRecord
                         DatePicker::make('arrival')->label('Заезд')->required(fn () => ! PmsClient::make()->isActive())->minDate(today()),
                         DatePicker::make('departure')->label('Выезд')->required(fn () => ! PmsClient::make()->isActive())->after('arrival'),
                     ]),
-                    Textarea::make('reason')->label('Причина исключения')->required()->helperText('Что произошло и почему бронь не была поставлена вовремя.'),
+                    Textarea::make('reason')->label('Причина исключения')->required()->helperText(__('Что произошло и почему бронь не была поставлена вовремя.')),
                 ])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                    fn () => app(ReservationExceptionManager::class)->request($record, $data), 'Заявка отправлена директору')),
+                    fn () => app(ReservationExceptionManager::class)->request($record, $data), __('Заявка отправлена директору'))),
             Action::make('approveException')->label('Согласовать исключение')->icon('heroicon-o-hand-thumb-up')->color('success')
                 ->authorize(Permission::ApproveReservationException)
                 ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Expired && $record->hasPendingException())
                 ->modalDescription(function (Certificate $record) {
                     $e = $record->reservationExceptions()->where('status', 'pending')->latest('id')->first();
 
-                    return $e ? "Бронь № {$e->booking_number}, {$e->arrival_date->format('d.m')}–{$e->departure_date->format('d.m.Y')}, гость {$e->guest_name}. Причина: {$e->reason}" : null;
+                    return $e ? __('Бронь № :p1, :p2–:p3, гость :p4. Причина: :p5', ['p1' => $e->booking_number, 'p2' => $e->arrival_date->format('d.m'), 'p3' => $e->departure_date->format('d.m.Y'), 'p4' => $e->guest_name, 'p5' => $e->reason]) : null;
                 })
                 ->schema([Textarea::make('comment')->label('Комментарий')])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                     fn () => app(ReservationExceptionManager::class)->approve($record->reservationExceptions()->where('status', 'pending')->latest('id')->firstOrFail(), $data['comment'] ?? null),
-                    'Исключение согласовано, сертификат возвращён в работу')),
+                    __('Исключение согласовано, сертификат возвращён в работу'))),
             Action::make('rejectException')->label('Отклонить исключение')->icon('heroicon-o-hand-thumb-down')->color('danger')
                 ->authorize(Permission::ApproveReservationException)
                 ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Expired && $record->hasPendingException())
                 ->schema([Textarea::make('comment')->label('Причина отказа')->required()])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                    fn () => app(ReservationExceptionManager::class)->reject($record->reservationExceptions()->where('status', 'pending')->latest('id')->firstOrFail(), $data['comment']), 'Заявка отклонена')),
+                    fn () => app(ReservationExceptionManager::class)->reject($record->reservationExceptions()->where('status', 'pending')->latest('id')->firstOrFail(), $data['comment']), __('Заявка отклонена'))),
 
             Action::make('setSeller')->label('Продавец')->icon('heroicon-o-user-circle')->color('gray')
                 ->authorize(Permission::AssignSeller)
                 ->visible(fn (Certificate $record) => $record->isDraft() && ! $record->isComplimentary() && ! $record->batch_id)
-                ->modalDescription('Комиссию после использования сертификата получит выбранный продавец. После выпуска сменить продавца нельзя.')
+                ->modalDescription(__('Комиссию после использования сертификата получит выбранный продавец. После выпуска сменить продавца нельзя.'))
                 ->fillForm(fn (Certificate $record) => ['seller' => $record->sold_by])
                 ->schema([Select::make('seller')->label('Продавец')->required()->searchable()->options(fn () => User::sellerOptions()),
-                    Textarea::make('reason')->label('Причина смены продавца')->required()->minLength(5)->helperText('Причину увидит директор по продажам.')])
+                    Textarea::make('reason')->label('Причина смены продавца')->required()->minLength(5)->helperText(__('Причину увидит директор по продажам.'))])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                    fn () => $this->manager()->setSeller($record, (int) $data['seller'], reason: $data['reason'] ?? null), 'Продавец назначен')),
+                    fn () => $this->manager()->setSeller($record, (int) $data['seller'], reason: $data['reason'] ?? null), __('Продавец назначен'))),
 
             Action::make('approveComplimentary')->label('Согласовать бесплатный')->icon('heroicon-o-hand-thumb-up')->color('success')
                 ->authorize(Permission::ApproveComplimentary)
                 ->visible(fn (Certificate $record) => $record->isDraft() && $record->isComplimentary() && ! $record->isComplimentaryApproved() && ! $record->batch_id)
-                ->modalDescription(fn (Certificate $record) => 'Срок: '.$record->valid_from->format('d.m.Y').' — '.$record->valid_until->format('d.m.Y')
-                    .($record->custom_validity ? ' (задан вручную)' : '').'. Маркетинговый расход по себестоимости: '.Money::format($record->marketing_cost)
-                    .($record->hasUnknownCost() ? ' (у части услуг себестоимость не указана)' : '')
-                    .($record->hasPayablePart() ? '. Платные услуги оплачивает заказчик: '.Money::format($record->payable_amount).' (выпуск — после оплаты)' : '')
-                    .'. После согласования состав фиксируется.')
+                ->modalDescription(fn (Certificate $record) => __('Срок: :p1 — :p2', ['p1' => $record->valid_from->format('d.m.Y'), 'p2' => $record->valid_until->format('d.m.Y')])
+                    .($record->custom_validity ? __(' (задан вручную)') : '').__('. Маркетинговый расход по себестоимости: :p1', ['p1' => Money::format($record->marketing_cost)])
+                    .($record->hasUnknownCost() ? __(' (у части услуг себестоимость не указана)') : '')
+                    .($record->hasPayablePart() ? __('. Платные услуги оплачивает заказчик: :p1 (выпуск — после оплаты)', ['p1' => Money::format($record->payable_amount)]) : '')
+                    .__('. После согласования состав фиксируется.'))
                 ->schema([Textarea::make('comment')->label('Комментарий')])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                    fn () => $this->manager()->approveComplimentary($record, $data['comment'] ?? null), 'Бесплатный сертификат согласован')),
+                    fn () => $this->manager()->approveComplimentary($record, $data['comment'] ?? null), __('Бесплатный сертификат согласован'))),
 
             // Счёт и оплата одиночной продажи — сразу в шапке (частичные счета, сверка — во вкладке «Оплата»).
             Action::make('invoice')->label('Выставить счёт')->icon('heroicon-o-document-text')
@@ -141,12 +141,12 @@ class ViewCertificate extends ViewRecord
                 ])
                 ->schema([
                     Select::make('method')->label('Способ')->options(PaymentMethod::class)->required(),
-                    TextInput::make('amount')->label('Сумма, ₸')->numeric()->minValue(1)->required()->helperText('По умолчанию — весь неоплаченный остаток.'),
+                    TextInput::make('amount')->label('Сумма, ₸')->numeric()->minValue(1)->required()->helperText(__('По умолчанию — весь неоплаченный остаток.')),
                     TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255),
                 ])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => app(PaymentManager::class)->invoice(
                     $record, $data['method'] instanceof PaymentMethod ? $data['method'] : PaymentMethod::from($data['method']),
-                    (string) $data['amount'], $data['invoice_number'] ?? null), 'Счёт выставлен')),
+                    (string) $data['amount'], $data['invoice_number'] ?? null), __('Счёт выставлен'))),
 
             Action::make('markPaid')->label('Оплачен')->icon('heroicon-o-check')->color('success')
                 ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment() !== null)
@@ -156,15 +156,15 @@ class ViewCertificate extends ViewRecord
                     ? $line->method->getLabel().($line->invoice_number ? ' № '.$line->invoice_number : '').' · '.Money::format($line->amount) : null)
                 ->schema([DateTimePicker::make('paid_at')->label('Дата поступления')->default(now())->maxDate(now())->required()])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                    fn () => app(PaymentManager::class)->markPaid($record->pendingPayment(), Carbon::parse($data['paid_at'])), 'Оплата отмечена')),
+                    fn () => app(PaymentManager::class)->markPaid($record->pendingPayment(), Carbon::parse($data['paid_at'])), __('Оплата отмечена'))),
 
             Action::make('issue')->label('Выпустить')->icon('heroicon-o-check-badge')->color('success')
                 ->authorize(Permission::IssueCertificates)
                 // Кнопка появляется, когда выпуск возможен: продажа оплачена, бесплатный согласован.
                 ->visible(fn (Certificate $record) => ! $record->batch_id && $record->isReadyToIssue())
                 ->requiresConfirmation()
-                ->modalDescription('После выпуска состав и цены фиксируются окончательно.')
-                ->action(fn (Certificate $record, Action $action) => $this->run($action, fn () => $this->manager()->issue($record), 'Сертификат выпущен')),
+                ->modalDescription(__('После выпуска состав и цены фиксируются окончательно.'))
+                ->action(fn (Certificate $record, Action $action) => $this->run($action, fn () => $this->manager()->issue($record), __('Сертификат выпущен'))),
 
             Action::make('downloadPdf')->label('PDF')->icon('heroicon-o-arrow-down-tray')->color('gray')
                 ->visible(fn (Certificate $record) => $record->isPrintable())
@@ -182,14 +182,13 @@ class ViewCertificate extends ViewRecord
                 function (Certificate $record) {
                     $open = $record->fulfillments()->whereIn('status', FulfillmentStatus::open())->with('item')->get();
 
-                    return 'Сертификат используется целиком, со всеми услугами. Отменить отметку «Использован» нельзя.'
-                        .($record->reservation_review_status === ReservationReview::Pending ? ' Бронь ещё на проверке Финансов.' : '')
-                        .($open->isEmpty() ? '' : ' Внимание: не выполнены '.$open->map(fn ($f) => "{$f->serviceLabel()} ({$f->status->getLabel()})")->implode(', ')
-                            .' — эти заявки закроются как отменённые.');
+                    return __('Сертификат используется целиком, со всеми услугами. Отменить отметку «Использован» нельзя.')
+                        .($record->reservation_review_status === ReservationReview::Pending ? __(' Бронь ещё на проверке Финансов.') : '')
+                        .($open->isEmpty() ? '' : __(' Внимание: не выполнены :p1 — эти заявки закроются как отменённые.', ['p1' => $open->map(fn ($f) => "{$f->serviceLabel()} ({$f->status->getLabel()})")->implode(', ')]));
                 }),
 
             ActionGroup::make([
-                Action::make('setRecipient')->label(fn (Certificate $record) => $record->recipient_id ? 'Сменить получателя' : 'Указать получателя')
+                Action::make('setRecipient')->label(fn (Certificate $record) => $record->recipient_id ? __('Сменить получателя') : __('Указать получателя'))
                     ->icon('heroicon-o-user-plus')
                     ->authorize(Permission::AssignRecipient)
                     ->visible(fn (Certificate $record) => ! $record->isDraft() && ! $record->status->isFinal()
@@ -202,18 +201,18 @@ class ViewCertificate extends ViewRecord
                             ->createOptionUsing(fn (array $data) => Recipient::create($data)->getKey()),
                     ])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                        fn () => $this->manager()->setRecipient($record, (int) $data['recipient_id']), 'Получатель указан')),
-                ContactFields::revealAction('revealCustomer', fn (Certificate $record) => $record->customer, 'Контакты заказчика'),
-                ContactFields::revealAction('revealRecipient', fn (Certificate $record) => $record->recipient, 'Контакты получателя'),
+                        fn () => $this->manager()->setRecipient($record, (int) $data['recipient_id']), __('Получатель указан'))),
+                ContactFields::revealAction('revealCustomer', fn (Certificate $record) => $record->customer, __('Контакты заказчика')),
+                ContactFields::revealAction('revealRecipient', fn (Certificate $record) => $record->recipient, __('Контакты получателя')),
 
                 $this->reservationAction('changeReservation', 'Изменить бронь', [CertificateStatus::Reserved, CertificateStatus::InUse]),
                 Action::make('release')->label('Снять бронь')->icon('heroicon-o-arrow-uturn-left')
                     ->authorize(Permission::ManageReservations)
                     ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Reserved)
-                    ->modalDescription(fn (Certificate $record) => 'Бронь '.$record->reservationLabel().' будет снята, сертификат снова станет активным. Данные брони останутся в истории.')
+                    ->modalDescription(fn (Certificate $record) => __('Бронь :p1 будет снята, сертификат снова станет активным. Данные брони останутся в истории.', ['p1' => $record->reservationLabel()]))
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                        fn () => app(ReservationManager::class)->release($record, $data['reason']), 'Бронь снята')),
+                        fn () => app(ReservationManager::class)->release($record, $data['reason']), __('Бронь снята'))),
 
                 Action::make('approveReservation')->label('Бронь проверена')->icon('heroicon-o-shield-check')->color('success')
                     ->authorize(Permission::ReviewReservations)
@@ -221,15 +220,15 @@ class ViewCertificate extends ViewRecord
                     ->modalDescription(fn (Certificate $record) => self::reviewSummary($record))
                     ->schema([Textarea::make('comment')->label('Комментарий')])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                        fn () => app(ReservationManager::class)->approve($record, $data['comment'] ?? null), 'Бронь подтверждена')),
+                        fn () => app(ReservationManager::class)->approve($record, $data['comment'] ?? null), __('Бронь подтверждена'))),
                 Action::make('disputeReservation')->label('Оспорить бронь')->icon('heroicon-o-shield-exclamation')->color('danger')
                     ->authorize(Permission::ReviewReservations)
                     ->visible(fn (Certificate $record) => in_array($record->reservation_review_status, [ReservationReview::Pending, ReservationReview::Approved], true)
                         && ! $record->status->isFinal())
-                    ->modalDescription(fn (Certificate $record) => self::reviewSummary($record).' Пока спор не снят, отметить сертификат использованным нельзя.')
+                    ->modalDescription(fn (Certificate $record) => self::reviewSummary($record).' '.__('Пока спор не снят, отметить сертификат использованным нельзя.'))
                     ->schema([Textarea::make('comment')->label('Что не так с бронью')->required()])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                        fn () => app(ReservationManager::class)->dispute($record, $data['comment']), 'Бронь оспорена')),
+                        fn () => app(ReservationManager::class)->dispute($record, $data['comment']), __('Бронь оспорена'))),
 
                 Action::make('changeValidity')->label('Изменить срок')->icon('heroicon-o-clock')
                     ->authorize(Permission::ChangeValidity)
@@ -241,7 +240,7 @@ class ViewCertificate extends ViewRecord
                         Textarea::make('reason')->label('Причина')->required(),
                     ])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => $this->manager()
-                        ->changeValidity($record, Carbon::parse($data['valid_from']), Carbon::parse($data['valid_until']), $data['reason']), 'Срок изменён')),
+                        ->changeValidity($record, Carbon::parse($data['valid_from']), Carbon::parse($data['valid_until']), $data['reason']), __('Срок изменён'))),
 
                 Action::make('cancel')->label('Аннулировать')->icon('heroicon-o-no-symbol')->color('danger')
                     ->authorize(Permission::CancelCertificates)
@@ -249,40 +248,40 @@ class ViewCertificate extends ViewRecord
                         && Money::toMinor($record->paidAmount()) === 0 && ! $record->hasPendingRefund()
                         && ! ($record->isDraft() && $record->batch_id))
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
-                    ->modalDescription('Сертификат останется в реестре со статусом «Аннулирован» — удалить его нельзя.')
-                    ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => $this->manager()->cancel($record, $data['reason']), 'Сертификат аннулирован')),
+                    ->modalDescription(__('Сертификат останется в реестре со статусом «Аннулирован» — удалить его нельзя.'))
+                    ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => $this->manager()->cancel($record, $data['reason']), __('Сертификат аннулирован'))),
 
                 Action::make('requestRefund')->label('Возврат и аннулирование')->icon('heroicon-o-receipt-refund')->color('danger')
                     ->authorize(Permission::RequestRefunds)
                     ->visible(fn (Certificate $record) => $record->status->canTransitionTo(CertificateStatus::Cancelled)
                         && Money::toMinor($record->paidAmount()) > 0 && ! $record->hasPendingRefund())
-                    ->modalDescription('Запрос уйдёт на согласование Финансам. До решения сертификат заблокирован; после согласования он будет аннулирован.')
+                    ->modalDescription(__('Запрос уйдёт на согласование Финансам. До решения сертификат заблокирован; после согласования он будет аннулирован.'))
                     ->fillForm(fn (Certificate $record) => ['amount' => $record->paidAmount()])
                     ->schema([
                         TextInput::make('amount')->label('Сумма к возврату, ₸')->numeric()->minValue(0)->required()
-                            ->helperText('От 0 до суммы поступивших оплат.'),
+                            ->helperText(__('От 0 до суммы поступивших оплат.')),
                         Textarea::make('reason')->label('Причина и с кем согласовано')->required(),
                     ])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => app(RefundManager::class)
-                        ->request($record, (string) $data['amount'], $data['reason']), 'Запрос на возврат отправлен Финансам')),
+                        ->request($record, (string) $data['amount'], $data['reason']), __('Запрос на возврат отправлен Финансам'))),
             ])->label('Ещё')->button()->color('gray'),
 
             ActionGroup::make([
                 Action::make('adminSetStatus')->label('Исправить статус')->icon('heroicon-o-wrench-screwdriver')
                     ->authorize(Permission::AdminCorrections)
-                    ->modalDescription('Только для исправления ошибок: обычные правила смены статуса не действуют. История сохранится, исправление запишется отдельно.')
+                    ->modalDescription(__('Только для исправления ошибок: обычные правила смены статуса не действуют. История сохранится, исправление запишется отдельно.'))
                     ->schema([
                         Select::make('status')->label('Новый статус')->options(CertificateStatus::class)->required(),
                         Textarea::make('reason')->label('Причина')->required(),
                     ])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => app(AdminCorrections::class)
-                        ->setStatus($record, $data['status'] instanceof CertificateStatus ? $data['status'] : CertificateStatus::from($data['status']), $data['reason']), 'Статус исправлен')),
+                        ->setStatus($record, $data['status'] instanceof CertificateStatus ? $data['status'] : CertificateStatus::from($data['status']), $data['reason']), __('Статус исправлен'))),
                 Action::make('adminRevokeApproval')->label('Отозвать согласование')->icon('heroicon-o-hand-thumb-down')
                     ->authorize(Permission::AdminCorrections)
                     ->visible(fn (Certificate $record) => $record->isDraft() && $record->isComplimentaryApproved())
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => app(AdminCorrections::class)
-                        ->revokeComplimentaryApproval($record, $data['reason']), 'Согласование отозвано')),
+                        ->revokeComplimentaryApproval($record, $data['reason']), __('Согласование отозвано'))),
             ])->label('Исправление')->icon('heroicon-o-wrench-screwdriver')->button()->color('danger')
                 ->visible(fn () => auth()->user()?->can(Permission::AdminCorrections)),
         ];
@@ -313,9 +312,9 @@ class ViewCertificate extends ViewRecord
             ->authorize(Permission::ManageReservations)
             ->visible(fn (Certificate $record) => in_array($record->status, $statuses, true))
             ->modalDescription(fn () => $pmsActive()
-                ? 'Введите номер брони PMS — гость и даты подтянутся из PMS автоматически. Без подтверждения PMS бронь не сохраняется.'
-                : 'Бронь заводится в PMS; сюда вносятся её номер, гость и даты. Имя гостя сверяется с получателем и заказчиком.')
-            ->modalSubmitActionLabel('Сохранить бронь')
+                ? __('Введите номер брони PMS — гость и даты подтянутся из PMS автоматически. Без подтверждения PMS бронь не сохраняется.')
+                : __('Бронь заводится в PMS; сюда вносятся её номер, гость и даты. Имя гостя сверяется с получателем и заказчиком.'))
+            ->modalSubmitActionLabel(__('Сохранить бронь'))
             ->fillForm(fn (Certificate $record) => [
                 'booking_number' => $record->pms_booking_number,
                 'guest_name' => $record->booking_guest_name ?? trim($record->recipient?->last_name.' '.$record->recipient?->first_name),
@@ -335,7 +334,7 @@ class ViewCertificate extends ViewRecord
                         }
 
                         return $reservations()->matchName($record, (string) $get('guest_name'))->getLabel()
-                            .' (получатель: '.($record->recipient?->full_name ?? '—').', заказчик: '.($record->customer?->displayName() ?: '—').')';
+                            .' ('.__('получатель: :p1, заказчик: :p2', ['p1' => $record->recipient?->full_name ?? '—', 'p2' => $record->customer?->displayName() ?: '—']).')';
                     }),
                 Grid::make(2)->visible(fn () => ! $pmsActive())->schema([
                     DatePicker::make('arrival')->label('Заезд')->required(fn () => ! $pmsActive())
@@ -343,12 +342,12 @@ class ViewCertificate extends ViewRecord
                     DatePicker::make('departure')->label('Выезд')->required(fn () => ! $pmsActive())->after('arrival'),
                 ]),
                 Textarea::make('note')->label(fn (Certificate $record, Get $get) => ($pmsActive() ? $this->hasDiscrepancy($record, $get) : $reservations()->matchName($record, (string) $get('guest_name')) === NameMatch::Mismatch)
-                    ? ($pmsActive() ? 'Причина расхождений' : 'Причина несовпадения имени') : 'Комментарий: бронь в последние дни срока')
-                    ->helperText('Бронь уйдёт на проверку Финансам.')
+                    ? ($pmsActive() ? __('Причина расхождений') : __('Причина несовпадения имени')) : __('Комментарий: бронь в последние дни срока'))
+                    ->helperText(__('Бронь уйдёт на проверку Финансам.'))
                     ->visible($needsNote)->required($needsNote),
             ])
             ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                fn () => $reservations()->save($record, $data), $name === 'reserve' ? 'Бронь отмечена' : 'Бронь изменена'));
+                fn () => $reservations()->save($record, $data), $name === 'reserve' ? __('Бронь отмечена') : __('Бронь изменена')));
     }
 
     /** Сверка с PMS нашла расхождение (имя, выезд за срок, тариф), требующее причины. */
@@ -367,7 +366,7 @@ class ViewCertificate extends ViewRecord
     private static function pmsPreview(Certificate $record, string $number): HtmlString|string
     {
         if (blank($number)) {
-            return 'После ввода номера здесь появятся данные брони из PMS.';
+            return __('После ввода номера здесь появятся данные брони из PMS.');
         }
         try {
             $found = app(ReservationManager::class)->resolveFromPms($record, $number);
@@ -375,18 +374,18 @@ class ViewCertificate extends ViewRecord
             return new HtmlString('<span class="text-danger-600">'.e($e->getMessage()).'</span>');
         }
         $b = $found['booking'];
-        $stale = $b->stale ? ' <span class="text-warning-600">(данные PMS устарели: '.($b->dataAgeMinutes ?? '?').' мин)</span>' : '';
+        $stale = $b->stale ? ' <span class="text-warning-600">'.e(__('(данные PMS устарели: :p1 мин)', ['p1' => $b->dataAgeMinutes ?? '?'])).'</span>' : '';
         $lines = collect($found['checks'])->map(fn (array $c) => '<div class="'.($c['ok'] ? 'text-success-600' : 'text-danger-600').'">'.($c['ok'] ? '✓ ' : '✗ ').e($c['text']).'</div>')->implode('');
 
-        return new HtmlString('<div><strong>'.e($found['guest']).'</strong> · '.$b->arrival->format('d.m.Y').' — '.$b->departure->format('d.m.Y').' · комнат: '.$b->roomCount.$stale.'</div>'
-            .$lines.'<div class="gf-muted">Получатель: '.e($record->recipient?->full_name ?? '—').', заказчик: '.e($record->customer?->displayName() ?: '—').'</div>');
+        return new HtmlString('<div><strong>'.e($found['guest']).'</strong> · '.$b->arrival->format('d.m.Y').' — '.$b->departure->format('d.m.Y').' · '.e(__('комнат: :p1', ['p1' => $b->roomCount])).$stale.'</div>'
+            .$lines.'<div class="gf-muted">'.e(__('Получатель: :p1, заказчик: :p2', ['p1' => $record->recipient?->full_name ?? '—', 'p2' => $record->customer?->displayName() ?: '—'])).'</div>');
     }
 
     private static function reviewSummary(Certificate $record): string
     {
-        return "Бронь {$record->reservationLabel()}. {$record->name_match?->getLabel()}."
-            .($record->reservation_note ? " Причина: {$record->reservation_note}." : '')
-            .' Получатель: '.($record->recipient?->full_name ?? '—').', заказчик: '.($record->customer?->displayName() ?: '—').'.';
+        return __('Бронь :p1. :p2.', ['p1' => $record->reservationLabel(), 'p2' => $record->name_match?->getLabel()])
+            .($record->reservation_note ? ' '.__('Причина: :p1.', ['p1' => $record->reservation_note]) : '')
+            .' '.__('Получатель: :p1, заказчик: :p2', ['p1' => $record->recipient?->full_name ?? '—', 'p2' => $record->customer?->displayName() ?: '—']).'.';
     }
 
     private function transitionAction(string $name, string $label, CertificateStatus $from, CertificateStatus $to, string $icon, Permission $permission, string|Closure|null $warning = null): Action
@@ -414,7 +413,7 @@ class ViewCertificate extends ViewRecord
             ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Reserved)
             ->requiresConfirmation()
             ->modalDescription(fn (Certificate $record) => $viaPms($record)
-                ? 'Gifter запросит бронь № '.$record->pms_booking_number.' в PMS, убедится, что она не изменилась, и отметит заезд. Вводить ничего не нужно.'
+                ? __('Gifter запросит бронь № :p1 в PMS, убедится, что она не изменилась, и отметит заезд. Вводить ничего не нужно.', ['p1' => $record->pms_booking_number])
                 : null)
             ->schema(fn (Certificate $record) => $viaPms($record) ? [] : [Textarea::make('reason')->label('Комментарий')])
             ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
@@ -430,7 +429,7 @@ class ViewCertificate extends ViewRecord
                         throw $e;
                     } catch (\Throwable $e) {
                         report($e);
-                        throw new DomainRuleViolation('Не удалось проверить заезд в PMS, попробуйте позже. Заезд не отмечен.');
+                        throw new DomainRuleViolation(__('Не удалось проверить заезд в PMS, попробуйте позже. Заезд не отмечен.'));
                     }
                 },
                 'Статус: '.CertificateStatus::InUse->getLabel()));

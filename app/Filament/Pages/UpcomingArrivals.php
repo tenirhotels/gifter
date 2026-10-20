@@ -66,7 +66,7 @@ class UpcomingArrivals extends Page implements HasTable
 
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return 'Заезды сегодня';
+        return __('Заезды сегодня');
     }
 
     public function table(Table $table): Table
@@ -80,7 +80,7 @@ class UpcomingArrivals extends Page implements HasTable
                 TextColumn::make('arrival_date')->label('Заезд')->date('d.m.Y')->sortable()
                     ->description(fn (Certificate $record) => self::dayLabel($record->arrival_date)),
                 TextColumn::make('booking_guest_name')->label('Гость')->searchable()->weight('medium')
-                    ->description(fn (Certificate $record) => $record->arrival_date->diffInDays($record->departure_date).' ноч., до '.$record->departure_date->format('d.m')),
+                    ->description(fn (Certificate $record) => __(':p1 ноч., до :p2', ['p1' => $record->arrival_date->diffInDays($record->departure_date), 'p2' => $record->departure_date->format('d.m')])),
                 TextColumn::make('number')->label('Сертификат')->searchable()
                     ->url(fn (Certificate $record) => CertificateResource::getUrl('view', ['record' => $record]))
                     ->description(fn (Certificate $record) => $record->package?->name),
@@ -95,7 +95,7 @@ class UpcomingArrivals extends Page implements HasTable
             ])
             ->filters([
                 SelectFilter::make('period')->label('Период')
-                    ->options(['today' => 'Сегодня', 'tomorrow' => 'Завтра', '3' => 'Ближайшие 3 дня', '7' => 'Ближайшие 7 дней', 'in_house' => 'Сейчас в отеле'])
+                    ->options(['today' => __('Сегодня'), 'tomorrow' => __('Завтра'), '3' => __('Ближайшие 3 дня'), '7' => __('Ближайшие 7 дней'), 'in_house' => __('Сейчас в отеле')])
                     ->default('7')
                     ->query(fn (Builder $query, array $data) => match ($data['value'] ?? null) {
                         'today' => $query->where('status', CertificateStatus::Reserved)->whereDate('arrival_date', today()->toDateString()),
@@ -111,7 +111,7 @@ class UpcomingArrivals extends Page implements HasTable
                         ->when($data['from'] ?? null, fn (Builder $q, $date) => $q->whereDate('arrival_date', '>=', $date))
                         ->when($data['until'] ?? null, fn (Builder $q, $date) => $q->whereDate('arrival_date', '<=', $date)))
                     ->indicateUsing(fn (array $data) => ($data['from'] ?? null) || ($data['until'] ?? null)
-                        ? 'Заезд: '.collect([$data['from'] ? Carbon::parse($data['from'])->format('d.m.Y') : null, $data['until'] ? Carbon::parse($data['until'])->format('d.m.Y') : null])->filter()->implode(' — ')
+                        ? __('Заезд: :p1', ['p1' => collect([$data['from'] ? Carbon::parse($data['from'])->format('d.m.Y') : null, $data['until'] ? Carbon::parse($data['until'])->format('d.m.Y') : null])->filter()->implode(' — ')])
                         : null),
                 SelectFilter::make('readiness')->label('Готовность')->options(ArrivalReadinessLevel::class)
                     ->query(fn (Builder $query, array $data) => filled($data['value'] ?? null)
@@ -120,16 +120,16 @@ class UpcomingArrivals extends Page implements HasTable
             ])
             ->recordUrl(fn (Certificate $record) => CertificateResource::getUrl('view', ['record' => $record]))
             ->defaultSort('arrival_date')
-            ->emptyStateHeading('Заездов по сертификатам нет')
-            ->emptyStateDescription('Измените период или снимите фильтры.');
+            ->emptyStateHeading(__('Заездов по сертификатам нет'))
+            ->emptyStateDescription(__('Измените период или снимите фильтры.'));
     }
 
     private static function dayLabel(Carbon $date): string
     {
         return match (true) {
-            $date->isToday() => 'сегодня',
-            $date->isTomorrow() => 'завтра',
-            $date->isPast() => 'был '.$date->translatedFormat('l'),
+            $date->isToday() => __('сегодня'),
+            $date->isTomorrow() => __('завтра'),
+            $date->isPast() => __('был :p1', ['p1' => $date->translatedFormat('l')]),
             default => $date->translatedFormat('l'),
         };
     }
@@ -139,7 +139,7 @@ class UpcomingArrivals extends Page implements HasTable
     {
         $open = $record->fulfillments->filter(fn (ServiceFulfillment $f) => $f->status->isOpen() || $f->status->value === 'completed');
         if ($open->isEmpty()) {
-            return new HtmlString('<span class="gf-muted">подготовка не нужна</span>');
+            return new HtmlString('<span class="gf-muted">'.e(__('подготовка не нужна')).'</span>');
         }
 
         return new HtmlString($open->map(function (ServiceFulfillment $f) {

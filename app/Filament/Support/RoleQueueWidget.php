@@ -26,6 +26,11 @@ abstract class RoleQueueWidget extends StatsOverviewWidget
     /** Иконка заголовка секции роли. */
     abstract protected function headingIcon(): string;
 
+    protected function getHeading(): ?string
+    {
+        return $this->heading ? __($this->heading) : null;
+    }
+
     public static function canView(): bool
     {
         $user = auth()->user();
@@ -48,13 +53,13 @@ abstract class RoleQueueWidget extends StatsOverviewWidget
     {
         $count = $query->count();
 
-        return $this->tile(Stat::make($label, $count)->description($hint)->url($url), $icon, $count > 0 ? $color : 'zero', $count > 0 && $color !== 'gray');
+        return $this->tile(Stat::make(__($label), $count)->description($hint ? __($hint) : null)->url($url), $icon, $count > 0 ? $color : 'zero', $count > 0 && $color !== 'gray');
     }
 
     /** Показатель (сумма, количество за период) — без «требует действия». */
     protected function metric(string $label, string|int $value, ?string $hint, string $icon): Stat
     {
-        return $this->tile(Stat::make($label, $value)->description($hint), $icon, 'metric', false);
+        return $this->tile(Stat::make(__($label), $value)->description($hint ? __($hint) : null), $icon, 'metric', false);
     }
 
     protected function tile(Stat $stat, string $icon, string $tone, bool $active): Stat

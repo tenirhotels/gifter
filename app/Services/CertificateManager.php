@@ -49,11 +49,11 @@ class CertificateManager
     {
         return DB::transaction(function () use ($data) {
             if (empty($data['package_id'])) {
-                throw new DomainRuleViolation('Выберите пакет: он задаёт состав и срок действия сертификата.');
+                throw new DomainRuleViolation(__('Выберите пакет: он задаёт состав и срок действия сертификата.'));
             }
             $package = Package::findOrFail($data['package_id']);
             if (! $package->is_active) {
-                throw new DomainRuleViolation("Пакет «{$package->name}» не активен.");
+                throw new DomainRuleViolation(__('Пакет «:p1» не активен.', ['p1' => $package->name]));
             }
             $soldAt = Carbon::parse($data['sold_at'] ?? today())->startOfDay();
             $soldAtReason = $soldAt->isSameDay(today()) ? null : $this->overrideReason('Дата продажи отличается от сегодняшней', $data['sold_at_reason'] ?? null);
@@ -161,7 +161,7 @@ class CertificateManager
             $kindChanged = $newPackage && $newPackage->is_complimentary !== $certificate->isComplimentary();
             $customerChanged = array_key_exists('customer_id', $data) && (int) $data['customer_id'] !== (int) $certificate->customer_id;
             if ($certificate->batch_id && ($packageChanged || $soldAtChanged || $customerChanged)) {
-                throw new DomainRuleViolation('Сертификат входит в '.$certificate->batch->term('acc').': пакет, заказчик и дата продажи у всех её сертификатов общие.');
+                throw new DomainRuleViolation(__('Сертификат входит в группу: пакет, заказчик и дата продажи у всех её сертификатов общие.'));
             }
             if ($soldAtChanged || $kindChanged || $packageChanged) {
                 $this->assertNoActivePayments($certificate);
@@ -169,7 +169,7 @@ class CertificateManager
             }
             $package = $newPackage ?? $certificate->package;
             if ($packageChanged && ! $package->is_active) {
-                throw new DomainRuleViolation("Пакет «{$package->name}» не активен.");
+                throw new DomainRuleViolation(__('Пакет «:p1» не активен.', ['p1' => $package->name]));
             }
 
             $before = $this->snapshot($certificate);
@@ -191,7 +191,7 @@ class CertificateManager
                 $certificate->valid_until = $package->validUntil($certificate->sold_at);
             }
             if ($certificate->custom_validity && $certificate->valid_from->lt($certificate->sold_at)) {
-                throw new DomainRuleViolation('Дата продажи позже начала срока, заданного вручную: сначала измените срок.');
+                throw new DomainRuleViolation(__('Дата продажи позже начала срока, заданного вручную: сначала измените срок.'));
             }
             $this->assertKind($certificate->kind, $certificate->customer_id, $certificate->complimentary_reason);
             $this->assertPayablePartHasCustomer($certificate);
@@ -233,7 +233,7 @@ class CertificateManager
             $this->recalculateTotal($certificate);
             $this->assertPayablePartHasCustomer($certificate);
             $this->history->record($certificate, HistoryEvent::ItemAdded,
-                "{$item->service_name_snapshot} × {$item->quantity}".($certificate->isComplimentary() ? ($item->paid_by_customer ? ' (платная)' : ' (бесплатная)') : ''),
+                "{$item->service_name_snapshot} × {$item->quantity}".($certificate->isComplimentary() ? ($item->paid_by_customer ? __(' (платная)') : __(' (бесплатная)')) : ''),
                 after: $this->itemSnapshot($item));
 
             return $item;
@@ -246,10 +246,10 @@ class CertificateManager
         return $this->locked($item->certificate, function (Certificate $certificate) use ($item, $paid, $viaBatch) {
             $item = CertificateItem::query()->findOrFail($item->id);
             if (! $certificate->isComplimentary()) {
-                throw new DomainRuleViolation('В платном сертификате оплачивается весь состав.');
+                throw new DomainRuleViolation(__('В платном сертификате оплачивается весь состав.'));
             }
             if ($item->from_package) {
-                throw new DomainRuleViolation('Услуги бесплатного пакета бесплатны: платной можно сделать только допуслугу.');
+                throw new DomainRuleViolation(__('Услуги бесплатного пакета бесплатны: платной можно сделать только допуслугу.'));
             }
             $this->assertNotInBatch($certificate, $viaBatch);
             $this->assertCompositionEditable($certificate);
@@ -261,7 +261,7 @@ class CertificateManager
             $this->recalculateTotal($certificate);
             $this->assertPayablePartHasCustomer($certificate);
             $this->history->record($certificate, HistoryEvent::ItemChanged,
-                "{$item->service_name_snapshot} × {$item->quantity}: ".($paid ? 'платная, оплачивает заказчик' : 'бесплатная'),
+                "{$item->service_name_snapshot} × {$item->quantity}: ".($paid ? __('платная, оплачивает заказчик') : __('бесплатная')),
                 before: $before, after: $this->itemSnapshot($item->refresh()));
 
             return $item;
@@ -273,7 +273,7 @@ class CertificateManager
     {
         $this->locked($item->certificate, function (Certificate $certificate) use ($item) {
             if ($item->from_package) {
-                throw new DomainRuleViolation('Услуги пакета не убираются: пакет продаётся целиком. Можно сменить пакет или убрать допуслугу.');
+                throw new DomainRuleViolation(__('Услуги пакета не убираются: пакет продаётся целиком. Можно сменить пакет или убрать допуслугу.'));
             }
             $this->assertNotInBatch($certificate, false);
             $this->assertCompositionEditable($certificate);
@@ -311,7 +311,7 @@ class CertificateManager
             $this->assertNotInBatch($certificate, $viaBatch);
             $seller = User::query()->where('is_active', true)->find($sellerId);
             if (! $seller || ! $seller->hasPermission(Permission::CreateCertificates)) {
-                throw new DomainRuleViolation('Продавцом может быть только действующий сотрудник отдела продаж.');
+                throw new DomainRuleViolation(__('Продавцом может быть только действующий сотрудник отдела продаж.'));
             }
             if ((int) $certificate->sold_by === $sellerId) {
                 return $certificate;
@@ -331,7 +331,7 @@ class CertificateManager
     {
         $reason = trim((string) $reason);
         if (mb_strlen($reason) < 5) {
-            throw new DomainRuleViolation("{$what}: укажите причину (не короче 5 знаков) — её увидит директор по продажам.");
+            throw new DomainRuleViolation(__(':p1: укажите причину (не короче 5 знаков) — её увидит директор по продажам.', ['p1' => $what]));
         }
 
         return $reason;
@@ -350,11 +350,11 @@ class CertificateManager
     {
         if ($requested && $requested !== auth()->id()) {
             if (! auth()->user()?->can(Permission::AssignSeller)) {
-                throw new DomainRuleViolation('Назначить другого продавца может менеджер продаж.');
+                throw new DomainRuleViolation(__('Назначить другого продавца может менеджер продаж.'));
             }
             $seller = User::query()->where('is_active', true)->find($requested);
             if (! $seller || ! $seller->hasPermission(Permission::CreateCertificates)) {
-                throw new DomainRuleViolation('Продавцом может быть только действующий сотрудник отдела продаж.');
+                throw new DomainRuleViolation(__('Продавцом может быть только действующий сотрудник отдела продаж.'));
             }
         }
 
@@ -366,11 +366,11 @@ class CertificateManager
     {
         return $this->locked($certificate, function (Certificate $certificate) use ($recipientId) {
             if ($certificate->status->isFinal() || $certificate->status === CertificateStatus::InUse) {
-                throw new DomainRuleViolation("Получателя сертификата в статусе «{$certificate->status->getLabel()}» изменить нельзя.");
+                throw new DomainRuleViolation(__('Получателя сертификата в статусе «:p1» изменить нельзя.', ['p1' => $certificate->status->getLabel()]));
             }
             // Имя гостя в брони сверено с получателем — подменить получателя после брони нельзя.
             if ($certificate->status === CertificateStatus::Reserved && $certificate->recipient_id !== $recipientId) {
-                throw new DomainRuleViolation('Сертификат забронирован: получателя можно сменить только после снятия брони.');
+                throw new DomainRuleViolation(__('Сертификат забронирован: получателя можно сменить только после снятия брони.'));
             }
             if ($certificate->recipient_id === $recipientId) {
                 return $certificate;
@@ -393,13 +393,13 @@ class CertificateManager
             $this->assertDraft($certificate);
             $this->assertNotInBatch($certificate, $viaBatch);
             if (! $certificate->isComplimentary()) {
-                throw new DomainRuleViolation('Согласование нужно только для бесплатного сертификата.');
+                throw new DomainRuleViolation(__('Согласование нужно только для бесплатного сертификата.'));
             }
             if ($certificate->isComplimentaryApproved()) {
-                throw new DomainRuleViolation('Сертификат уже согласован.');
+                throw new DomainRuleViolation(__('Сертификат уже согласован.'));
             }
             if (! $certificate->items()->exists()) {
-                throw new DomainRuleViolation('Нечего согласовывать: в сертификате нет услуг.');
+                throw new DomainRuleViolation(__('Нечего согласовывать: в сертификате нет услуг.'));
             }
             $certificate->update(['complimentary_approved_by' => auth()->id(), 'complimentary_approved_at' => now(), 'updated_by' => auth()->id()]);
             $this->history->record($certificate, HistoryEvent::ComplimentaryApproved,
@@ -416,21 +416,21 @@ class CertificateManager
             $this->assertDraft($certificate);
             $this->assertNotInBatch($certificate, $viaBatch);
             if (! $certificate->items()->exists()) {
-                throw new DomainRuleViolation('Нельзя выпустить сертификат без услуг.');
+                throw new DomainRuleViolation(__('Нельзя выпустить сертификат без услуг.'));
             }
             if ($certificate->isComplimentary() && ! $certificate->isComplimentaryApproved()) {
-                throw new DomainRuleViolation('Бесплатный сертификат выпускается после согласования директором по продажам.');
+                throw new DomainRuleViolation(__('Бесплатный сертификат выпускается после согласования директором по продажам.'));
             }
             if (! $certificate->isFullyPaid()) {
-                throw new DomainRuleViolation(($certificate->isComplimentary() ? 'Платная часть оплачена не полностью: получено ' : 'Сертификат оплачен не полностью: получено ')
-                    .Money::format($certificate->paidAmount()).' из '.Money::format($certificate->payable_amount).'.');
+                throw new DomainRuleViolation(($certificate->isComplimentary()
+                    ? __('Платная часть оплачена не полностью: получено :p1 из :p2.', ['p1' => Money::format($certificate->paidAmount()), 'p2' => Money::format($certificate->payable_amount)])
+                    : __('Сертификат оплачен не полностью: получено :p1 из :p2.', ['p1' => Money::format($certificate->paidAmount()), 'p2' => Money::format($certificate->payable_amount)])));
             }
             if (! $certificate->isPaymentConfirmed()) {
-                throw new DomainRuleViolation('Оплата ждёт подтверждения Финансов: получено '.Money::format($certificate->paidAmount())
-                    .', сверено '.Money::format($certificate->reconciledAmount()).' из '.Money::format($certificate->payable_amount).'. Выпуск — после сверки.');
+                throw new DomainRuleViolation(__('Оплата ждёт подтверждения Финансов: получено :p1, сверено :p2 из :p3. Выпуск — после сверки.', ['p1' => Money::format($certificate->paidAmount()), 'p2' => Money::format($certificate->reconciledAmount()), 'p3' => Money::format($certificate->payable_amount)]));
             }
             if ($certificate->valid_until->lt(today())) {
-                throw new DomainRuleViolation('Срок действия уже истёк — исправьте даты перед выпуском.');
+                throw new DomainRuleViolation(__('Срок действия уже истёк — исправьте даты перед выпуском.'));
             }
 
             $certificate->update([
@@ -458,28 +458,28 @@ class CertificateManager
             $this->assertNoPendingRefund($certificate);
             $from = $certificate->status;
             if ($from === CertificateStatus::Draft) {
-                throw new DomainRuleViolation('Черновик переводится в работу только выпуском.');
+                throw new DomainRuleViolation(__('Черновик переводится в работу только выпуском.'));
             }
             if ($target === CertificateStatus::Cancelled) {
-                throw new DomainRuleViolation('Для аннулирования используйте отдельное действие с причиной.');
+                throw new DomainRuleViolation(__('Для аннулирования используйте отдельное действие с причиной.'));
             }
             if (! $from->canTransitionTo($target)) {
-                throw new DomainRuleViolation("Переход «{$from->getLabel()}» → «{$target->getLabel()}» недопустим.");
+                throw new DomainRuleViolation(__('Переход «:p1» → «:p2» недопустим.', ['p1' => $from->getLabel(), 'p2' => $target->getLabel()]));
             }
             // Бронь — с номером брони PMS, датами и сверкой имени (ReservationManager).
             if ($target === CertificateStatus::Reserved || ($from === CertificateStatus::Reserved && $target === CertificateStatus::Active)) {
-                throw new DomainRuleViolation('Бронь отмечается и снимается действиями «Отметить бронь» / «Снять бронь».');
+                throw new DomainRuleViolation(__('Бронь отмечается и снимается действиями «Отметить бронь» / «Снять бронь».'));
             }
             if ($target === CertificateStatus::InUse) {
                 if (! $certificate->hasReservation()) {
-                    throw new DomainRuleViolation('Заезд — только по брони с номером PMS.');
+                    throw new DomainRuleViolation(__('Заезд — только по брони с номером PMS.'));
                 }
                 if ($certificate->arrival_date->gt(today()->addDay())) {
-                    throw new DomainRuleViolation('Заезд по брони — с '.$certificate->arrival_date->format('d.m.Y').'.');
+                    throw new DomainRuleViolation(__('Заезд по брони — с :p1.', ['p1' => $certificate->arrival_date->format('d.m.Y')]));
                 }
             }
             if ($target === CertificateStatus::Used && $certificate->reservation_review_status === ReservationReview::Disputed) {
-                throw new DomainRuleViolation('Бронь оспорена Финансами — отметить сертификат использованным нельзя, пока спор не снят.');
+                throw new DomainRuleViolation(__('Бронь оспорена Финансами — отметить сертификат использованным нельзя, пока спор не снят.'));
             }
 
             $certificate->update(['status' => $target, 'updated_by' => auth()->id()]);
@@ -491,7 +491,7 @@ class CertificateManager
             if ($target === CertificateStatus::Used) {
                 $this->commissions->earn($certificate);
             } elseif ($target === CertificateStatus::Expired) {
-                $this->commissions->void($certificate, $reason ?: 'Срок действия сертификата истёк');
+                $this->commissions->void($certificate, $reason ?: __('Срок действия сертификата истёк'));
             }
 
             return $certificate;
@@ -507,17 +507,17 @@ class CertificateManager
             }
             $this->assertNoPendingRefund($certificate);
             if (trim($reason) === '') {
-                throw new DomainRuleViolation('Укажите причину аннулирования.');
+                throw new DomainRuleViolation(__('Укажите причину аннулирования.'));
             }
             $from = $certificate->status;
             if (! $from->canTransitionTo(CertificateStatus::Cancelled)) {
-                throw new DomainRuleViolation("Сертификат в статусе «{$from->getLabel()}» аннулировать нельзя.");
+                throw new DomainRuleViolation(__('Сертификат в статусе «:p1» аннулировать нельзя.', ['p1' => $from->getLabel()]));
             }
             if ($certificate->payments()->where('status', PaymentStatus::Pending)->exists()) {
-                throw new DomainRuleViolation('Сначала отмените выставленные неоплаченные счета.');
+                throw new DomainRuleViolation(__('Сначала отмените выставленные неоплаченные счета.'));
             }
             if (Money::toMinor($certificate->paidAmount()) > 0) {
-                throw new DomainRuleViolation('По сертификату есть оплата — аннулирование только через запрос на возврат с согласованием Финансов.');
+                throw new DomainRuleViolation(__('По сертификату есть оплата — аннулирование только через запрос на возврат с согласованием Финансов.'));
             }
 
             $certificate->update([
@@ -540,11 +540,11 @@ class CertificateManager
     {
         return $this->locked($certificate, function (Certificate $certificate) use ($validFrom, $validUntil, $reason) {
             if (trim($reason) === '') {
-                throw new DomainRuleViolation('Укажите причину изменения срока.');
+                throw new DomainRuleViolation(__('Укажите причину изменения срока.'));
             }
             $this->assertNoPendingRefund($certificate);
             if (! in_array($certificate->status, [CertificateStatus::Draft, CertificateStatus::Active, CertificateStatus::Reserved], true)) {
-                throw new DomainRuleViolation("Срок сертификата в статусе «{$certificate->status->getLabel()}» изменить нельзя.");
+                throw new DomainRuleViolation(__('Срок сертификата в статусе «:p1» изменить нельзя.', ['p1' => $certificate->status->getLabel()]));
             }
             $this->assertValidity($validFrom, $validUntil);
 
@@ -594,10 +594,10 @@ class CertificateManager
     private function createItem(Certificate $certificate, Service $service, int $quantity, bool $fromPackage = false, bool $paid = false): CertificateItem
     {
         if ($quantity < 1) {
-            throw new DomainRuleViolation('Количество должно быть не меньше 1.');
+            throw new DomainRuleViolation(__('Количество должно быть не меньше 1.'));
         }
         if (! $service->is_active) {
-            throw new DomainRuleViolation("Услуга «{$service->name}» не активна.");
+            throw new DomainRuleViolation(__('Услуга «:p1» не активна.', ['p1' => $service->name]));
         }
         $price = $this->pricing->priceOn($service, $certificate->sold_at);
 
@@ -657,7 +657,7 @@ class CertificateManager
     private function assertNoPendingRefund(Certificate $certificate): void
     {
         if ($certificate->hasPendingRefund()) {
-            throw new DomainRuleViolation('По сертификату ждёт решения запрос на возврат — действия заблокированы до решения Финансов.');
+            throw new DomainRuleViolation(__('По сертификату ждёт решения запрос на возврат — действия заблокированы до решения Финансов.'));
         }
     }
 
@@ -665,7 +665,7 @@ class CertificateManager
     private function assertNotInBatch(Certificate $certificate, bool $viaBatch): void
     {
         if ($certificate->batch_id && ! $viaBatch) {
-            throw new DomainRuleViolation('Сертификат входит в '.$certificate->batch->term('acc').' — это действие выполняется на странице '.$certificate->batch->term('gen').' для всех её сертификатов.');
+            throw new DomainRuleViolation(__('Сертификат входит в группу — это действие выполняется на странице группы для всех её сертификатов.'));
         }
     }
 
@@ -674,7 +674,7 @@ class CertificateManager
         $purpose = $purpose instanceof ComplimentaryPurpose ? $purpose : ComplimentaryPurpose::tryFrom((string) $purpose);
         $purpose ??= $package?->complimentary_purpose;
         if (! $purpose) {
-            throw new DomainRuleViolation('Укажите цель бесплатного сертификата.');
+            throw new DomainRuleViolation(__('Укажите цель бесплатного сертификата.'));
         }
 
         return $purpose;
@@ -683,10 +683,10 @@ class CertificateManager
     private function assertKind(CertificateKind $kind, ?int $customerId, ?string $reason): void
     {
         if ($kind === CertificateKind::Complimentary && trim((string) $reason) === '') {
-            throw new DomainRuleViolation('Для бесплатного сертификата укажите основание (кому и зачем).');
+            throw new DomainRuleViolation(__('Для бесплатного сертификата укажите основание (кому и зачем).'));
         }
         if ($kind === CertificateKind::Sale && ! $customerId) {
-            throw new DomainRuleViolation('Для продажи укажите заказчика.');
+            throw new DomainRuleViolation(__('Для продажи укажите заказчика.'));
         }
     }
 
@@ -694,14 +694,14 @@ class CertificateManager
     private function assertPayablePartHasCustomer(Certificate $certificate): void
     {
         if ($certificate->isComplimentary() && $certificate->hasPayablePart() && ! $certificate->customer_id) {
-            throw new DomainRuleViolation('В сертификате есть платные услуги — укажите заказчика, который их оплатит.');
+            throw new DomainRuleViolation(__('В сертификате есть платные услуги — укажите заказчика, который их оплатит.'));
         }
     }
 
     private function assertDraft(Certificate $certificate): void
     {
         if (! $certificate->isDraft()) {
-            throw new DomainRuleViolation('Действие доступно только для черновика.');
+            throw new DomainRuleViolation(__('Действие доступно только для черновика.'));
         }
     }
 
@@ -715,21 +715,21 @@ class CertificateManager
     private function assertNotApproved(Certificate $certificate): void
     {
         if ($certificate->isComplimentaryApproved()) {
-            throw new DomainRuleViolation('Бесплатный сертификат уже согласован директором — состав и дата продажи зафиксированы.');
+            throw new DomainRuleViolation(__('Бесплатный сертификат уже согласован директором — состав и дата продажи зафиксированы.'));
         }
     }
 
     private function assertNoActivePayments(Certificate $certificate): void
     {
         if ($certificate->payments()->where('status', '!=', PaymentStatus::Cancelled)->exists()) {
-            throw new DomainRuleViolation('По сертификату уже выставлен счёт. Чтобы изменить состав или дату продажи, отмените неоплаченный счёт.');
+            throw new DomainRuleViolation(__('По сертификату уже выставлен счёт. Чтобы изменить состав или дату продажи, отмените неоплаченный счёт.'));
         }
     }
 
     private function assertValidity(Carbon $from, Carbon $until): void
     {
         if ($until->lt($from)) {
-            throw new DomainRuleViolation('Дата окончания действия раньше даты начала.');
+            throw new DomainRuleViolation(__('Дата окончания действия раньше даты начала.'));
         }
     }
 

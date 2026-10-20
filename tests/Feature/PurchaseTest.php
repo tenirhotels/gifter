@@ -107,7 +107,7 @@ class PurchaseTest extends TestCase
             ->set('data.extras', [['service_id' => $this->extra->id, 'quantity' => 1]])
             ->set('data.certificate_count', 2)
             ->assertSeeHtml('class="gf-quote"')
-            ->assertSee('Пакет «Уикенд»')->assertSee('Доп. услуги')
+            ->assertSee('Пакет «Уикенд»')->assertSee('Допуслуги')
             ->assertSee('За 1 сертификат')->assertSee('Итого за 2 шт.')->assertSee('120 000 ₸');
     }
 

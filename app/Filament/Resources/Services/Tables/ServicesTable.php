@@ -24,7 +24,7 @@ class ServicesTable
             try {
                 $value = app(ServicePricing::class)->priceOn($record, today())->{$field};
 
-                return $value === null ? 'не указана' : Money::format($value);
+                return $value === null ? __('не указана') : Money::format($value);
             } catch (DomainRuleViolation) {
                 return '—';
             }

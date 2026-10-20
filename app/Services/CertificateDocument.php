@@ -42,7 +42,7 @@ class CertificateDocument
     public function pdf(Certificate $certificate): string
     {
         if (! $certificate->isPrintable()) {
-            throw new DomainRuleViolation('PDF доступен только для выпущенного действующего сертификата.');
+            throw new DomainRuleViolation(__('PDF доступен только для выпущенного действующего сертификата.'));
         }
         $certificate->loadMissing(['recipient', 'package', 'items']);
         $url = $this->verificationUrl($certificate);
@@ -58,7 +58,7 @@ class CertificateDocument
     {
         $certificates = $batch->certificates()->with(['recipient', 'package', 'items'])->get()->filter->isPrintable()->values();
         if ($certificates->isEmpty()) {
-            throw new DomainRuleViolation('В блоке нет выпущенных действующих сертификатов.');
+            throw new DomainRuleViolation(__('В блоке нет выпущенных действующих сертификатов.'));
         }
         $pages = $certificates->map(fn (Certificate $certificate) => [
             'certificate' => $certificate,

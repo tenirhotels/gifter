@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="ru">
+<html lang="{{ app()->getLocale() }}">
 <head>
 <meta charset="utf-8">
-<title>Сертификаты</title>
+<title>{{ __('Сертификаты') }}</title>
 <style>
     @page { margin: 18mm 16mm; }
     body { font-family: "DejaVu Sans", sans-serif; font-size: 10.5pt; color: #18181b; }
@@ -34,18 +34,18 @@
     @if ($hotel['hotel_contacts'])<div class="small">{{ $hotel['hotel_contacts'] }}</div>@endif
 </div>
 
-<div class="title">Подарочный сертификат</div>
+<div class="title">{{ __('Подарочный сертификат') }}</div>
 <div class="number">№ {{ $page['certificate']->number }}</div>
 
 <table class="meta">
-    <tr><td class="k">Получатель</td><td>{{ $page['certificate']->recipient?->full_name ?? 'Предъявитель сертификата' }}</td></tr>
-    <tr><td class="k">Пакет</td><td>{{ $page['certificate']->package?->name }}</td></tr>
-    <tr><td class="k">Действует</td><td>с {{ $page['certificate']->valid_from->format('d.m.Y') }} по {{ $page['certificate']->valid_until->format('d.m.Y') }} включительно</td></tr>
+    <tr><td class="k">{{ __('Получатель') }}</td><td>{{ $page['certificate']->recipient?->full_name ?? __('Предъявитель сертификата') }}</td></tr>
+    <tr><td class="k">{{ __('Пакет') }}</td><td>{{ $page['certificate']->package?->name }}</td></tr>
+    <tr><td class="k">{{ __('Действует') }}</td><td>{{ __('с :p1 по :p2 включительно', ['p1' => $page['certificate']->valid_from->format('d.m.Y'), 'p2' => $page['certificate']->valid_until->format('d.m.Y')]) }}</td></tr>
 </table>
 
-<div class="section">В сертификат входит</div>
+<div class="section">{{ __('В сертификат входит') }}</div>
 <table class="items">
-    <thead><tr><th>Услуга</th><th class="q" style="text-align:right">Количество</th><th class="u">Ед. изм.</th></tr></thead>
+    <thead><tr><th>{{ __('Услуга') }}</th><th class="q" style="text-align:right">{{ __('Количество') }}</th><th class="u">{{ __('Ед. изм.') }}</th></tr></thead>
     <tbody>
     @foreach ($page['certificate']->items as $item)
         <tr><td>{{ $item->service_name_snapshot }}</td><td class="q">{{ $item->quantity }}</td><td class="u">{{ $item->unit_snapshot }}</td></tr>
@@ -53,14 +53,14 @@
     </tbody>
 </table>
 
-<div class="section">Условия</div>
+<div class="section">{{ __('Условия') }}</div>
 <ol class="terms">
-    @foreach ($hotel['terms'] as $term)<li>{{ $term }}</li>@endforeach
+    @foreach ($hotel['terms'] as $term)<li>{{ __($term) }}</li>@endforeach
 </ol>
 
 <div class="qr">
     <img src="{{ $page['qr'] }}" alt="QR">
-    <div class="small">Проверка подлинности и срока: {{ $page['verifyUrl'] }}</div>
+    <div class="small">{{ __('Проверка подлинности и срока:') }} {{ $page['verifyUrl'] }}</div>
 </div>
 </div>
 @endforeach

@@ -74,16 +74,16 @@ class CreateCertificate extends CreateRecord
                     $package->columnSpanFull(),
                     TextInput::make('certificate_count')->label('Количество сертификатов')->integer()
                         ->minValue(1)->maxValue(CertificateBatchManager::MAX_QUANTITY)->default(1)->required()->live(onBlur: true)
-                        ->helperText('Больше 1 — группа: один счёт на всех, у каждого сертификата свой получатель.'),
+                        ->helperText(__('Больше 1 — группа: один счёт на всех, у каждого сертификата свой получатель.')),
                     $soldAt,
                     $soldAtReason,
                     // Комиссия после использования — продавцу; по умолчанию тот, кто оформляет. Другого назначает менеджер продаж.
                     Select::make('sold_by')->label('Продавец')->options(fn () => User::sellerOptions())->default(fn () => auth()->id())
                         ->searchable()
                         ->visible(fn (Get $get) => auth()->user()?->can(Permission::AssignSeller) && ! CertificateForm::isComplimentary($get))
-                        ->helperText('Получит комиссию, когда сертификат будет использован.'),
+                        ->helperText(__('Получит комиссию, когда сертификат будет использован.')),
                     Textarea::make('seller_reason')->label('Причина: продавец не автор оформления')->minLength(5)->columnSpanFull()
-                        ->helperText('Причину увидит директор по продажам.')
+                        ->helperText(__('Причину увидит директор по продажам.'))
                         ->visible(fn (Get $get) => auth()->user()?->can(Permission::AssignSeller) && ! CertificateForm::isComplimentary($get) && filled($get('sold_by')) && (int) $get('sold_by') !== auth()->id())
                         ->required(),
                 ]),
@@ -97,7 +97,7 @@ class CreateCertificate extends CreateRecord
                     CertificateForm::customerField(),
                     CertificateForm::recipientField()->hidden(fn (Get $get) => self::count($get) > 1),
                     Placeholder::make('recipients_hint')->label('Получатели')->visible(fn (Get $get) => self::count($get) > 1)
-                        ->content('У каждого сертификата свой получатель — укажите их после оформления.'),
+                        ->content(__('У каждого сертификата свой получатель — укажите их после оформления.')),
                 ]),
             Step::make('Состав')->icon('heroicon-o-list-bullet')->schema([
                 Repeater::make('extras')->label('Допуслуги к пакету')->addActionLabel('Добавить допуслугу')
@@ -108,7 +108,7 @@ class CreateCertificate extends CreateRecord
                         TextInput::make('quantity')->label('Количество')->integer()->minValue(1)->default(1)->required()->live(onBlur: true),
                         // В бесплатном сертификате доп. услуга может быть платной: её оплачивает заказчик по счёту.
                         Toggle::make('paid')->label('Платная — оплачивает заказчик')->default(false)->live()
-                            ->helperText('Выключено — бесплатно, маркетинговый расход.')
+                            ->helperText(__('Выключено — бесплатно, маркетинговый расход.'))
                             ->visible(fn (Get $get) => (bool) Package::find($get('../../package_id'))?->is_complimentary),
                     ]),
                 Placeholder::make('quote')->label('Расчёт по прайсу')->content(fn (Get $get) => $this->quoteTable($get)),
@@ -118,13 +118,13 @@ class CreateCertificate extends CreateRecord
                 ->visible(fn (Get $get) => ! CertificateForm::isComplimentary($get) || CertificateForm::hasPaidExtras($get))
                 ->schema([
                     Toggle::make('create_invoice')->live()->default(true)
-                        ->label(fn (Get $get) => self::count($get) > 1 ? 'Сразу выставить один счёт на всю группу' : 'Сразу выставить счёт на всю сумму'),
+                        ->label(fn (Get $get) => self::count($get) > 1 ? __('Сразу выставить один счёт на всю группу') : __('Сразу выставить счёт на всю сумму')),
                     Grid::make(2)->visible(fn (Get $get) => (bool) $get('create_invoice'))->schema([
                         Select::make('payment_method')->label('Способ')->options(PaymentMethod::class)->default(PaymentMethod::KaspiInvoice->value)->required(),
                         TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255),
                     ]),
                     Placeholder::make('invoice_hint')->hiddenLabel()
-                        ->content('Оплату отметите на странице сертификата (или группы), когда деньги поступят; перечисление на р/с и наличные подтверждают Финансы. После оплаты — «Выпустить».'),
+                        ->content(__('Оплату отметите на странице сертификата (или группы), когда деньги поступят; перечисление на р/с и наличные подтверждают Финансы. После оплаты — «Выпустить».')),
                 ]),
         ];
     }
@@ -134,34 +134,34 @@ class CreateCertificate extends CreateRecord
     {
         $package = Package::find($get('package_id'));
         if (! $package) {
-            return 'Выберите пакет на первом шаге.';
+            return __('Выберите пакет на первом шаге.');
         }
         $quote = app(CertificateManager::class)->quote($package, array_values($get('extras') ?? []), Carbon::parse($get('sold_at') ?: today()));
         $free = (bool) $package->is_complimentary;
         $cols = $free ? 5 : 4;
         $line = fn (array $l) => '<tr><td>'.e($l['name']).'</td><td class="gf-num">'.$l['quantity'].'</td><td class="gf-num">'.Money::format($l['unit_price']).'</td>'
-            .($free ? '<td>'.($l['paid'] ? 'Платно' : '<span class="gf-muted">Бесплатно</span>').'</td>' : '')
+            .($free ? '<td>'.($l['paid'] ? __('Платно') : '<span class="gf-muted">'.e(__('Бесплатно')).'</span>').'</td>' : '')
             .'<td class="gf-num">'.Money::format($l['line_total']).'</td></tr>';
         $group = fn (string $title, $lines) => $lines->isEmpty() ? ''
             : '<tr class="gf-quote-group"><td colspan="'.$cols.'">'.e($title).'</td></tr>'.$lines->map($line)->implode('');
         $lines = collect($quote['lines']);
-        $body = $group('Пакет «'.$package->name.'»', $lines->where('from_package', true))
-            .$group('Доп. услуги', $lines->where('from_package', false));
+        $body = $group(__('Пакет «:p1»', ['p1' => $package->name]), $lines->where('from_package', true))
+            .$group(__('Допуслуги'), $lines->where('from_package', false));
 
         $count = self::count($get);
         $span = $cols - 1;
         $row = fn (string $label, string $amount, string $class = '') => '<tr'.($class ? ' class="'.$class.'"' : '').'><td colspan="'.$span.'">'.$label.'</td><td class="gf-num">'.$amount.'</td></tr>';
-        $groupNote = $count > 1 ? ' за '.$count.' шт.' : '';
+        $groupNote = $count > 1 ? ' '.__('за :p1 шт.', ['p1' => $count]) : '';
         if ($free) {
-            $foot = $row('Бесплатно по прайсу'.$groupNote, Money::format(Money::multiply($quote['free'], $count)))
-                .$row('К оплате заказчиком'.$groupNote, Money::format(Money::multiply($quote['payable'], $count)), 'gf-quote-total');
+            $foot = $row(__('Бесплатно по прайсу').$groupNote, Money::format(Money::multiply($quote['free'], $count)))
+                .$row(__('К оплате заказчиком').$groupNote, Money::format(Money::multiply($quote['payable'], $count)), 'gf-quote-total');
         } else {
-            $foot = ($count > 1 ? $row('За 1 сертификат', Money::format($quote['total'])) : '')
-                .$row($count > 1 ? 'Итого за '.$count.' шт.' : 'Итого', Money::format(Money::multiply($quote['total'], $count)), 'gf-quote-total');
+            $foot = ($count > 1 ? $row(__('За 1 сертификат'), Money::format($quote['total'])) : '')
+                .$row($count > 1 ? __('Итого за :p1 шт.', ['p1' => $count]) : __('Итого'), Money::format(Money::multiply($quote['total'], $count)), 'gf-quote-total');
         }
-        $missing = $quote['missing'] ? '<p class="gf-summary-warn">Нет цены на дату продажи: '.e(implode(', ', $quote['missing'])).'. Такие услуги не войдут в сертификат, пока не задана цена.</p>' : '';
+        $missing = $quote['missing'] ? '<p class="gf-summary-warn">'.e(__('Нет цены на дату продажи: :p1. Такие услуги не войдут в сертификат, пока не задана цена.', ['p1' => implode(', ', $quote['missing'])])).'</p>' : '';
 
-        return new HtmlString('<div class="gf-quote"><table><thead><tr><th>Услуга</th><th class="gf-num">Кол-во</th><th class="gf-num">Цена</th>'.($free ? '<th>Оплата</th>' : '').'<th class="gf-num">Сумма</th></tr></thead>'
+        return new HtmlString('<div class="gf-quote"><table><thead><tr><th>'.e(__('Услуга')).'</th><th class="gf-num">'.e(__('Кол-во')).'</th><th class="gf-num">'.e(__('Цена')).'</th>'.($free ? '<th>'.e(__('Оплата')).'</th>' : '').'<th class="gf-num">'.e(__('Сумма')).'</th></tr></thead>'
             .'<tbody>'.$body.'</tbody><tfoot>'.$foot.'</tfoot></table></div>'.$missing);
     }
 
@@ -170,7 +170,7 @@ class CreateCertificate extends CreateRecord
     {
         $package = Package::find($get('package_id'));
         if (! $package) {
-            return new HtmlString('<div class="gf-summary-empty">Выберите пакет: здесь появятся состав, срок действия и сумма.</div>');
+            return new HtmlString('<div class="gf-summary-empty">'.e(__('Выберите пакет: здесь появятся состав, срок действия и сумма.')).'</div>');
         }
         $count = self::count($get);
         $free = (bool) $package->is_complimentary;
@@ -184,17 +184,17 @@ class CreateCertificate extends CreateRecord
         $extras = collect($quote['lines'])->reject(fn (array $line) => $line['from_package']);
 
         $row = fn (string $label, string $value) => '<div class="gf-summary-row"><dt>'.e($label).'</dt><dd>'.$value.'</dd></div>';
-        $rows = $row('Пакет', e($package->name))
-            .$row('Тип', $free ? 'бесплатный, после согласования директора'.($quote['payable'] !== '0.00' ? ' и оплаты платных услуг' : '') : 'продажа')
-            .$row('Срок', e($validity))
-            .$row('Состав', e(collect($quote['lines'])->where('from_package', true)->map(fn (array $l) => "{$l['name']} × {$l['quantity']}")->implode(', ') ?: 'пакет без услуг'))
-            .($extras->isNotEmpty() ? $row('Доп. услуги', e($extras->map(fn (array $l) => "{$l['name']} × {$l['quantity']}".($free ? ($l['paid'] ? ' (платно)' : ' (бесплатно)') : ''))->implode(', '))) : '')
-            .($free ? $row('Бесплатно по прайсу', '<span class="gf-nowrap">'.Money::format($freePart).'</span> · маркетинговый расход') : '')
-            .$row('Заказчик', $customer ? e($customer) : '<span class="gf-muted">'.($free && $quote['payable'] === '0.00' ? 'не обязателен' : ($free ? 'обязателен — есть платные услуги' : 'не выбран')).'</span>')
-            .($count > 1 ? $row('Сертификатов', $count.' шт., группа · <span class="gf-nowrap">'.Money::format($quote['total']).'</span> за 1') : '');
-        $missing = $quote['missing'] ? '<p class="gf-summary-warn">Нет цены на дату продажи: '.e(implode(', ', $quote['missing'])).'</p>' : '';
+        $rows = $row(__('Пакет'), e($package->name))
+            .$row(__('Тип'), $free ? __('бесплатный, после согласования директора').($quote['payable'] !== '0.00' ? __(' и оплаты платных услуг') : '') : __('продажа'))
+            .$row(__('Срок'), e($validity))
+            .$row(__('Состав'), e(collect($quote['lines'])->where('from_package', true)->map(fn (array $l) => "{$l['name']} × {$l['quantity']}")->implode(', ') ?: __('пакет без услуг')))
+            .($extras->isNotEmpty() ? $row(__('Допуслуги'), e($extras->map(fn (array $l) => "{$l['name']} × {$l['quantity']}".($free ? ($l['paid'] ? __(' (платно)') : __(' (бесплатно)')) : ''))->implode(', '))) : '')
+            .($free ? $row(__('Бесплатно по прайсу'), '<span class="gf-nowrap">'.Money::format($freePart).'</span> · '.e(__('маркетинговый расход'))) : '')
+            .$row(__('Заказчик'), $customer ? e($customer) : '<span class="gf-muted">'.($free && $quote['payable'] === '0.00' ? __('не обязателен') : ($free ? __('обязателен — есть платные услуги') : __('не выбран'))).'</span>')
+            .($count > 1 ? $row(__('Сертификатов'), e(__(':p1 шт., группа', ['p1' => $count])).' · <span class="gf-nowrap">'.Money::format($quote['total']).'</span> '.e(__('за 1'))) : '');
+        $missing = $quote['missing'] ? '<p class="gf-summary-warn">'.e(__('Нет цены на дату продажи: :p1', ['p1' => implode(', ', $quote['missing'])])).'</p>' : '';
 
-        return new HtmlString('<div class="gf-summary-total"><span>К оплате</span><strong>'.Money::format($payable).'</strong></div>'
+        return new HtmlString('<div class="gf-summary-total"><span>'.e(__('К оплате')).'</span><strong>'.Money::format($payable).'</strong></div>'
             .'<dl class="gf-summary-list">'.$rows.'</dl>'.$missing);
     }
 
@@ -247,7 +247,7 @@ class CreateCertificate extends CreateRecord
 
     protected function getCreatedNotificationTitle(): ?string
     {
-        return $this->purchase ? "Оформлено: {$this->purchase->shortLabel()}, {$this->purchase->quantity} сертификатов" : 'Сертификат оформлен';
+        return $this->purchase ? __('Оформлено: :p1, :p2 сертификатов', ['p1' => $this->purchase->shortLabel(), 'p2' => $this->purchase->quantity]) : __('Сертификат оформлен');
     }
 
     protected function getRedirectUrl(): string

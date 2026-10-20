@@ -66,14 +66,14 @@ class ReservationReviews extends Page implements HasTable
             ->columns([
                 TextColumn::make('number')->label('Сертификат')->searchable()
                     ->url(fn (Certificate $record) => CertificateResource::getUrl('view', ['record' => $record]))
-                    ->description(fn (Certificate $record) => $record->status->getLabel().' · до '.$record->valid_until->format('d.m.Y')),
+                    ->description(fn (Certificate $record) => __(':p1 · до :p2', ['p1' => $record->status->getLabel(), 'p2' => $record->valid_until->format('d.m.Y')])),
                 TextColumn::make('pms_booking_number')->label('Номер брони')->searchable()
                     ->description(fn (Certificate $record) => $record->arrival_date?->format('d.m').'–'.$record->departure_date?->format('d.m.Y')),
                 TextColumn::make('booking_guest_name')->label('Гость в брони')
                     ->description(fn (Certificate $record) => $record->name_match?->shortLabel())
                     ->color(fn (Certificate $record) => $record->name_match?->getColor()),
                 TextColumn::make('recipient.full_name')->label('Получатель')->placeholder('—')
-                    ->description(fn (Certificate $record) => $record->customer?->displayName() ? 'заказчик: '.$record->customer->displayName() : null),
+                    ->description(fn (Certificate $record) => $record->customer?->displayName() ? __('заказчик: :p1', ['p1' => $record->customer->displayName()]) : null),
                 TextColumn::make('reservation_note')->label('Причина')->wrap()->limit(90)->placeholder('—'),
                 TextColumn::make('reservation_review_status')->label('Проверка')->badge()->toggleable(isToggledHiddenByDefault: true)
                     ->description(fn (Certificate $record) => $record->reservationReviewer?->name),
@@ -88,17 +88,17 @@ class ReservationReviews extends Page implements HasTable
                     ->visible(fn (Certificate $record) => in_array($record->reservation_review_status, [ReservationReview::Pending, ReservationReview::Disputed], true))
                     ->schema([Textarea::make('comment')->label('Комментарий')])
                     ->action(fn (Certificate $record, array $data, Action $action) => RunsDomainActions::run($action,
-                        fn () => $manager()->approve($record, $data['comment'] ?? null), 'Бронь подтверждена')),
+                        fn () => $manager()->approve($record, $data['comment'] ?? null), __('Бронь подтверждена'))),
                 Action::make('dispute')->label('Оспорить')->icon('heroicon-o-shield-exclamation')->color('danger')
                     ->authorize(Permission::ReviewReservations)
                     ->visible(fn (Certificate $record) => in_array($record->reservation_review_status, [ReservationReview::Pending, ReservationReview::Approved], true)
                         && ! $record->status->isFinal())
-                    ->modalDescription('Пока спор не снят, сертификат нельзя отметить использованным.')
+                    ->modalDescription(__('Пока спор не снят, сертификат нельзя отметить использованным.'))
                     ->schema([Textarea::make('comment')->label('Что не так с бронью')->required()])
                     ->action(fn (Certificate $record, array $data, Action $action) => RunsDomainActions::run($action,
-                        fn () => $manager()->dispute($record, $data['comment']), 'Бронь оспорена')),
+                        fn () => $manager()->dispute($record, $data['comment']), __('Бронь оспорена'))),
             ])
             ->defaultSort(fn (Builder $query) => $query->orderBy('arrival_date'))
-            ->emptyStateHeading('Броней на проверке нет');
+            ->emptyStateHeading(__('Броней на проверке нет'));
     }
 }

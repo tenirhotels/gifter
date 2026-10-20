@@ -30,7 +30,7 @@ final class ErrorReporter
                 'class' => get_class($e),
                 'message' => $message,
                 'file' => str_replace(base_path().'/', '', $e->getFile()).':'.$e->getLine(),
-                'url' => app()->runningInConsole() ? 'консоль' : request()->method().' /'.ltrim(request()->path(), '/'),
+                'url' => app()->runningInConsole() ? __('консоль') : request()->method().' /'.ltrim(request()->path(), '/'),
                 'time' => now()->format('d.m.Y H:i:s'),
             ]));
         } catch (Throwable) {

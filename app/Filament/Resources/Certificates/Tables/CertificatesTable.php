@@ -26,7 +26,7 @@ class CertificatesTable
             // Переключатель «Группировать → Группа»: сертификаты групп собираются под заголовком группы.
             ->groups([
                 Group::make('batch_id')->label('Группа')->titlePrefixedWithLabel(false)->collapsible()->orderQueryUsing(fn (Builder $query, string $direction) => $query->orderBy('batch_id', 'desc'))
-                    ->getTitleFromRecordUsing(fn (Certificate $record) => $record->batch?->label() ?? 'Без группы'),
+                    ->getTitleFromRecordUsing(fn (Certificate $record) => $record->batch?->label() ?? __('Без группы')),
             ])
             ->columns([
                 TextColumn::make('number')->label('Номер')->searchable()->sortable()->copyable(),
@@ -52,7 +52,7 @@ class CertificatesTable
                     ->query(fn (Builder $query) => $query->whereNull('recipient_id')),
                 Filter::make('batch')->schema([TextInput::make('batch_id')->label('Из группы №')->integer()->minValue(1)])
                     ->query(fn (Builder $query, array $data) => $query->when($data['batch_id'] ?? null, fn (Builder $q, $id) => $q->where('batch_id', (int) $id)))
-                    ->indicateUsing(fn (array $data) => ($data['batch_id'] ?? null) ? 'Группа №'.$data['batch_id'] : null),
+                    ->indicateUsing(fn (array $data) => ($data['batch_id'] ?? null) ? __('Группа №:p1', ['p1' => $data['batch_id']]) : null),
                 Filter::make('expiring')->label('Истекают в ближайшие 14 дней')
                     ->query(fn (Builder $query) => $query->whereIn('status', [CertificateStatus::Active, CertificateStatus::Reserved])
                         ->whereDate('valid_until', '<=', today()->addDays(14)->toDateString())),

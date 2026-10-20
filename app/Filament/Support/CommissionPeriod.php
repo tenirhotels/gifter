@@ -30,7 +30,7 @@ class CommissionPeriod
     {
         return Filter::make('period')->label('Период использования')
             ->schema([
-                Select::make('preset')->label('Месяц использования')->options(['this' => 'Этот месяц', 'last' => 'Прошлый месяц'])->placeholder('Свой период'),
+                Select::make('preset')->label('Месяц использования')->options(['this' => __('Этот месяц'), 'last' => __('Прошлый месяц')])->placeholder(__('Свой период')),
                 DatePicker::make('from')->label('С')->native(false)->displayFormat('d.m.Y'),
                 DatePicker::make('until')->label('По')->native(false)->displayFormat('d.m.Y'),
             ])
@@ -43,7 +43,7 @@ class CommissionPeriod
             ->indicateUsing(function (array $data): ?string {
                 [$from, $to] = self::range($data);
 
-                return $from || $to ? 'Использовано: '.($from ? Carbon::parse($from)->format('d.m.Y') : '…').' – '.($to ? Carbon::parse($to)->format('d.m.Y') : '…') : null;
+                return $from || $to ? __('Использовано: :p1 – :p2', ['p1' => $from ? Carbon::parse($from)->format('d.m.Y') : '…', 'p2' => $to ? Carbon::parse($to)->format('d.m.Y') : '…']) : null;
             });
     }
 }

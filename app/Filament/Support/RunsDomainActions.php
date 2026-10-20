@@ -22,7 +22,7 @@ final class RunsDomainActions
         }
 
         if ($success) {
-            Notification::make()->success()->title($success)->send();
+            Notification::make()->success()->title(__($success))->send();
         }
     }
 }

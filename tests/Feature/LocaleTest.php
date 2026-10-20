@@ -64,4 +64,25 @@ class LocaleTest extends TestCase
     {
         $this->assertSame('Asia/Almaty', config('app.timezone'));
     }
+
+    public function test_every_interface_text_in_code_has_kazakh_and_english_translation(): void
+    {
+        foreach (['kk', 'en'] as $lang) {
+            $this->artisan('gifter:lang-missing', ['--lang' => $lang])->expectsOutputToContain('0 без перевода')->assertSuccessful();
+        }
+    }
+
+    public function test_messages_with_values_are_translated_with_placeholders(): void
+    {
+        app()->setLocale('kk');
+        $this->assertSame('Комиссиялар: Айдар', __('Комиссии: :p1', ['p1' => 'Айдар']));
+        app()->setLocale('en');
+        $this->assertSame('Booking No. 77 was not found in PMS. Check the number.', __('Бронь № :p1 не найдена в PMS. Проверьте номер.', ['p1' => 77]));
+    }
+
+    public function test_public_verification_page_follows_lang_parameter(): void
+    {
+        $this->get('/v/'.str_repeat('a', 32).'?lang=en')->assertNotFound()->assertSee('Certificate not found');
+        $this->get('/v/'.str_repeat('a', 32).'?lang=kk')->assertNotFound()->assertSee('Сертификат табылмады');
+    }
 }

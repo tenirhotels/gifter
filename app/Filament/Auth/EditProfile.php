@@ -26,6 +26,6 @@ class EditProfile extends BaseEditProfile
     protected function getEmailFormComponent(): Component
     {
         return parent::getEmailFormComponent()->disabled()->dehydrated(false)
-            ->helperText('Email меняет администратор.');
+            ->helperText(__('Email меняет администратор.'));
     }
 }

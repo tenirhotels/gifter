@@ -25,10 +25,10 @@ final class RefundActions
             Action::make('approveRefund')->label('Согласовать')->icon('heroicon-o-check')->color('success')
                 ->authorize(Permission::ApproveRefunds)
                 ->visible(fn (Refund $record) => $record->status === RefundStatus::Requested)
-                ->modalDescription('Сертификат будет аннулирован. Выплату отметьте отдельно, когда деньги вернутся заказчику.')
+                ->modalDescription(__('Сертификат будет аннулирован. Выплату отметьте отдельно, когда деньги вернутся заказчику.'))
                 ->schema([Textarea::make('comment')->label('Комментарий')])
                 ->action(function (Refund $record, array $data, Action $action) use ($after) {
-                    RunsDomainActions::run($action, fn () => app(RefundManager::class)->approve($record, $data['comment'] ?? null), 'Возврат согласован, сертификат аннулирован');
+                    RunsDomainActions::run($action, fn () => app(RefundManager::class)->approve($record, $data['comment'] ?? null), __('Возврат согласован, сертификат аннулирован'));
                     $after();
                 }),
             Action::make('rejectRefund')->label('Отклонить')->icon('heroicon-o-x-mark')->color('danger')
@@ -36,7 +36,7 @@ final class RefundActions
                 ->visible(fn (Refund $record) => $record->status === RefundStatus::Requested)
                 ->schema([Textarea::make('comment')->label('Причина отказа')->required()])
                 ->action(function (Refund $record, array $data, Action $action) use ($after) {
-                    RunsDomainActions::run($action, fn () => app(RefundManager::class)->reject($record, $data['comment']), 'Запрос отклонён');
+                    RunsDomainActions::run($action, fn () => app(RefundManager::class)->reject($record, $data['comment']), __('Запрос отклонён'));
                     $after();
                 }),
             Action::make('payRefund')->label('Деньги возвращены')->icon('heroicon-o-banknotes')
@@ -48,16 +48,16 @@ final class RefundActions
                 ])
                 ->action(function (Refund $record, array $data, Action $action) use ($after) {
                     RunsDomainActions::run($action, fn () => app(RefundManager::class)
-                        ->markPaid($record, Carbon::parse($data['paid_at']), $data['reference'] ?? null), 'Выплата отмечена');
+                        ->markPaid($record, Carbon::parse($data['paid_at']), $data['reference'] ?? null), __('Выплата отмечена'));
                     $after();
                 }),
             Action::make('adminReopenRefund')->label('Вернуть на согласование')->icon('heroicon-o-arrow-uturn-left')->color('danger')
                 ->authorize(Permission::AdminCorrections)
                 ->visible(fn (Refund $record) => $record->status !== RefundStatus::Requested)
-                ->modalDescription('Исправление ошибочного решения. Если возврат был согласован, сертификату вернётся прежний статус.')
+                ->modalDescription(__('Исправление ошибочного решения. Если возврат был согласован, сертификату вернётся прежний статус.'))
                 ->schema([Textarea::make('reason')->label('Причина')->required()])
                 ->action(function (Refund $record, array $data, Action $action) use ($after) {
-                    RunsDomainActions::run($action, fn () => app(AdminCorrections::class)->reopenRefund($record, $data['reason']), 'Запрос возвращён на согласование');
+                    RunsDomainActions::run($action, fn () => app(AdminCorrections::class)->reopenRefund($record, $data['reason']), __('Запрос возвращён на согласование'));
                     $after();
                 }),
         ];

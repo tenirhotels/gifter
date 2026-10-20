@@ -31,25 +31,25 @@ class ItemsRelationManager extends RelationManager
         $editable = fn (): bool => $this->certificate()->isDraft() && ! $this->certificate()->isComplimentaryApproved() && ! $this->certificate()->batch_id;
 
         return $table
-            ->description('Состав пакета не меняется. Допуслуги можно добавлять и убирать, пока сертификат — черновик; в бесплатном их может оплатить заказчик.')
+            ->description(__('Состав пакета не меняется. Допуслуги можно добавлять и убирать, пока сертификат — черновик; в бесплатном их может оплатить заказчик.'))
             ->columns([
                 TextColumn::make('service_name_snapshot')->label('Услуга')
-                    ->description(fn (CertificateItem $record) => $record->from_package ? 'из пакета' : 'допуслуга'),
+                    ->description(fn (CertificateItem $record) => $record->from_package ? __('из пакета') : __('допуслуга')),
                 TextColumn::make('paid_by_customer')->label('Оплата')->badge()
-                    ->state(fn (CertificateItem $record) => $record->paid_by_customer ? 'Платно' : 'Бесплатно')
+                    ->state(fn (CertificateItem $record) => $record->paid_by_customer ? __('Платно') : __('Бесплатно'))
                     ->color(fn (CertificateItem $record) => $record->paid_by_customer ? 'warning' : 'success')
                     ->visible(fn () => $this->certificate()->isComplimentary()),
                 TextColumn::make('quantity')->label('Кол-во'),
                 TextColumn::make('unit_snapshot')->label('Единица'),
                 TextColumn::make('unit_price')->label('Цена')->formatStateUsing(fn ($state) => Money::format($state)),
                 TextColumn::make('line_total')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state)),
-                TextColumn::make('line_cost')->label('Себестоимость')->placeholder('не указана')
+                TextColumn::make('line_cost')->label('Себестоимость')->placeholder(__('не указана'))
                     ->formatStateUsing(fn ($state) => Money::format($state))
                     ->visible(fn () => auth()->user()?->can(Permission::ViewCosts)),
                 TextColumn::make('provider.name')->label('Поставщик')->placeholder('—')->toggleable(),
                 TextColumn::make('fulfillment')->label('Исполнение')->state(fn (CertificateItem $record) => $record->requires_fulfillment
-                    ? collect(['подготовка', $record->requires_scheduling ? 'время' : null, $record->requires_confirmation ? 'подтверждение' : null])->filter()->implode(', ')
-                    : 'не требуется')->color(fn (CertificateItem $record) => $record->requires_fulfillment ? 'warning' : 'gray')->toggleable(),
+                    ? collect([__('подготовка'), $record->requires_scheduling ? __('время') : null, $record->requires_confirmation ? __('подтверждение') : null])->filter()->implode(', ')
+                    : __('не требуется'))->color(fn (CertificateItem $record) => $record->requires_fulfillment ? 'warning' : 'gray')->toggleable(),
                 TextColumn::make('priceVersion.valid_from')->label('Цена с')->date('d.m.Y')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->paginated(false)
@@ -60,23 +60,23 @@ class ItemsRelationManager extends RelationManager
                             ->options(fn () => Service::where('is_active', true)->orderBy('name')->pluck('name', 'id')),
                         TextInput::make('quantity')->label('Количество')->integer()->minValue(1)->default(1)->required(),
                         Toggle::make('paid')->label('Платная — оплачивает заказчик')->default(false)
-                            ->helperText('Выключено — бесплатно (маркетинговый расход). Включено — оплачивает заказчик, войдёт в счёт.')
+                            ->helperText(__('Выключено — бесплатно (маркетинговый расход). Включено — оплачивает заказчик, войдёт в счёт.'))
                             ->visible(fn () => $this->certificate()->isComplimentary()),
                     ])
                     ->action(function (array $data, Action $action) {
                         RunsDomainActions::run($action, fn () => app(CertificateManager::class)
-                            ->addItem($this->certificate(), Service::findOrFail($data['service_id']), (int) $data['quantity'], paid: (bool) ($data['paid'] ?? false)), 'Услуга добавлена');
+                            ->addItem($this->certificate(), Service::findOrFail($data['service_id']), (int) $data['quantity'], paid: (bool) ($data['paid'] ?? false)), __('Услуга добавлена'));
                         $this->refreshPage();
                     }),
             ])
             ->recordActions([
                 Action::make('togglePaid')
-                    ->label(fn (CertificateItem $record) => $record->paid_by_customer ? 'Сделать бесплатной' : 'Сделать платной')
+                    ->label(fn (CertificateItem $record) => $record->paid_by_customer ? __('Сделать бесплатной') : __('Сделать платной'))
                     ->icon('heroicon-o-currency-dollar')->color('gray')
                     ->visible(fn (CertificateItem $record) => $editable() && ! $record->from_package && $this->certificate()->isComplimentary())
                     ->authorize(Permission::ComposeDrafts)
                     ->action(function (CertificateItem $record, Action $action) {
-                        RunsDomainActions::run($action, fn () => app(CertificateManager::class)->setItemPaid($record, ! $record->paid_by_customer), 'Оплата услуги изменена');
+                        RunsDomainActions::run($action, fn () => app(CertificateManager::class)->setItemPaid($record, ! $record->paid_by_customer), __('Оплата услуги изменена'));
                         $this->refreshPage();
                     }),
                 Action::make('remove')->label('Убрать')->icon('heroicon-o-x-mark')->color('danger')
@@ -84,7 +84,7 @@ class ItemsRelationManager extends RelationManager
                     ->authorize(Permission::ComposeDrafts)
                     ->requiresConfirmation()
                     ->action(function (CertificateItem $record, Action $action) {
-                        RunsDomainActions::run($action, fn () => app(CertificateManager::class)->removeItem($record), 'Услуга убрана');
+                        RunsDomainActions::run($action, fn () => app(CertificateManager::class)->removeItem($record), __('Услуга убрана'));
                         $this->refreshPage();
                     }),
             ]);

@@ -19,7 +19,7 @@ class ServicePricing
         $price = $service->prices()->getQuery()->reorder()->effectiveOn($date)->orderByDesc('valid_from')->first();
 
         if (! $price) {
-            throw new DomainRuleViolation("Нет действующей цены на {$date->format('d.m.Y')} для услуги «{$service->name}».");
+            throw new DomainRuleViolation(__('Нет действующей цены на :p1 для услуги «:p2».', ['p1' => $date->format('d.m.Y'), 'p2' => $service->name]));
         }
 
         return $price;
@@ -32,13 +32,13 @@ class ServicePricing
     public function addPrice(Service $service, string $price, Carbon $validFrom, ?Carbon $validUntil = null, ?string $cost = null): ServicePrice
     {
         if ((float) $price <= 0) {
-            throw new DomainRuleViolation('Цена должна быть больше нуля.');
+            throw new DomainRuleViolation(__('Цена должна быть больше нуля.'));
         }
         if ($cost !== null && $cost !== '' && (float) $cost < 0) {
-            throw new DomainRuleViolation('Себестоимость не может быть отрицательной.');
+            throw new DomainRuleViolation(__('Себестоимость не может быть отрицательной.'));
         }
         if ($validUntil && $validUntil->lt($validFrom)) {
-            throw new DomainRuleViolation('Дата окончания раньше даты начала.');
+            throw new DomainRuleViolation(__('Дата окончания раньше даты начала.'));
         }
 
         $pending = $this->needsApproval();
@@ -52,7 +52,7 @@ class ServicePricing
             }
 
             if ($this->overlapsOthers($service, $validFrom, $validUntil, $pending ? $open?->id : null)) {
-                throw new DomainRuleViolation('Период пересекается с существующей ценой этой услуги.');
+                throw new DomainRuleViolation(__('Период пересекается с существующей ценой этой услуги.'));
             }
 
             return $service->prices()->create([
@@ -84,13 +84,13 @@ class ServicePricing
     public function approve(ServicePrice $version): ServicePrice
     {
         if (! auth()->user()?->can(Permission::AdminCorrections)) {
-            throw new DomainRuleViolation('Цену подтверждает администратор.');
+            throw new DomainRuleViolation(__('Цену подтверждает администратор.'));
         }
 
         return DB::transaction(function () use ($version) {
             $fresh = ServicePrice::query()->lockForUpdate()->findOrFail($version->id);
             if ($fresh->isApproved()) {
-                throw new DomainRuleViolation('Цена уже подтверждена.');
+                throw new DomainRuleViolation(__('Цена уже подтверждена.'));
             }
             $service = $fresh->service;
             $open = $service->prices()->getQuery()->reorder()->whereKeyNot($fresh->id)->whereNotNull('approved_at')->whereNull('valid_until')
@@ -101,7 +101,7 @@ class ServicePricing
             if ($service->prices()->getQuery()->reorder()->whereKeyNot($fresh->id)->whereNotNull('approved_at')
                 ->where(fn ($q) => $q->whereNull('valid_until')->orWhereDate('valid_until', '>=', $fresh->valid_from->toDateString()))
                 ->when($fresh->valid_until, fn ($q) => $q->whereDate('valid_from', '<=', $fresh->valid_until->toDateString()))->exists()) {
-                throw new DomainRuleViolation('Период пересекается с подтверждённой ценой этой услуги — исправьте даты.');
+                throw new DomainRuleViolation(__('Период пересекается с подтверждённой ценой этой услуги — исправьте даты.'));
             }
             $fresh->update(['approved_at' => now(), 'approved_by' => auth()->id()]);
             $version->setRawAttributes($fresh->getAttributes(), true);
@@ -118,17 +118,17 @@ class ServicePricing
     {
         if (! $this->isEditable($version)) {
             throw new DomainRuleViolation($version->certificateItems()->exists()
-                ? 'Цена уже использована в сертификатах — добавьте новую версию.'
-                : 'Исправить можно только цену, добавленную сегодня. Для изменения добавьте новую версию.');
+                ? __('Цена уже использована в сертификатах — добавьте новую версию.')
+                : __('Исправить можно только цену, добавленную сегодня. Для изменения добавьте новую версию.'));
         }
         if ((float) $price <= 0) {
-            throw new DomainRuleViolation('Цена должна быть больше нуля.');
+            throw new DomainRuleViolation(__('Цена должна быть больше нуля.'));
         }
         if ($cost !== null && $cost !== '' && (float) $cost < 0) {
-            throw new DomainRuleViolation('Себестоимость не может быть отрицательной.');
+            throw new DomainRuleViolation(__('Себестоимость не может быть отрицательной.'));
         }
         if ($validUntil && $validUntil->lt($validFrom)) {
-            throw new DomainRuleViolation('Дата окончания раньше даты начала.');
+            throw new DomainRuleViolation(__('Дата окончания раньше даты начала.'));
         }
 
         return DB::transaction(function () use ($version, $price, $validFrom, $validUntil, $cost) {
@@ -140,7 +140,7 @@ class ServicePricing
                 $previous->update(['valid_until' => $validFrom->copy()->subDay()]);
             }
             if ($this->overlapsOthers($service, $validFrom, $validUntil, $version->id)) {
-                throw new DomainRuleViolation('Период пересекается с другой ценой этой услуги.');
+                throw new DomainRuleViolation(__('Период пересекается с другой ценой этой услуги.'));
             }
             $version->update([
                 'price' => $price,

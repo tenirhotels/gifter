@@ -82,14 +82,14 @@ class Commissions extends Page implements HasTable
                     ->description(fn (User $record) => $money($this->row($record->id)['sales_minor'])),
                 TextColumn::make('redeemed')->label('Использовано')->state(fn (User $record) => $this->row($record->id)['redeemed']),
                 TextColumn::make('not_redeemed')->label('Не использовано')->state(fn (User $record) => $this->row($record->id)['not_redeemed'])
-                    ->description(fn (User $record) => ($r = $this->row($record->id))['expired'] ? "истекло: {$r['expired']}" : null),
+                    ->description(fn (User $record) => ($r = $this->row($record->id))['expired'] ? __('истекло: :p1', ['p1' => $r['expired']]) : null),
                 TextColumn::make('no_reservation')->label('Без брони')->state(fn (User $record) => $this->row($record->id)['no_reservation'])
                     ->color(fn (User $record) => $this->row($record->id)['no_reservation'] > 0 ? 'warning' : null),
                 TextColumn::make('earned')->label('Начислено')->state(fn (User $record) => $money($this->row($record->id)['earned_minor']))->weight('bold'),
                 TextColumn::make('pending')->label('К выплате')
                     ->state(fn (User $record) => $money($this->row($record->id)['pending_minor']))
                     ->description(fn (User $record) => ($r = $this->row($record->id))['pending_minor']
-                        ? 'согласовать: '.$money($r['to_approve_minor']).' · выплатить: '.$money($r['approved_minor']) : null)
+                        ? __('согласовать: :p1 · выплатить: :p2', ['p1' => $money($r['to_approve_minor']), 'p2' => $money($r['approved_minor'])]) : null)
                     ->color(fn (User $record) => $this->row($record->id)['pending_minor'] > 0 ? 'warning' : null),
                 TextColumn::make('paid')->label('Выплачено')->state(fn (User $record) => $money($this->row($record->id)['paid_minor']))->color('success'),
             ])
@@ -103,6 +103,6 @@ class Commissions extends Page implements HasTable
             ])
             ->recordUrl(fn (User $record) => SellerCommissions::getUrl(['seller' => $record->id]))
             ->defaultSort('name')
-            ->emptyStateHeading('Продаж с комиссией пока нет');
+            ->emptyStateHeading(__('Продаж с комиссией пока нет'));
     }
 }

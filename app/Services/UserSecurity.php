@@ -16,13 +16,13 @@ class UserSecurity
     public function resetTwoFactor(User $user, string $reason): void
     {
         if (blank(trim($reason))) {
-            throw new DomainRuleViolation('Укажите причину сброса.');
+            throw new DomainRuleViolation(__('Укажите причину сброса.'));
         }
         if ($user->is(auth()->user())) {
-            throw new DomainRuleViolation('Свой двухфакторный вход меняйте в профиле.');
+            throw new DomainRuleViolation(__('Свой двухфакторный вход меняйте в профиле.'));
         }
         if (! $user->hasTwoFactor()) {
-            throw new DomainRuleViolation('У пользователя двухфакторный вход ещё не настроен.');
+            throw new DomainRuleViolation(__('У пользователя двухфакторный вход ещё не настроен.'));
         }
 
         $user->forceFill(['app_authentication_secret' => null, 'app_authentication_recovery_codes' => null])->save();

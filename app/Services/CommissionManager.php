@@ -40,15 +40,15 @@ class CommissionManager
         $from = Carbon::parse($data['valid_from'])->startOfDay();
         $until = empty($data['valid_until']) ? null : Carbon::parse($data['valid_until'])->startOfDay();
         if ($until && $until->lt($from)) {
-            throw new DomainRuleViolation('Дата окончания раньше даты начала.');
+            throw new DomainRuleViolation(__('Дата окончания раньше даты начала.'));
         }
         if ($type === CommissionType::Percent) {
             $rate = (float) ($data['rate'] ?? 0);
             if ($rate <= 0 || $rate > 100) {
-                throw new DomainRuleViolation('Процент — от 0,01 до 100.');
+                throw new DomainRuleViolation(__('Процент — от 0,01 до 100.'));
             }
         } elseif (Money::toMinor($data['fixed_amount'] ?? 0) <= 0) {
-            throw new DomainRuleViolation('Фиксированная сумма должна быть больше нуля.');
+            throw new DomainRuleViolation(__('Фиксированная сумма должна быть больше нуля.'));
         }
 
         return DB::transaction(function () use ($data, $type, $from, $until) {
@@ -66,8 +66,7 @@ class CommissionManager
 
                     continue;
                 }
-                throw new DomainRuleViolation('Период пересекается с правилом «'.$other->describe().'» ('
-                    .$other->valid_from->format('d.m.Y').' — '.($other->valid_until?->format('d.m.Y') ?? 'без окончания').').');
+                throw new DomainRuleViolation(__('Период пересекается с правилом «:p1» (:p2 — :p3).', ['p1' => $other->describe(), 'p2' => $other->valid_from->format('d.m.Y'), 'p3' => $other->valid_until?->format('d.m.Y') ?? __('без окончания')]));
             }
 
             $rule = CommissionRule::create([
@@ -151,8 +150,7 @@ class CommissionManager
             return;
         }
         if (in_array($commission->status, [CommissionStatus::Approved, CommissionStatus::Paid], true)) {
-            throw new DomainRuleViolation('Комиссия по сертификату уже '.mb_strtolower($commission->status->getLabel())
-                .': сначала отмените согласование или выплату в разделе «Комиссии».');
+            throw new DomainRuleViolation(__('Комиссия по сертификату уже в статусе «:p1»: сначала отмените согласование или выплату в разделе «Комиссии».', ['p1' => mb_strtolower($commission->status->getLabel())]));
         }
         if ($commission->status === CommissionStatus::Earned) {
             $this->move($commission, CommissionStatus::PendingRedemption, 'commission_reverted', ['earned_at' => null]);
@@ -174,7 +172,7 @@ class CommissionManager
         return DB::transaction(function () use ($commission) {
             $fresh = $this->lock($commission);
             if ($fresh->status !== CommissionStatus::Earned) {
-                throw new DomainRuleViolation("Комиссия в статусе «{$fresh->status->getLabel()}» — согласовать нельзя.");
+                throw new DomainRuleViolation(__('Комиссия в статусе «:p1» — согласовать нельзя.', ['p1' => $fresh->status->getLabel()]));
             }
 
             return $this->move($fresh, CommissionStatus::Approved, 'commission_approved', ['approved_by' => auth()->id(), 'approved_at' => now()]);
@@ -184,12 +182,12 @@ class CommissionManager
     /** Отмена согласования (до выплаты): комиссия возвращается в «Начислена». */
     public function unapprove(CertificateCommission $commission, string $reason): CertificateCommission
     {
-        $reason = trim($reason) ?: throw new DomainRuleViolation('Укажите причину.');
+        $reason = trim($reason) ?: throw new DomainRuleViolation(__('Укажите причину.'));
 
         return DB::transaction(function () use ($commission, $reason) {
             $fresh = $this->lock($commission);
             if ($fresh->status !== CommissionStatus::Approved) {
-                throw new DomainRuleViolation('Согласование можно отменить только до выплаты.');
+                throw new DomainRuleViolation(__('Согласование можно отменить только до выплаты.'));
             }
 
             return $this->move($fresh, CommissionStatus::Earned, 'commission_unapproved', ['approved_by' => null, 'approved_at' => null], $reason);
@@ -202,7 +200,7 @@ class CommissionManager
         return DB::transaction(function () use ($commission, $paidAt, $reference, $comment) {
             $fresh = $this->lock($commission);
             if ($fresh->status !== CommissionStatus::Approved) {
-                throw new DomainRuleViolation('Выплатить можно только комиссию, согласованную директором (сейчас: «'.$fresh->status->getLabel().'»).');
+                throw new DomainRuleViolation(__('Выплатить можно только комиссию, согласованную директором (сейчас: «:p1»).', ['p1' => $fresh->status->getLabel()]));
             }
             $payment = $fresh->payments()->create([
                 'amount' => $fresh->amount,
@@ -221,12 +219,12 @@ class CommissionManager
     /** Отмена выплаты — Финансы, с причиной: запись выплаты сохраняется, комиссия снова «Согласована». */
     public function reversePayment(CertificateCommission $commission, string $reason): CertificateCommission
     {
-        $reason = trim($reason) ?: throw new DomainRuleViolation('Укажите причину отмены выплаты.');
+        $reason = trim($reason) ?: throw new DomainRuleViolation(__('Укажите причину отмены выплаты.'));
 
         return DB::transaction(function () use ($commission, $reason) {
             $fresh = $this->lock($commission);
             if ($fresh->status !== CommissionStatus::Paid) {
-                throw new DomainRuleViolation('Отменить выплату можно только у выплаченной комиссии.');
+                throw new DomainRuleViolation(__('Отменить выплату можно только у выплаченной комиссии.'));
             }
             $payment = $fresh->activePayment();
             $payment?->update(['reversed_at' => now(), 'reversed_by' => auth()->id(), 'reversal_reason' => $reason]);

@@ -32,24 +32,24 @@ class RefundManager
         return DB::transaction(function () use ($certificate, $amount, $reason) {
             $certificate = Certificate::query()->lockForUpdate()->findOrFail($certificate->id);
             if (trim($reason) === '') {
-                throw new DomainRuleViolation('Укажите причину возврата.');
+                throw new DomainRuleViolation(__('Укажите причину возврата.'));
             }
             if (! $certificate->status->canTransitionTo(CertificateStatus::Cancelled)) {
-                throw new DomainRuleViolation("Сертификат в статусе «{$certificate->status->getLabel()}» аннулировать нельзя.");
+                throw new DomainRuleViolation(__('Сертификат в статусе «:p1» аннулировать нельзя.', ['p1' => $certificate->status->getLabel()]));
             }
             if ($certificate->hasPendingRefund()) {
-                throw new DomainRuleViolation('Запрос на возврат уже ждёт решения.');
+                throw new DomainRuleViolation(__('Запрос на возврат уже ждёт решения.'));
             }
             if ($certificate->payments()->where('status', PaymentStatus::Pending)->exists()) {
-                throw new DomainRuleViolation('Сначала отмените выставленные неоплаченные счета.');
+                throw new DomainRuleViolation(__('Сначала отмените выставленные неоплаченные счета.'));
             }
             $paid = Money::toMinor($certificate->paidAmount());
             if ($paid === 0) {
-                throw new DomainRuleViolation('Оплаты нет — сертификат можно аннулировать без возврата.');
+                throw new DomainRuleViolation(__('Оплаты нет — сертификат можно аннулировать без возврата.'));
             }
             $amountMinor = Money::toMinor($amount);
             if ($amountMinor < 0 || $amountMinor > $paid) {
-                throw new DomainRuleViolation('Сумма возврата должна быть от 0 до '.Money::format(Money::fromMinor($paid)).'.');
+                throw new DomainRuleViolation(__('Сумма возврата должна быть от 0 до :p1.', ['p1' => Money::format(Money::fromMinor($paid))]));
             }
 
             $refund = $certificate->refunds()->create([
@@ -96,7 +96,7 @@ class RefundManager
     public function reject(Refund $refund, string $comment): Refund
     {
         if (trim($comment) === '') {
-            throw new DomainRuleViolation('Укажите причину отказа.');
+            throw new DomainRuleViolation(__('Укажите причину отказа.'));
         }
 
         return $this->lockedRequested($refund, function (Refund $refund, Certificate $certificate) use ($comment) {
@@ -117,7 +117,7 @@ class RefundManager
         return DB::transaction(function () use ($refund, $paidAt, $reference) {
             $fresh = Refund::query()->lockForUpdate()->findOrFail($refund->id);
             if ($fresh->status !== RefundStatus::Approved) {
-                throw new DomainRuleViolation('Выплату можно отметить только по согласованному возврату.');
+                throw new DomainRuleViolation(__('Выплату можно отметить только по согласованному возврату.'));
             }
             $fresh->update([
                 'status' => RefundStatus::Completed,
@@ -139,7 +139,7 @@ class RefundManager
             $certificate = Certificate::query()->lockForUpdate()->findOrFail($refund->certificate_id);
             $fresh = Refund::query()->lockForUpdate()->findOrFail($refund->id);
             if ($fresh->status !== RefundStatus::Requested) {
-                throw new DomainRuleViolation("Запрос в статусе «{$fresh->status->getLabel()}» уже рассмотрен.");
+                throw new DomainRuleViolation(__('Запрос в статусе «:p1» уже рассмотрен.', ['p1' => $fresh->status->getLabel()]));
             }
             $result = $callback($fresh, $certificate);
             $refund->setRawAttributes($fresh->getAttributes(), true);

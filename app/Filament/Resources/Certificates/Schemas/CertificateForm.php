@@ -49,17 +49,17 @@ class CertificateForm
                     ->when(! auth()->user()?->can(Permission::CreateComplimentary), fn ($q) => $q->where('is_complimentary', false))
                     ->orderBy('is_complimentary')->orderBy('name'))
                 ->preload()
-                ->getOptionLabelFromRecordUsing(fn (Package $record) => "{$record->name} — {$record->validityLabel()}".($record->is_complimentary ? ' · бесплатный' : ''))
+                ->getOptionLabelFromRecordUsing(fn (Package $record) => "{$record->name} — {$record->validityLabel()}".($record->is_complimentary ? __(' · бесплатный') : ''))
                 ->afterStateUpdated(fn ($state, Set $set) => $set('complimentary_purpose', Package::find($state)?->complimentary_purpose?->value))
-                ->helperText('Пакет задаёт состав, срок действия и тип: бесплатный пакет даёт бесплатный сертификат.'),
+                ->helperText(__('Пакет задаёт состав, срок действия и тип: бесплатный пакет даёт бесплатный сертификат.')),
             Placeholder::make('validity_preview')->label('Срок действия')
                 ->hidden(fn (Get $get) => ! $withValidityPreview || self::isComplimentary($get))
                 ->content(fn (Get $get) => ValidityFields::preview(Package::find($get('package_id')), $get('validity'), $get('sold_at'))),
             DatePicker::make('sold_at')->label('Дата продажи')->default(today())->required()->live()
-                ->helperText('От этой даты считаются цены и срок действия.')
+                ->helperText(__('От этой даты считаются цены и срок действия.'))
                 ->visible(fn () => auth()->user()?->can(Permission::EditSaleDate)),
             Textarea::make('sold_at_reason')->label('Причина изменения даты продажи')->minLength(5)->columnSpanFull()
-                ->helperText('Дата влияет на цены и правило комиссии — причину увидит директор по продажам.')
+                ->helperText(__('Дата влияет на цены и правило комиссии — причину увидит директор по продажам.'))
                 ->visible(fn (Get $get) => auth()->user()?->can(Permission::EditSaleDate) && filled($get('sold_at')) && ! Carbon::parse($get('sold_at'))->isSameDay(today()))
                 ->required(fn (Get $get) => filled($get('sold_at')) && ! Carbon::parse($get('sold_at'))->isSameDay(today())),
         ];
@@ -73,7 +73,7 @@ class CertificateForm
                 ->default(fn (Get $get) => Package::find($get('package_id'))?->complimentary_purpose)
                 ->helperText(fn ($state) => ($state instanceof ComplimentaryPurpose ? $state : ComplimentaryPurpose::tryFrom((string) $state))?->getDescription()),
             Textarea::make('complimentary_reason')->label('Основание (кому и зачем)')->required()
-                ->helperText('Выпускается без оплаты после согласования директором; расход — маркетинговый.'),
+                ->helperText(__('Выпускается без оплаты после согласования директором; расход — маркетинговый.')),
         ];
     }
 
@@ -85,8 +85,8 @@ class CertificateForm
             ->createOptionForm(CustomerForm::fields())
             ->required(fn (Get $get): bool => ! self::isComplimentary($get) || self::hasPaidExtras($get))
             ->helperText(fn (Get $get): ?string => self::isComplimentary($get)
-                ? (self::hasPaidExtras($get) ? 'Есть платные услуги — заказчик, который их оплатит, обязателен.' : 'Для бесплатного — необязательно (партнёр, блогер, компания).')
-                : 'Найдите по фамилии, компании или БИН, или создайте нового (+).');
+                ? (self::hasPaidExtras($get) ? __('Есть платные услуги — заказчик, который их оплатит, обязателен.') : __('Для бесплатного — необязательно (партнёр, блогер, компания).'))
+                : __('Найдите по фамилии, компании или БИН, или создайте нового (+).'));
     }
 
     public static function recipientField(): Select
@@ -94,7 +94,7 @@ class CertificateForm
         return Select::make('recipient_id')->label('Получатель')
             ->relationship('recipient', 'full_name')->searchable(['last_name', 'first_name'])->preload()
             ->createOptionForm(RecipientForm::fields())
-            ->helperText('Можно не указывать, если получатель пока неизвестен, и добавить позже.');
+            ->helperText(__('Можно не указывать, если получатель пока неизвестен, и добавить позже.'));
     }
 
     public static function notesField(): Textarea

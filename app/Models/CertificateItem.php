@@ -39,7 +39,7 @@ class CertificateItem extends Model
     {
         $guard = function (self $item) {
             if (! $item->certificate->isDraft()) {
-                throw new DomainRuleViolation('Состав выпущенного сертификата изменить нельзя.');
+                throw new DomainRuleViolation(__('Состав выпущенного сертификата изменить нельзя.'));
             }
         };
         static::updating($guard);
