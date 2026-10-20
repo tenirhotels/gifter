@@ -34,7 +34,7 @@ class ItemsRelationManager extends RelationManager
             ->description('Состав пакета не меняется. Допуслуги можно добавлять и убирать, пока сертификат — черновик; в бесплатном их может оплатить заказчик.')
             ->columns([
                 TextColumn::make('service_name_snapshot')->label('Услуга')
-                    ->description(fn (CertificateItem $record) => $record->from_package ? 'из пакета' : 'доп. услуга'),
+                    ->description(fn (CertificateItem $record) => $record->from_package ? 'из пакета' : 'допуслуга'),
                 TextColumn::make('paid_by_customer')->label('Оплата')->badge()
                     ->state(fn (CertificateItem $record) => $record->paid_by_customer ? 'Платно' : 'Бесплатно')
                     ->color(fn (CertificateItem $record) => $record->paid_by_customer ? 'warning' : 'success')

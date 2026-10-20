@@ -99,9 +99,9 @@ class CertificateManager
 
     /**
      * Предварительный расчёт до создания черновика (для мастера продажи):
-     * базовый состав пакета + доп. услуги по ценам на дату продажи.
+     * базовый состав пакета + допуслуги по ценам на дату продажи.
      *
-     * Оплата: у платного пакета всё оплачивает заказчик; у бесплатного — только доп. услуги
+     * Оплата: у платного пакета всё оплачивает заказчик; у бесплатного — только допуслуги
      * с признаком `paid` (тумблер «Платная»).
      *
      * @param  list<array{service_id:int|string|null, quantity:int|string|null, paid?:bool|null}>  $extras
@@ -141,7 +141,7 @@ class CertificateManager
     }
 
     /**
-     * Правка реквизитов черновика. Смена пакета заменяет базовый состав (доп. услуги
+     * Правка реквизитов черновика. Смена пакета заменяет базовый состав (допуслуги
      * остаются); смена пакета или даты продажи пересчитывает срок и цены.
      *
      * @param  array{customer_id?:int|null, recipient_id?:int|null, package_id?:int, kind?:CertificateKind|string, complimentary_reason?:string|null, sold_at?:string|Carbon, notes?:string|null}  $data
@@ -204,7 +204,7 @@ class CertificateManager
             if ($packageChanged) {
                 $certificate->items()->where('from_package', true)->get()->each->delete();
                 if ($kindChanged) {
-                    // Сменился тип: у платного оплачивается всё, у бесплатного доп. услуги снова бесплатные.
+                    // Сменился тип: у платного оплачивается всё, у бесплатного допуслуги снова бесплатные.
                     $certificate->items()->update(['paid_by_customer' => ! $certificate->isComplimentary()]);
                 }
                 $this->addPackageItems($certificate, $package);
@@ -240,7 +240,7 @@ class CertificateManager
         });
     }
 
-    /** Платная или бесплатная доп. услуга бесплатного сертификата — до согласования и до выставления счёта. */
+    /** Платная или бесплатная допуслуга бесплатного сертификата — до согласования и до выставления счёта. */
     public function setItemPaid(CertificateItem $item, bool $paid, bool $viaBatch = false): CertificateItem
     {
         return $this->locked($item->certificate, function (Certificate $certificate) use ($item, $paid, $viaBatch) {
@@ -249,7 +249,7 @@ class CertificateManager
                 throw new DomainRuleViolation('В платном сертификате оплачивается весь состав.');
             }
             if ($item->from_package) {
-                throw new DomainRuleViolation('Услуги бесплатного пакета бесплатны: платной можно сделать только доп. услугу.');
+                throw new DomainRuleViolation('Услуги бесплатного пакета бесплатны: платной можно сделать только допуслугу.');
             }
             $this->assertNotInBatch($certificate, $viaBatch);
             $this->assertCompositionEditable($certificate);
@@ -268,12 +268,12 @@ class CertificateManager
         });
     }
 
-    /** Убрать доп. услугу. Услуги пакета не убираются — смысл пакета в его составе. */
+    /** Убрать допуслугу. Услуги пакета не убираются — смысл пакета в его составе. */
     public function removeItem(CertificateItem $item): void
     {
         $this->locked($item->certificate, function (Certificate $certificate) use ($item) {
             if ($item->from_package) {
-                throw new DomainRuleViolation('Услуги пакета не убираются: пакет продаётся целиком. Можно сменить пакет или убрать доп. услугу.');
+                throw new DomainRuleViolation('Услуги пакета не убираются: пакет продаётся целиком. Можно сменить пакет или убрать допуслугу.');
             }
             $this->assertNotInBatch($certificate, false);
             $this->assertCompositionEditable($certificate);
@@ -290,7 +290,7 @@ class CertificateManager
     {
         $package->loadMissing('items.service');
         if ($package->items->isEmpty()) {
-            return; // пакет задаёт только срок, состав — доп. услугами
+            return; // пакет задаёт только срок, состав — допуслугами
         }
         foreach ($package->items as $packageItem) {
             $this->createItem($certificate, $packageItem->service, $packageItem->quantity, fromPackage: true);
@@ -616,7 +616,7 @@ class CertificateManager
             'requires_scheduling' => $service->requires_scheduling,
             'requires_confirmation' => $service->requires_confirmation,
             'from_package' => $fromPackage,
-            // Платный сертификат оплачивается целиком; в бесплатном платная — только отмеченная доп. услуга.
+            // Платный сертификат оплачивается целиком; в бесплатном платная — только отмеченная допуслуга.
             'paid_by_customer' => ! $certificate->isComplimentary() || (! $fromPackage && $paid),
             'position' => (int) $certificate->items()->max('position') + 1,
         ]);
@@ -629,7 +629,7 @@ class CertificateManager
         $certificate->update([
             'total_amount' => Money::fromMinor($minor($items, 'line_total')),
             'total_cost' => Money::fromMinor($minor($items, 'line_cost')),
-            // К оплате заказчиком: у продажи — всё, у бесплатного — платные доп. услуги.
+            // К оплате заказчиком: у продажи — всё, у бесплатного — платные допуслуги.
             'payable_amount' => Money::fromMinor($minor($items->where('paid_by_customer', true), 'line_total')),
             // Маркетинговый расход: себестоимость того, что заказчик не оплачивает (только у бесплатного).
             'marketing_cost' => $certificate->isComplimentary() ? Money::fromMinor($minor($items->where('paid_by_customer', false), 'line_cost')) : '0.00',
