@@ -25,7 +25,7 @@ final class RefundActions
             Action::make('approveRefund')->label('Согласовать')->icon('heroicon-o-check')->color('success')
                 ->authorize(Permission::ApproveRefunds)
                 ->visible(fn (Refund $record) => $record->status === RefundStatus::Requested)
-                ->modalDescription('Сертификат будет аннулирован. Выплату отметите отдельно, когда деньги уйдут клиенту.')
+                ->modalDescription('Сертификат будет аннулирован. Выплату отметьте отдельно, когда деньги вернутся заказчику.')
                 ->schema([Textarea::make('comment')->label('Комментарий')])
                 ->action(function (Refund $record, array $data, Action $action) use ($after) {
                     RunsDomainActions::run($action, fn () => app(RefundManager::class)->approve($record, $data['comment'] ?? null), 'Возврат согласован, сертификат аннулирован');
@@ -44,7 +44,7 @@ final class RefundActions
                 ->visible(fn (Refund $record) => $record->status === RefundStatus::Approved)
                 ->schema([
                     DateTimePicker::make('paid_at')->label('Дата выплаты')->default(now())->maxDate(now())->required(),
-                    TextInput::make('reference')->label('№ платёжного документа')->maxLength(255),
+                    TextInput::make('reference')->label('Номер платёжного документа')->maxLength(255),
                 ])
                 ->action(function (Refund $record, array $data, Action $action) use ($after) {
                     RunsDomainActions::run($action, fn () => app(RefundManager::class)

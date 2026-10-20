@@ -18,7 +18,7 @@ final class PaymentCorrectionActions
         $after ??= fn () => null;
 
         return [
-            Action::make('adminReopenPayment')->label('Вернуть в «Счёт выставлен»')->icon('heroicon-o-arrow-uturn-left')->color('danger')
+            Action::make('adminReopenPayment')->label('Вернуть в «Ожидает оплаты»')->icon('heroicon-o-arrow-uturn-left')->color('danger')
                 ->authorize(Permission::AdminCorrections)
                 ->visible(fn (Payment $record) => $record->status !== PaymentStatus::Pending)
                 ->modalDescription('Исправление ошибочной отметки оплаты или отмены счёта. Запись попадёт в историю сертификата.')

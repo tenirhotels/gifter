@@ -189,7 +189,7 @@ class CommissionManager
         return DB::transaction(function () use ($commission, $reason) {
             $fresh = $this->lock($commission);
             if ($fresh->status !== CommissionStatus::Approved) {
-                throw new DomainRuleViolation('Отменить согласование можно только у согласованной, но не выплаченной комиссии.');
+                throw new DomainRuleViolation('Согласование можно отменить только до выплаты.');
             }
 
             return $this->move($fresh, CommissionStatus::Earned, 'commission_unapproved', ['approved_by' => null, 'approved_at' => null], $reason);
@@ -226,7 +226,7 @@ class CommissionManager
         return DB::transaction(function () use ($commission, $reason) {
             $fresh = $this->lock($commission);
             if ($fresh->status !== CommissionStatus::Paid) {
-                throw new DomainRuleViolation('Отменить можно только выплаченную комиссию.');
+                throw new DomainRuleViolation('Отменить выплату можно только у выплаченной комиссии.');
             }
             $payment = $fresh->activePayment();
             $payment?->update(['reversed_at' => now(), 'reversed_by' => auth()->id(), 'reversal_reason' => $reason]);

@@ -46,7 +46,7 @@ class PaymentManager
             }
             $outstanding = Money::toMinor($certificate->payable_amount) - Money::toMinor($certificate->invoicedAmount());
             if ($outstanding <= 0) {
-                throw new DomainRuleViolation('На всю платную сумму счета уже выставлены.');
+                throw new DomainRuleViolation('Счета уже выставлены на всю платную сумму.');
             }
             $amountMinor = $amount === null ? $outstanding : Money::toMinor($amount);
             if ($amountMinor <= 0) {

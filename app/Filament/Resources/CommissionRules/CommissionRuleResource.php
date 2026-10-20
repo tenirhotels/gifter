@@ -106,7 +106,7 @@ class CommissionRuleResource extends Resource
             ])
             ->filters([SelectFilter::make('package_id')->label('Пакет')->relationship('package', 'name')])
             ->defaultSort('valid_from', 'desc')
-            ->emptyStateHeading('Правил комиссии нет — продавцы пока ничего не зарабатывают')
+            ->emptyStateHeading('Правил комиссии нет — продавцам пока ничего не начисляется')
             ->emptyStateDescription('Добавьте правило для пакета: процент или фиксированную сумму за сертификат.');
     }
 

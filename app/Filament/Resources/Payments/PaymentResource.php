@@ -91,13 +91,13 @@ class PaymentResource extends Resource
                     ->url(fn (Payment $record) => CertificateResource::getUrl('view', ['record' => $record->certificate_id]))
                     ->description(fn (Payment $record) => $record->batch_id ? "Группа №{$record->batch_id} (из {$record->batch->quantity})" : null),
                 TextColumn::make('certificate.customer.full_name')->label('Плательщик')->placeholder('—')->searchable(),
-                TextColumn::make('method')->label('Способ'),
+                TextColumn::make('method')->label('Способ оплаты'),
                 TextColumn::make('amount')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state))->sortable(),
-                TextColumn::make('status')->label('Статус')->badge(),
-                TextColumn::make('invoice_number')->label('№ счёта')->placeholder('—')->searchable(),
-                TextColumn::make('invoiced_at')->label('Выставлен')->dateTime('d.m.Y')->sortable(),
-                TextColumn::make('paid_at')->label('Поступил')->dateTime('d.m.Y H:i')->placeholder('—')->sortable(),
-                TextColumn::make('reconciled_at')->label('Сверено')->dateTime('d.m.Y')->placeholder('нет')
+                TextColumn::make('status')->label('Статус оплаты')->badge(),
+                TextColumn::make('invoice_number')->label('Номер счёта')->placeholder('—')->searchable(),
+                TextColumn::make('invoiced_at')->label('Дата выставления')->dateTime('d.m.Y')->sortable(),
+                TextColumn::make('paid_at')->label('Дата оплаты')->dateTime('d.m.Y H:i')->placeholder('—')->sortable(),
+                TextColumn::make('reconciled_at')->label('Сверка')->dateTime('d.m.Y')->placeholder('не сверено')
                     ->description(fn (Payment $record) => $record->reconciler?->name),
             ])
             ->filters([
@@ -105,8 +105,8 @@ class PaymentResource extends Resource
                     ->query(fn (Builder $query) => $query->where(fn (Builder $q) => $q
                         ->where(fn (Builder $q) => $q->where('status', PaymentStatus::Paid)->whereNull('reconciled_at'))
                         ->orWhere(fn (Builder $q) => $q->where('status', PaymentStatus::Pending)->whereIn('method', PaymentMethod::financeConfirmed())))),
-                SelectFilter::make('method')->label('Способ')->options(PaymentMethod::class),
-                SelectFilter::make('status')->label('Статус')->options(PaymentStatus::class),
+                SelectFilter::make('method')->label('Способ оплаты')->options(PaymentMethod::class),
+                SelectFilter::make('status')->label('Статус оплаты')->options(PaymentStatus::class),
             ])
             ->recordActions([
                 Action::make('receiveTransfer')->label(fn (Payment $record) => $record->method === PaymentMethod::Cash ? 'Принято в кассе' : 'Поступило на р/с')->icon('heroicon-o-banknotes')->color('success')
@@ -116,7 +116,7 @@ class PaymentResource extends Resource
                     ->schema([DateTimePicker::make('paid_at')->label('Дата поступления (выписка или касса)')->default(now())->maxDate(now())->required()])
                     ->action(fn (Payment $record, array $data, Action $action) => RunsDomainActions::run($action,
                         fn () => app(PaymentManager::class)->markPaid($record, Carbon::parse($data['paid_at'])), 'Поступление отмечено и сверено')),
-                Action::make('reconcile')->label('Сверено')->icon('heroicon-o-document-check')
+                Action::make('reconcile')->label('Сверка')->icon('heroicon-o-document-check')
                     ->authorize(Permission::ReconcilePayments)
                     ->visible(fn (Payment $record) => $record->status === PaymentStatus::Paid && ! $record->isReconciled())
                     ->requiresConfirmation()

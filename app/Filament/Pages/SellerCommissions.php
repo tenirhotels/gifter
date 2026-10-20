@@ -150,7 +150,7 @@ class SellerCommissions extends Page implements HasTable
     {
         return [
             DateTimePicker::make('paid_at')->label('Дата выплаты')->default(now())->maxDate(now())->required(),
-            TextInput::make('reference')->label('Номер платежа / ведомости')->maxLength(255),
+            TextInput::make('reference')->label('Номер платежа или ведомости')->maxLength(255),
             Textarea::make('comment')->label('Комментарий'),
         ];
     }
