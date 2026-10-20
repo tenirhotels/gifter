@@ -11,6 +11,7 @@ use App\Exceptions\DomainRuleViolation;
 use App\Filament\Pages\Commissions;
 use App\Filament\Pages\MyCommission;
 use App\Filament\Pages\SellerCommissions;
+use App\Filament\Pages\SellerReports;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\CommissionRules\Pages\CreateCommissionRule;
@@ -31,12 +32,14 @@ use App\Services\CommissionManager;
 use App\Services\PaymentManager;
 use App\Services\RefundManager;
 use App\Services\ReservationExceptionManager;
+use App\Services\SellerReport;
 use App\Services\ServicePricing;
 use App\Support\Money;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
+use OpenSpout\Reader\XLSX\Reader;
 use Tests\TestCase;
 
 /** Комиссия продавцов: начисляется при погашении, снимок на сертификате, согласование и выплата. */
@@ -563,5 +566,63 @@ class CommissionTest extends TestCase
             ->call('create')->assertHasNoFormErrors();
 
         $this->assertSame('15000.00', (string) CommissionRule::sole()->fixed_amount);
+    }
+
+    public function test_seller_report_summary_by_usage_and_sale_with_period_and_seller_filters(): void
+    {
+        $this->rule('percent', '5');
+        $other = User::factory()->create(['roles' => [Role::Sales], 'name' => 'Бауыржан']);
+        $used = $this->sold();
+        $this->sold($other);
+        $this->redeem($used);
+
+        $byUsage = (new SellerReport(SellerReport::USED, '2026-05-01', '2026-05-31'))->summary();
+        $this->assertCount(1, $byUsage);
+        $this->assertSame('Айгерим', $byUsage[0]['seller']);
+        $this->assertSame(1, $byUsage[0]['used']);
+        $this->assertSame(800000, $byUsage[0]['earned_minor']);
+
+        $bySale = (new SellerReport(SellerReport::SOLD, '2026-05-01', '2026-05-31'))->summary();
+        $this->assertCount(2, $bySale);
+        $this->assertSame(1, $bySale->firstWhere('seller', 'Бауыржан')['not_used']);
+        $this->assertSame(0, $bySale->firstWhere('seller', 'Бауыржан')['earned_minor']);
+
+        $this->assertCount(0, (new SellerReport(SellerReport::SOLD, '2026-06-01', '2026-06-30'))->summary());
+        $this->assertCount(1, (new SellerReport(SellerReport::SOLD, null, null, $other->id))->summary());
+
+        $months = (new SellerReport(SellerReport::USED))->months();
+        $this->assertSame(['2026-05'], $months['months']);
+        $this->assertSame(800000, $months['rows'][0]['total']);
+    }
+
+    public function test_seller_report_excel_has_three_sheets_and_page_access_and_audit(): void
+    {
+        $this->rule('percent', '5');
+        $certificate = $this->sold();
+        $this->redeem($certificate);
+
+        $path = (new SellerReport(SellerReport::USED))->toXlsx();
+        $reader = new Reader;
+        $reader->open($path);
+        $names = [];
+        foreach ($reader->getSheetIterator() as $sheet) {
+            $names[] = $sheet->getName();
+            if ($sheet->getName() === 'Сертификаты') {
+                $rows = iterator_to_array($sheet->getRowIterator(), false);
+                $this->assertSame($certificate->number, $rows[1]->toArray()[1]);
+            }
+        }
+        $reader->close();
+        @unlink($path);
+        $this->assertSame(['Сводка', 'Сертификаты', 'По месяцам'], $names);
+
+        $this->actingAs($this->seller);
+        $this->get('/admin/seller-report')->assertForbidden();
+        foreach ([Role::Finance, Role::SalesDirector] as $role) {
+            $this->actingAs(User::factory()->create(['roles' => [$role]]));
+            $this->get('/admin/seller-report')->assertOk()->assertSee('Айгерим');
+        }
+        Livewire::test(SellerReports::class)->callAction('export')->assertFileDownloaded();
+        $this->assertDatabaseHas('audit_logs', ['event' => 'seller_report_exported']);
     }
 }
