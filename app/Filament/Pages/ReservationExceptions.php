@@ -68,7 +68,7 @@ class ReservationExceptions extends Page implements HasTable
                 TextColumn::make('certificate.number')->label('Сертификат')->searchable()
                     ->url(fn (ReservationException $record) => CertificateResource::getUrl('view', ['record' => $record->certificate_id]))
                     ->description(fn (ReservationException $record) => 'истёк '.$record->certificate->valid_until->format('d.m.Y').' · продавец: '.($record->certificate->seller?->name ?? '—')),
-                TextColumn::make('booking_number')->label('Бронь PMS')->searchable()
+                TextColumn::make('booking_number')->label('Номер брони')->searchable()
                     ->description(fn (ReservationException $record) => $record->arrival_date->format('d.m').'–'.$record->departure_date->format('d.m.Y')),
                 TextColumn::make('guest_name')->label('Гость')->description(fn (ReservationException $record) => 'получатель: '.($record->certificate->recipient?->full_name ?? '—')),
                 TextColumn::make('reason')->label('Причина')->wrap()->limit(120),

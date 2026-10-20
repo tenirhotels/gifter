@@ -84,7 +84,7 @@ class UpcomingArrivals extends Page implements HasTable
                 TextColumn::make('number')->label('Сертификат')->searchable()
                     ->url(fn (Certificate $record) => CertificateResource::getUrl('view', ['record' => $record]))
                     ->description(fn (Certificate $record) => $record->package?->name),
-                TextColumn::make('pms_booking_number')->label('Бронь PMS')->searchable()->copyable(),
+                TextColumn::make('pms_booking_number')->label('Номер брони')->searchable()->copyable(),
                 TextColumn::make('services')->label('Услуги')->html()->wrap()
                     ->state(fn (Certificate $record) => self::servicesHtml($record)),
                 TextColumn::make('readiness')->label('Готовность')->badge()

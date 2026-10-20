@@ -72,28 +72,28 @@ class PmsSettings extends Page
         $isExely = fn (Get $get): bool => $get('provider') === PmsSetting::EXELY;
 
         return $schema->statePath('data')->components([
-            Section::make('Источник броней')->description('Gifter только читает брони по номеру и ничего не создаёт в PMS. Оба источника отвечают в одном формате — выберите один.')->schema([
+            Section::make('Источник броней')->description('Gifter только читает брони по номеру и ничего не создаёт в PMS. Выберите один источник.')->schema([
                 Toggle::make('enabled')->label('Проверять брони по PMS')
-                    ->helperText('Включено: номер брони подтверждается в PMS, гость и даты берутся оттуда; без подтверждения бронь не сохраняется. Выключено: бронь вносится вручную.'),
+                    ->helperText('Включено: бронь подтверждается в PMS, гость и даты берутся оттуда. Выключено: бронь вносится вручную.'),
                 Radio::make('provider')->label('Источник')->options([
                     PmsSetting::HUB => 'Hotel Hub — свой сервис отеля (адрес и токен)',
-                    PmsSetting::EXELY => 'Exely напрямую — Read Reservation API (client_id и client_secret)',
+                    PmsSetting::EXELY => 'Exely напрямую (client_id и client_secret)',
                 ])->default(PmsSetting::HUB)->live()->required(),
                 TextInput::make('base_url')->label(fn (Get $get) => $isExely($get) ? 'Адрес Exely' : 'Адрес хаба')->url()->maxLength(255)
                     ->rule(fn () => app()->isProduction() ? 'starts_with:https://' : 'nullable')
                     ->placeholder(fn (Get $get) => $isExely($get) ? PmsSetting::EXELY_DEFAULT_URL : 'https://hub.example.com')
-                    ->helperText(fn (Get $get) => $isExely($get) ? 'Можно оставить пустым — используется '.PmsSetting::EXELY_DEFAULT_URL.'.' : 'Без «/v1/…»: путь /v1/properties/{код}/bookings/{номер} добавляется автоматически.'),
+                    ->helperText(fn (Get $get) => $isExely($get) ? 'Можно оставить пустым — используется '.PmsSetting::EXELY_DEFAULT_URL.'.' : 'Только адрес сервиса, без «/v1/…» — путь добавится сам.'),
                 TextInput::make('property_code')->label(fn (Get $get) => $isExely($get) ? 'Идентификатор отеля в Exely (propertyId)' : 'Код отеля')->maxLength(64),
                 TextInput::make('token')->label('Токен хаба')->password()->autocomplete('off')->maxLength(500)
                     ->visible(fn (Get $get) => ! $isExely($get))
                     ->placeholder(filled($current->token) ? '•••••••• сохранён — оставьте пустым, чтобы не менять' : '')
-                    ->helperText('Токен с правом «bookings» (хаб: «API и токены»). Хранится зашифрованным, в панели не показывается.'),
+                    ->helperText('Выдаётся в Hotel Hub, раздел «API и токены». Хранится зашифрованным и не показывается.'),
                 TextInput::make('client_id')->label('client_id')->maxLength(255)->autocomplete('off')
-                    ->visible($isExely)->helperText('Ключи подключения Exely: «Настройка гостиницы → Подключение API». Доступ к Read Reservation API включается в Exely отдельно.'),
+                    ->visible($isExely)->helperText('Ключи из Exely: «Настройка гостиницы → Подключение API». Доступ к броням включается в Exely отдельно.'),
                 TextInput::make('client_secret')->label('client_secret')->password()->autocomplete('off')->maxLength(500)
                     ->visible($isExely)
                     ->placeholder(filled($current->client_secret) ? '•••••••• сохранён — оставьте пустым, чтобы не менять' : '')
-                    ->helperText('Хранится зашифрованным, в панели не показывается. Токен доступа Gifter получает сам и обновляет каждые 15 минут.'),
+                    ->helperText('Хранится зашифрованным и не показывается. Пропуск Gifter получает и обновляет сам.'),
             ])->columns(1),
         ]);
     }
@@ -109,13 +109,13 @@ class PmsSettings extends Page
                 } catch (PmsException $e) {
                     Notification::make()->danger()->title($e->getMessage())->send();
                 }
-            })->tooltip('Список услуг из Exely (без цен); включать услуги в сертификаты — в разделе «Услуги PMS»'),
+            })->tooltip('Загрузит список услуг из Exely. Включать их в сертификаты — в разделе «Услуги PMS»'),
             Action::make('ping')->label('Проверить связь')->icon('heroicon-o-signal')->color('gray')->action(function () {
                 $result = PmsClient::make()->ping();
                 $note = Notification::make()->title($result['message']);
                 $result['ok'] ? $note->success() : $note->danger();
                 $note->send();
-            })->tooltip('Сохраните настройки, затем проверьте: запрашивается несуществующая бронь, ответ «не найдена» означает, что связь и токен в порядке'),
+            })->tooltip('Сначала сохраните настройки. Ответ «бронь не найдена» значит, что связь работает'),
         ];
     }
 

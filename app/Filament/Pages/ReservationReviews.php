@@ -67,7 +67,7 @@ class ReservationReviews extends Page implements HasTable
                 TextColumn::make('number')->label('Сертификат')->searchable()
                     ->url(fn (Certificate $record) => CertificateResource::getUrl('view', ['record' => $record]))
                     ->description(fn (Certificate $record) => $record->status->getLabel().' · до '.$record->valid_until->format('d.m.Y')),
-                TextColumn::make('pms_booking_number')->label('Бронь PMS')->searchable()
+                TextColumn::make('pms_booking_number')->label('Номер брони')->searchable()
                     ->description(fn (Certificate $record) => $record->arrival_date?->format('d.m').'–'.$record->departure_date?->format('d.m.Y')),
                 TextColumn::make('booking_guest_name')->label('Гость в брони')
                     ->description(fn (Certificate $record) => $record->name_match?->shortLabel())

@@ -88,7 +88,7 @@ class PmsServices extends Page implements HasTable
             ->columns([
                 TextColumn::make('name')->label('Название в PMS')->searchable()->sortable()
                     ->description(fn (PmsService $record) => 'ID '.$record->external_id.($record->kind ? ' · '.$record->kind : '')),
-                IconColumn::make('allowed_in_certificate')->label('Можно включать в сертификат')->boolean(),
+                IconColumn::make('allowed_in_certificate')->label('В сертификат')->boolean(),
                 TextColumn::make('service.name')->label('Услуга в Gifter')->placeholder('не заведена')
                     ->url(fn (PmsService $record) => $record->service_id ? ServiceResource::getUrl('edit', ['record' => $record->service_id]) : null),
                 TextColumn::make('missing_since')->label('Статус в PMS')->badge()
@@ -97,7 +97,7 @@ class PmsServices extends Page implements HasTable
                 TextColumn::make('synced_at')->label('Обновлено')->dateTime('d.m.Y H:i')->placeholder('—'),
             ])
             ->filters([
-                TernaryFilter::make('allowed_in_certificate')->label('Можно включать в сертификат'),
+                TernaryFilter::make('allowed_in_certificate')->label('В сертификат'),
             ])
             ->recordActions([
                 Action::make('create')->label('Создать услугу из этой')->icon('heroicon-o-plus')
@@ -122,6 +122,6 @@ class PmsServices extends Page implements HasTable
             ])
             ->defaultSort('name')
             ->emptyStateHeading('Услуги ещё не загружены')
-            ->emptyStateDescription('Нажмите «Обновить услуги из PMS» (нужны подключение Exely в «Настройках PMS» и доступ ключей к Content API).');
+            ->emptyStateDescription('Нажмите «Обновить услуги из PMS». Нужны подключение Exely и доступ ключей к списку услуг.');
     }
 }

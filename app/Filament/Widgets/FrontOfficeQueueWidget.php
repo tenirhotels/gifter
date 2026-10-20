@@ -44,7 +44,7 @@ class FrontOfficeQueueWidget extends RoleQueueWidget
             $this->counter('Услуги сегодня', $q->fulfillmentsToday(), $queue(['when' => ['value' => 'today']]), 'info', 'ужины, трансферы, билеты', 'heroicon-o-clock'),
             $this->counter('Сейчас в отеле', $q->status(CertificateStatus::InUse), $list(['status' => ['values' => ['in_use']]]), 'info', 'отметить использованным при выезде', 'heroicon-o-home-modern'),
             $this->counter('Забронированы', $q->status(CertificateStatus::Reserved), $list(['status' => ['values' => ['reserved']]]), 'info', 'ждут заезда', 'heroicon-o-calendar-days'),
-            $this->counter('Истекают ≤ 14 дней', $q->expiringSoon(), $list(['expiring' => ['isActive' => true]]), 'danger', 'активные и забронированные', 'heroicon-o-exclamation-triangle'),
+            $this->counter('Истекают за 14 дней', $q->expiringSoon(), $list(['expiring' => ['isActive' => true]]), 'danger', 'активные и забронированные', 'heroicon-o-exclamation-triangle'),
             $this->counter('Активны, без брони', $q->status(CertificateStatus::Active), $list(['status' => ['values' => ['active']]]), 'gray', 'могут позвонить', 'heroicon-o-ticket'),
         ];
     }
