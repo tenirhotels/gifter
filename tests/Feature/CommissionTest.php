@@ -283,7 +283,7 @@ class CommissionTest extends TestCase
         Livewire::test(MyCommission::class)->assertCanSeeTableRecords([$redeemed, $noReservation, $reserved])->assertCanNotSeeTableRecords([$foreign])
             ->assertSee(['Дата продажи', 'Стоимость', 'Бронирование', 'Комиссионные', 'Выплата', 'Бронь не создана', 'ожидается', 'начислено']);
         $this->actingAs(User::factory()->create(['roles' => [Role::Finance]]));
-        Livewire::test(Commissions::class)->assertSee('Айгерим')->assertCanSeeTableRecords([$this->seller, $other]);
+        Livewire::test(Commissions::class)->assertSee('Айгерим')->assertSee($other->name);
     }
 
     public function test_commissions_are_filtered_by_redemption_period(): void
@@ -618,11 +618,11 @@ class CommissionTest extends TestCase
         $this->actingAs($this->seller);
         $this->get('/admin/commissions')->assertForbidden();
         $this->actingAs(User::factory()->create(['roles' => [Role::Finance]]));
-        Livewire::test(Commissions::class)->assertActionExists('exportReport')->callAction('exportReport')->assertFileDownloaded();
+        Livewire::test(Commissions::class)->callAction('export')->assertFileDownloaded();
         $this->assertDatabaseHas('audit_logs', ['event' => 'seller_report_exported']);
     }
 
-    public function test_commissions_page_slices_by_usage_period_and_month(): void
+    public function test_commissions_page_is_the_seller_report_with_slices(): void
     {
         $this->rule('percent', '5');
         $other = User::factory()->create(['roles' => [Role::Sales], 'name' => 'Бауыржан']);
@@ -631,28 +631,12 @@ class CommissionTest extends TestCase
         $this->redeem($used);
         $this->actingAs(User::factory()->create(['roles' => [Role::Finance]]));
 
-        Livewire::test(Commissions::class)->assertCanSeeTableRecords([$this->seller, $other])
-            ->filterTable('report', ['basis' => 'used', 'preset' => 'all'])
-            ->assertCanSeeTableRecords([$this->seller])->assertCanNotSeeTableRecords([$other])
-            ->filterTable('report', ['basis' => 'used', 'preset' => 'all', 'by_month' => true])
-            ->assertSee(Carbon::createFromFormat('Y-m', '2026-05')->translatedFormat('M Y').': ')
-            ->filterTable('report', ['basis' => 'sold', 'preset' => 'last'])
-            ->assertCanNotSeeTableRecords([$this->seller, $other]);
-    }
-
-    public function test_commissions_page_shows_certificate_details_for_seller(): void
-    {
-        $this->rule('percent', '5');
-        $certificate = $this->sold();
-        $this->redeem($certificate);
-        $this->actingAs(User::factory()->create(['roles' => [Role::SalesDirector]]));
-
-        Livewire::test(Commissions::class)->assertTableColumnExists('to_approve')->assertTableColumnExists('approved')
-            ->assertActionVisible(TestAction::make('details')->table($this->seller));
-
-        $html = view('filament.pages.seller-report-details', ['rows' => (new SellerReport(SellerReport::SOLD, null, null, $this->seller->id))->details()])->render();
-        $this->assertStringContainsString($certificate->number, $html);
-        $this->assertStringContainsString('Дата использования', $html);
-        $this->assertStringContainsString('Дата выплаты', $html);
+        $page = Livewire::test(Commissions::class)->assertSee('Без брони')->assertSee('К согласованию');
+        $this->assertCount(2, $page->instance()->report()->summary());
+        $page->set('data.basis', 'used');
+        $this->assertCount(1, $page->instance()->report()->summary());
+        $page->set('data.preset', 'last');
+        $this->assertCount(0, $page->instance()->report()->summary());
+        $page->set('data.preset', 'all')->assertSee('Начисленная комиссия по месяцам');
     }
 }

@@ -16,31 +16,24 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Toggle;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Concerns\InteractsWithTable;
-use Filament\Tables\Contracts\HasTable;
-use Filament\Tables\Filters\Filter;
-use Filament\Tables\Table;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use UnitEnum;
 
 /**
- * «Комиссии» — сводка по продавцам для Финансов и директора: продано, погашено, не погашено,
- * без брони, начислено, ожидает выплаты, выплачено. «Сертификаты» раскрывают сумму до отдельных сертификатов.
- * «Отчёт Excel» — детальная выгрузка по продавцам за период: сводка, сертификаты, разбивка по месяцам (SellerReport).
+ * «Комиссии» — единый отчёт по продавцам для Финансов и директора: продажи и комиссии со срезами (по использованию или
+ * по дате продажи), периодами, разбивкой по месяцам и выгрузкой в Excel. «Сертификаты» раскрывают строку до отдельных
+ * сертификатов, «Согласование и выплаты» ведёт к работе с комиссиями продавца. Выгрузка пишется в журнал аудита.
  */
-class Commissions extends Page implements HasTable
+class Commissions extends Page
 {
-    use InteractsWithTable;
     use TranslatesPageLabels;
 
-    protected string $view = 'filament.pages.table-page';
+    protected string $view = 'filament.pages.commissions';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptPercent;
 
@@ -54,18 +47,8 @@ class Commissions extends Page implements HasTable
 
     protected static ?string $slug = 'commissions';
 
-    /** @var Collection<int, array<string, mixed>>|null */
-    private ?Collection $summary = null;
-
-    private ?string $summaryKey = null;
-
-    /** @var array{months: list<string>, rows: list<array<string, mixed>>}|null */
-    private ?array $months = null;
-
-    public static function canAccess(): bool
-    {
-        return (bool) auth()->user()?->can(Permission::ViewAllCommissions);
-    }
+    /** @var array<string, mixed> */
+    public array $data = [];
 
     public static function getNavigationBadge(): ?string
     {
@@ -75,51 +58,52 @@ class Commissions extends Page implements HasTable
         return CertificateCommission::query()->where('status', $status)->exists() ? '●' : null;
     }
 
-    /** Отчёт по текущим фильтрам: срез (по продаже / по использованию), период, продавец. */
-    private function report(): SellerReport
+    public static function canAccess(): bool
     {
-        $state = $this->getTableFilterState('report') ?? [];
-        [$from, $to] = SellerReport::range($state['preset'] ?? 'all', $state['from'] ?? null, $state['until'] ?? null);
+        return (bool) auth()->user()?->can(Permission::ViewAllCommissions);
+    }
+
+    public function mount(): void
+    {
+        $this->form->fill(['basis' => SellerReport::SOLD, 'preset' => 'all', 'from' => null, 'until' => null, 'seller' => null]);
+    }
+
+    public function form(Schema $schema): Schema
+    {
+        return $schema->statePath('data')->components([
+            Grid::make(['default' => 1, 'lg' => 4])->schema([
+                Radio::make('basis')->label('Срез')->options([
+                    SellerReport::SOLD => __('По дате продажи'),
+                    SellerReport::USED => __('По использованию (месяц начисления комиссии)'),
+                ])->default(SellerReport::SOLD)->live()->required(),
+                Select::make('preset')->label('Период')->options([
+                    'all' => __('Весь период'), 'this' => __('Этот месяц'), 'last' => __('Прошлый месяц'), 'quarter' => __('Этот квартал'), 'year' => __('Этот год'),
+                    'custom' => __('Свой период'),
+                ])->default('all')->live()->required(),
+                DatePicker::make('from')->label('С')->native(false)->displayFormat('d.m.Y')->live()
+                    ->visible(fn (Get $get) => $get('preset') === 'custom'),
+                DatePicker::make('until')->label('По')->native(false)->displayFormat('d.m.Y')->live()
+                    ->visible(fn (Get $get) => $get('preset') === 'custom'),
+                Select::make('seller')->label('Продавец')->options(fn () => User::query()->whereIn('id', Certificate::query()->whereNotNull('issued_at')->whereNotNull('sold_by')->select('sold_by'))->orderBy('name')->pluck('name', 'id'))
+                    ->placeholder(__('Все продавцы'))->live(),
+            ]),
+        ]);
+    }
+
+    public function report(): SellerReport
+    {
+        [$from, $to] = SellerReport::range($this->data['preset'] ?? 'all', $this->data['from'] ?? null, $this->data['until'] ?? null);
 
         return new SellerReport(
-            ($state['basis'] ?? null) === SellerReport::USED ? SellerReport::USED : SellerReport::SOLD,
-            $from, $to, filled($state['seller'] ?? null) ? (int) $state['seller'] : null,
+            ($this->data['basis'] ?? null) === SellerReport::USED ? SellerReport::USED : SellerReport::SOLD,
+            $from, $to, filled($this->data['seller'] ?? null) ? (int) $this->data['seller'] : null,
         );
-    }
-
-    /** @return Collection<int, array<string, mixed>> */
-    private function summary(): Collection
-    {
-        $key = json_encode($this->getTableFilterState('report'));
-        if ($this->summaryKey !== $key || $this->summary === null) {
-            $this->summaryKey = $key;
-            $this->summary = $this->report()->summary()->keyBy('seller_id');
-            $this->months = null;
-        }
-
-        return $this->summary;
-    }
-
-    /** @return array<string, mixed> */
-    private function row(int $sellerId): array
-    {
-        return $this->summary()[$sellerId] ?? ['count' => 0, 'sales_minor' => 0, 'used' => 0, 'not_used' => 0, 'expired' => 0, 'no_reservation' => 0,
-            'earned_minor' => 0, 'to_approve_minor' => 0, 'approved_minor' => 0, 'paid_minor' => 0];
-    }
-
-    /** @return array{months: list<string>, rows: list<array<string, mixed>>} */
-    private function months(): array
-    {
-        $this->summary();
-
-        return $this->months ??= $this->report()->months();
     }
 
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('exportReport')->label('Скачать Excel')->icon('heroicon-o-arrow-down-tray')
-                ->tooltip(__('Выгрузка по выбранным срезу, периоду и продавцу: сводка, сертификаты, по месяцам'))
+            Action::make('export')->label('Скачать Excel')->icon('heroicon-o-arrow-down-tray')
                 ->action(function (): BinaryFileResponse {
                     $report = $this->report();
                     AuditLog::record('seller_report_exported', auth()->user(), null, [
@@ -131,74 +115,23 @@ class Commissions extends Page implements HasTable
         ];
     }
 
-    public function table(Table $table): Table
+    /** @return array<string, mixed> */
+    protected function getViewData(): array
     {
+        $report = $this->report();
+        $summary = $report->summary();
         $money = fn (int $minor) => Money::format(Money::fromMinor($minor));
 
-        return $table
-            ->query(fn () => User::query()->whereIn('id', $this->summary()->keys()))
-            ->columns([
-                TextColumn::make('name')->label('Продавец')->searchable()->weight('bold'),
-                TextColumn::make('sold')->label('Продано')->state(fn (User $record) => $this->row($record->id)['count'])
-                    ->description(fn (User $record) => $money($this->row($record->id)['sales_minor'])),
-                TextColumn::make('redeemed')->label('Использовано')->state(fn (User $record) => $this->row($record->id)['used']),
-                TextColumn::make('not_redeemed')->label('Не использовано')->state(fn (User $record) => $this->row($record->id)['not_used'])
-                    ->description(fn (User $record) => ($r = $this->row($record->id))['expired'] ? __('истекло: :p1', ['p1' => $r['expired']]) : null),
-                TextColumn::make('no_reservation')->label('Без брони')->state(fn (User $record) => $this->row($record->id)['no_reservation'])
-                    ->color(fn (User $record) => $this->row($record->id)['no_reservation'] > 0 ? 'warning' : null),
-                TextColumn::make('earned')->label('Начислено')->state(fn (User $record) => $money($this->row($record->id)['earned_minor']))->weight('bold'),
-                TextColumn::make('to_approve')->label('К согласованию')->state(fn (User $record) => $money($this->row($record->id)['to_approve_minor']))
-                    ->color(fn (User $record) => $this->row($record->id)['to_approve_minor'] > 0 ? 'warning' : null),
-                TextColumn::make('approved')->label('К выплате')->state(fn (User $record) => $money($this->row($record->id)['approved_minor']))
-                    ->color(fn (User $record) => $this->row($record->id)['approved_minor'] > 0 ? 'info' : null),
-                TextColumn::make('paid')->label('Выплачено')->state(fn (User $record) => $money($this->row($record->id)['paid_minor']))->color('success'),
-                TextColumn::make('by_month')->label('По месяцам')->html()->wrap()
-                    ->visible(fn () => ! empty($this->getTableFilterState('report')['by_month'] ?? null))
-                    ->state(function (User $record) use ($money): string {
-                        $row = collect($this->months()['rows'])->firstWhere('seller_id', $record->id);
-
-                        return collect($row['values'] ?? [])->map(fn (int $minor, string $month) => e(Carbon::createFromFormat('Y-m', $month)->translatedFormat('M Y').': '.$money($minor)))->implode('<br>');
-                    }),
-            ])
-            ->filters([
-                // Срез и период управляют всей таблицей: продажи и комиссии считаются по одним и тем же сертификатам.
-                Filter::make('report')->label('Срез и период')
-                    ->schema([
-                        Radio::make('basis')->label('Срез')->options([
-                            SellerReport::SOLD => __('По дате продажи'),
-                            SellerReport::USED => __('По использованию (месяц начисления комиссии)'),
-                        ])->default(SellerReport::SOLD),
-                        Select::make('preset')->label('Период')->options([
-                            'all' => __('Весь период'), 'this' => __('Этот месяц'), 'last' => __('Прошлый месяц'), 'quarter' => __('Этот квартал'),
-                            'year' => __('Этот год'), 'custom' => __('Свой период'),
-                        ])->default('all')->live(),
-                        DatePicker::make('from')->label('С')->native(false)->displayFormat('d.m.Y')->visible(fn (Get $get) => $get('preset') === 'custom'),
-                        DatePicker::make('until')->label('По')->native(false)->displayFormat('d.m.Y')->visible(fn (Get $get) => $get('preset') === 'custom'),
-                        Select::make('seller')->label('Продавец')->options(fn () => User::query()->whereIn('id', Certificate::query()->whereNotNull('issued_at')->whereNotNull('sold_by')->select('sold_by'))->orderBy('name')->pluck('name', 'id'))
-                            ->placeholder(__('Все продавцы')),
-                        Toggle::make('by_month')->label('Разбивка по месяцам'),
-                    ])
-                    ->query(fn ($query) => $query)
-                    ->indicateUsing(function (array $data): ?string {
-                        $report = $this->report();
-
-                        return $report->from || $report->to || $report->sellerId || $report->basis === SellerReport::USED ? $report->periodLabel() : null;
-                    }),
-            ])
-            ->filtersFormColumns(2)
-            ->recordActions([
-                Action::make('details')->label('Сертификаты')->icon('heroicon-o-list-bullet')
-                    ->modalHeading(fn (User $record) => __('Сертификаты: :p1', ['p1' => $record->name]))
-                    ->modalDescription(fn () => $this->report()->periodLabel())
-                    ->slideOver()->modalWidth('7xl')->modalSubmitAction(false)->modalCancelActionLabel(__('Закрыть'))
-                    ->modalContent(fn (User $record) => view('filament.pages.seller-report-details', [
-                        'rows' => (new SellerReport($this->report()->basis, $this->report()->from, $this->report()->to, $record->id))->details(),
-                    ])),
-                Action::make('payouts')->label('Согласование и выплаты')->icon('heroicon-o-banknotes')->color('gray')
-                    ->url(fn (User $record) => SellerCommissions::getUrl(['seller' => $record->id])),
-            ])
-            ->recordAction('details')
-            ->defaultSort('name')
-            ->emptyStateHeading(__('Продаж с комиссией пока нет'));
+        return [
+            'periodLabel' => $report->periodLabel(),
+            'summary' => $summary,
+            'totals' => [
+                'count' => $summary->sum('count'), 'sales' => $money($summary->sum('sales_minor')), 'used' => $summary->sum('used'), 'not_used' => $summary->sum('not_used'), 'no_reservation' => $summary->sum('no_reservation'),
+                'earned' => $money($summary->sum('earned_minor')), 'to_approve' => $money($summary->sum('to_approve_minor')),
+                'approved' => $money($summary->sum('approved_minor')), 'paid' => $money($summary->sum('paid_minor')),
+            ],
+            'months' => $report->months(),
+            'money' => $money,
+        ];
     }
 }
