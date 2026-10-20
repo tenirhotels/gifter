@@ -26,7 +26,7 @@ class ServiceForm
     {
         return $schema->components([
             // Создание: услуга из списка PMS (название и ID подставляются) или вручную. Правка: показываем связь с PMS.
-            Section::make('Источник')->columns(2)->columnSpanFull()->visible(fn (string $operation) => $operation === 'create')->schema([
+            Section::make('Источник услуги')->description('Выберите услугу из Exely или создайте её вручную, если её нет в PMS.')->columns(2)->columnSpanFull()->visible(fn (string $operation) => $operation === 'create')->schema([
                 Radio::make('source')->label('Откуда услуга')->options(['pms' => 'Из списка PMS (Exely)', 'manual' => 'Вручную (нет в PMS)'])
                     ->default(fn () => request()->query('pms') ? 'pms' : 'manual')->live()->required()->inline(),
                 Select::make('pms_service_id')->label('Услуга из PMS')->searchable()->live()
@@ -41,7 +41,7 @@ class ServiceForm
                             $set('unit', 'шт');
                         }
                     })
-                    ->helperText('Показаны услуги из PMS, которых ещё нет в Gifter. Название можно переименовать или перевести — связь идёт по ID.'),
+                    ->helperText('Выберите услугу из Exely, которую будете использовать в сертификатах. Название можно изменить — связь с Exely сохраняется по ID.'),
             ]),
             Section::make('Из PMS')->columns(2)->columnSpanFull()
                 ->visible(fn (string $operation, ?Service $record) => $operation === 'edit' && $record?->pmsService !== null)->schema([
@@ -54,39 +54,48 @@ class ServiceForm
                             ? 'Включено — услуга предлагается при составлении сертификата.' : 'Включить можно после того, как цена на сегодня утверждена администратором.'),
                 ]),
             Section::make('Услуга')->columns(2)->columnSpanFull()->schema([
-                TextInput::make('name')->label('Название')->required()->maxLength(255),
-                TextInput::make('unit')->label('Единица')->placeholder('ночь, персона, сеанс, билет')->required()->maxLength(50),
+                TextInput::make('name')->label('Название')->required()->maxLength(255)
+                    ->helperText('Название услуги, которое увидят сотрудники и гости в Gifter.'),
+                TextInput::make('unit')->label('Единица измерения')->placeholder('ночь, персона, сеанс, билет')->required()->maxLength(50)
+                    ->helperText('В чём учитывается услуга: шт., ночь, человек, час и т. д.'),
                 Select::make('category_id')->label('Категория')->relationship('category', 'name', fn ($query) => $query->where('is_active', true)->orderBy('position'))
-                    ->preload()->required()->createOptionForm(ServiceCategoryForm::fields()),
+                    ->preload()->required()->createOptionForm(ServiceCategoryForm::fields())
+                    ->helperText('Определяет, к какому типу относится услуга: проживание, питание, услуга отеля или стороннего поставщика.'),
                 Select::make('provider_id')->label('Поставщик')->relationship('provider', 'name', fn ($query) => $query->where('is_active', true))
                     ->searchable()->preload()->required()->createOptionForm(ProviderForm::fields())
                     ->helperText('Кто оказывает услугу: отель, ресторан, отдел или сторонняя компания.'),
-                Textarea::make('description')->label('Описание')->columnSpanFull(),
+                Textarea::make('description')->label('Описание')->columnSpanFull()
+                    ->helperText('Кратко опишите услугу и условия её предоставления.'),
                 Toggle::make('is_active')->label('Активна')->default(true)
-                    ->helperText('Неактивную услугу нельзя добавить в новый сертификат; выпущенные не меняются.'),
+                    ->helperText('Если выключить, услугу нельзя будет добавить в новые сертификаты. Уже выпущенные сертификаты не изменятся.'),
             ]),
             Section::make('Цена')->columns(3)->columnSpanFull()->visible(fn (string $operation) => $operation === 'create')
                 ->description(fn () => app(ServicePricing::class)->needsApproval() ? 'Цену, введённую директором, подтверждает администратор: до подтверждения услуга не продаётся.' : null)
                 ->schema([
                     TextInput::make('price')->label('Цена продажи, ₸')->numeric()->minValue(1)->dehydrated(true)
+                        ->helperText('Стоимость услуги, которая используется при продаже сертификата.')
                         ->required(fn (Get $get) => $get('source') === 'pms'),
-                    TextInput::make('cost')->label('Себестоимость, ₸')->numeric()->minValue(0)->visible(fn () => auth()->user()?->can(Permission::ViewCosts)),
-                    DatePicker::make('valid_from')->label('Цена действует с')->default(today())->required(fn (Get $get) => filled($get('price'))),
+                    TextInput::make('cost')->label('Себестоимость, ₸')->numeric()->minValue(0)->visible(fn () => auth()->user()?->can(Permission::ViewCosts))
+                        ->helperText('Внутренняя стоимость услуги для расчёта маржи. Гостю не показывается.'),
+                    DatePicker::make('valid_from')->label('Цена действует с')->default(today())->required(fn (Get $get) => filled($get('price')))
+                        ->helperText('Дата, с которой применяется эта цена для новых сертификатов.'),
                 ]),
             Section::make('Исполнение')->columns(3)->columnSpanFull()
-                ->description('Что нужно сделать перед заездом гостя. Признаки фиксируются в сертификате на дату продажи.')
+                ->description('Укажите, нужна ли подготовка или дополнительные действия перед предоставлением услуги. Эти условия фиксируются в сертификате при его выпуске.')
                 ->schema([
-                    Toggle::make('requires_fulfillment')->label('Требует подготовки')->live()
-                        ->helperText('Нужна заявка поставщику (ужин, трансфер, билеты). Завтрак обычно — нет.')
+                    Toggle::make('requires_fulfillment')->label('Предварительная подготовка')->live()
+                        ->helperText('Услугу нужно подготовить или заказать заранее. Пример: ужин, трансфер, билеты.')
                         ->afterStateUpdated(function (?bool $state, Set $set) {
                             if (! $state) {
                                 $set('requires_scheduling', false);
                                 $set('requires_confirmation', false);
                             }
                         }),
-                    Toggle::make('requires_scheduling')->label('Нужны дата и время')->live()
+                    Toggle::make('requires_scheduling')->label('Требуется запись')->live()
+                        ->helperText('Для услуги необходимо выбрать дату и/или время.')
                         ->disabled(fn (Get $get) => ! $get('requires_fulfillment')),
-                    Toggle::make('requires_confirmation')->label('Нужно подтверждение поставщика')->live()
+                    Toggle::make('requires_confirmation')->label('Требуется подтверждение')->live()
+                        ->helperText('Услуга предоставляется только после подтверждения поставщика.')
                         ->disabled(fn (Get $get) => ! $get('requires_fulfillment')),
                 ]),
         ]);

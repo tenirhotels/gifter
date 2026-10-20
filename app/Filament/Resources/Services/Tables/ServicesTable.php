@@ -41,7 +41,7 @@ class ServicesTable
                 TextColumn::make('current_cost')->label('Себестоимость')->state(fn (Service $record) => $current($record, 'cost'))
                     ->visible(fn () => auth()->user()?->can(Permission::ViewCosts)),
                 IconColumn::make('requires_fulfillment')->label('Подготовка')->boolean(),
-                IconColumn::make('requires_scheduling')->label('Время')->boolean()->toggleable(),
+                IconColumn::make('requires_scheduling')->label('Запись')->boolean()->toggleable(),
                 IconColumn::make('requires_confirmation')->label('Подтверждение')->boolean()->toggleable(),
                 IconColumn::make('from_pms')->label('Из PMS')->boolean()->state(fn (Service $record) => $record->pmsService !== null)->toggleable(),
                 IconColumn::make('is_active')->label('Активна')->boolean(),
@@ -49,7 +49,7 @@ class ServicesTable
             ->filters([
                 SelectFilter::make('category_id')->label('Категория')->relationship('category', 'name'),
                 SelectFilter::make('provider_id')->label('Поставщик')->relationship('provider', 'name'),
-                TernaryFilter::make('requires_fulfillment')->label('Требует подготовки'),
+                TernaryFilter::make('requires_fulfillment')->label('Предварительная подготовка'),
                 TernaryFilter::make('is_active')->label('Активна'),
                 Filter::make('incomplete')->label('Не хватает данных (категория, поставщик, цена)')
                     ->query(fn (Builder $query) => $query->where(fn (Builder $q) => $q->whereNull('category_id')->orWhereNull('provider_id')
