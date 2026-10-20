@@ -87,6 +87,8 @@ final class SellerReport
                 'package' => $c->package?->name,
                 'customer' => $c->customer?->displayName(),
                 'status' => $c->status->getLabel(),
+                'status_enum' => $c->status,
+                'booking' => $c->pms_booking_number,
                 'used' => $c->status === CertificateStatus::Used,
                 'used_at' => $commission?->earned_at,
                 'sale_minor' => Money::toMinor($c->total_amount),
@@ -117,6 +119,8 @@ final class SellerReport
                 'sales_minor' => $rows->sum('sale_minor'),
                 'used' => $rows->where('used', true)->count(),
                 'not_used' => $rows->where('used', false)->count(),
+                'expired' => $rows->where('status_enum', CertificateStatus::Expired)->count(),
+                'no_reservation' => $rows->filter(fn ($x) => $x['status_enum'] === CertificateStatus::Active && blank($x['booking']))->count(),
                 'earned_minor' => $earned($rows)->sum('commission_minor'),
                 'to_approve_minor' => $of(CommissionStatus::Earned),
                 'approved_minor' => $of(CommissionStatus::Approved),
@@ -128,14 +132,15 @@ final class SellerReport
     /**
      * Начисленная комиссия: продавец × месяц (по выбранному срезу).
      *
-     * @return array{months: list<string>, rows: list<array{seller: string, values: array<string, int>, total: int}>}
+     * @return array{months: list<string>, rows: list<array{seller_id: int, seller: string, values: array<string, int>, total: int}>}
      */
     public function months(): array
     {
         $details = $this->details()->filter(fn ($r) => $r['commission_state']?->isEarned());
         $key = fn (array $r) => ($this->basis === self::USED ? $r['used_at'] : $r['sold_at'])?->format('Y-m');
         $months = $details->map($key)->filter()->unique()->sort()->values()->all();
-        $rows = $details->groupBy('seller')->map(function (Collection $items, string $seller) use ($key, $months) {
+        $rows = $details->groupBy('seller_id')->map(function (Collection $items) use ($key, $months) {
+            $seller = $items->first()['seller'];
             $values = array_fill_keys($months, 0);
             foreach ($items as $item) {
                 if ($month = $key($item)) {
@@ -143,8 +148,8 @@ final class SellerReport
                 }
             }
 
-            return ['seller' => $seller, 'values' => $values, 'total' => array_sum($values)];
-        })->sortKeys()->values()->all();
+            return ['seller_id' => $items->first()['seller_id'], 'seller' => $seller, 'values' => $values, 'total' => array_sum($values)];
+        })->sortBy('seller')->values()->all();
 
         return ['months' => $months, 'rows' => $rows];
     }
@@ -161,14 +166,14 @@ final class SellerReport
 
         $writer->getCurrentSheet()->setName(__('Сводка'));
         $writer->addRow(Row::fromValues([__('Отчёт по продавцам'), $this->periodLabel()], $head));
-        $writer->addRow(Row::fromValues([__('Продавец'), __('Сертификатов'), __('Сумма продаж, ₸'), __('Использовано'), __('Не использовано'),
+        $writer->addRow(Row::fromValues([__('Продавец'), __('Сертификатов'), __('Сумма продаж, ₸'), __('Использовано'), __('Не использовано'), __('Без брони'),
             __('Начислено, ₸'), __('К согласованию, ₸'), __('К выплате, ₸'), __('Выплачено, ₸')], $head));
         $summary = $this->summary();
         foreach ($summary as $s) {
-            $writer->addRow(Row::fromValues([$s['seller'], $s['count'], $money($s['sales_minor']), $s['used'], $s['not_used'],
+            $writer->addRow(Row::fromValues([$s['seller'], $s['count'], $money($s['sales_minor']), $s['used'], $s['not_used'], $s['no_reservation'],
                 $money($s['earned_minor']), $money($s['to_approve_minor']), $money($s['approved_minor']), $money($s['paid_minor'])]));
         }
-        $writer->addRow(Row::fromValues([__('Итого'), $summary->sum('count'), $money($summary->sum('sales_minor')), $summary->sum('used'), $summary->sum('not_used'),
+        $writer->addRow(Row::fromValues([__('Итого'), $summary->sum('count'), $money($summary->sum('sales_minor')), $summary->sum('used'), $summary->sum('not_used'), $summary->sum('no_reservation'),
             $money($summary->sum('earned_minor')), $money($summary->sum('to_approve_minor')), $money($summary->sum('approved_minor')), $money($summary->sum('paid_minor'))], $head));
 
         $writer->addNewSheetAndMakeItCurrent()->setName(__('Сертификаты'));

@@ -618,8 +618,25 @@ class CommissionTest extends TestCase
         $this->actingAs($this->seller);
         $this->get('/admin/commissions')->assertForbidden();
         $this->actingAs(User::factory()->create(['roles' => [Role::Finance]]));
-        Livewire::test(Commissions::class)->assertActionExists('exportReport')
-            ->callAction('exportReport', ['basis' => 'used', 'preset' => 'all', 'seller' => null])->assertFileDownloaded();
+        Livewire::test(Commissions::class)->assertActionExists('exportReport')->callAction('exportReport')->assertFileDownloaded();
         $this->assertDatabaseHas('audit_logs', ['event' => 'seller_report_exported']);
+    }
+
+    public function test_commissions_page_slices_by_usage_period_and_month(): void
+    {
+        $this->rule('percent', '5');
+        $other = User::factory()->create(['roles' => [Role::Sales], 'name' => 'Бауыржан']);
+        $used = $this->sold();
+        $this->sold($other);
+        $this->redeem($used);
+        $this->actingAs(User::factory()->create(['roles' => [Role::Finance]]));
+
+        Livewire::test(Commissions::class)->assertCanSeeTableRecords([$this->seller, $other])
+            ->filterTable('report', ['basis' => 'used', 'preset' => 'all'])
+            ->assertCanSeeTableRecords([$this->seller])->assertCanNotSeeTableRecords([$other])
+            ->filterTable('report', ['basis' => 'used', 'preset' => 'all', 'by_month' => true])
+            ->assertSee(Carbon::createFromFormat('Y-m', '2026-05')->translatedFormat('M Y').': ')
+            ->filterTable('report', ['basis' => 'sold', 'preset' => 'last'])
+            ->assertCanNotSeeTableRecords([$this->seller, $other]);
     }
 }
