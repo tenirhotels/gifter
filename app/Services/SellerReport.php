@@ -31,6 +31,25 @@ final class SellerReport
         public readonly ?int $sellerId = null,
     ) {}
 
+    /**
+     * Границы периода по пресету: this, last, quarter, year, custom (свои даты), иначе — весь период.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    public static function range(?string $preset, ?string $from = null, ?string $until = null): array
+    {
+        $now = now();
+
+        return match ($preset) {
+            'this' => [$now->copy()->startOfMonth()->toDateString(), $now->copy()->endOfMonth()->toDateString()],
+            'last' => [$now->copy()->subMonthNoOverflow()->startOfMonth()->toDateString(), $now->copy()->subMonthNoOverflow()->endOfMonth()->toDateString()],
+            'quarter' => [$now->copy()->startOfQuarter()->toDateString(), $now->copy()->endOfQuarter()->toDateString()],
+            'year' => [$now->copy()->startOfYear()->toDateString(), $now->copy()->endOfYear()->toDateString()],
+            'custom' => [$from, $until],
+            default => [null, null],
+        };
+    }
+
     /** @return Collection<int, Certificate> */
     private function certificates(): Collection
     {

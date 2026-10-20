@@ -11,7 +11,6 @@ use App\Exceptions\DomainRuleViolation;
 use App\Filament\Pages\Commissions;
 use App\Filament\Pages\MyCommission;
 use App\Filament\Pages\SellerCommissions;
-use App\Filament\Pages\SellerReports;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Filament\Resources\CommissionRules\Pages\CreateCommissionRule;
@@ -617,12 +616,10 @@ class CommissionTest extends TestCase
         $this->assertSame(['Сводка', 'Сертификаты', 'По месяцам'], $names);
 
         $this->actingAs($this->seller);
-        $this->get('/admin/seller-report')->assertForbidden();
-        foreach ([Role::Finance, Role::SalesDirector] as $role) {
-            $this->actingAs(User::factory()->create(['roles' => [$role]]));
-            $this->get('/admin/seller-report')->assertOk()->assertSee('Айгерим');
-        }
-        Livewire::test(SellerReports::class)->callAction('export')->assertFileDownloaded();
+        $this->get('/admin/commissions')->assertForbidden();
+        $this->actingAs(User::factory()->create(['roles' => [Role::Finance]]));
+        Livewire::test(Commissions::class)->assertActionExists('exportReport')
+            ->callAction('exportReport', ['basis' => 'used', 'preset' => 'all', 'seller' => null])->assertFileDownloaded();
         $this->assertDatabaseHas('audit_logs', ['event' => 'seller_report_exported']);
     }
 }

@@ -6,24 +6,32 @@ use App\Enums\CommissionStatus;
 use App\Enums\Permission;
 use App\Filament\Support\CommissionPeriod;
 use App\Filament\Support\TranslatesPageLabels;
+use App\Models\AuditLog;
 use App\Models\Certificate;
 use App\Models\CertificateCommission;
 use App\Models\User;
 use App\Services\CommissionManager;
+use App\Services\SellerReport;
 use App\Support\Money;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Select;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use UnitEnum;
 
 /**
  * «Комиссии» — сводка по продавцам для Финансов и директора: продано, погашено, не погашено,
  * без брони, начислено, ожидает выплаты, выплачено. «Сертификаты» раскрывают сумму до отдельных сертификатов.
+ * «Отчёт Excel» — детальная выгрузка по продавцам за период: сводка, сертификаты, разбивка по месяцам (SellerReport).
  */
 class Commissions extends Page implements HasTable
 {
@@ -68,6 +76,40 @@ class Commissions extends Page implements HasTable
 
         return $this->rows[$sellerId] ?? ['sold' => 0, 'sales_minor' => 0, 'redeemed' => 0, 'not_redeemed' => 0, 'no_reservation' => 0, 'expired' => 0,
             'earned_minor' => 0, 'pending_minor' => 0, 'to_approve_minor' => 0, 'approved_minor' => 0, 'paid_minor' => 0];
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('exportReport')->label('Отчёт Excel')->icon('heroicon-o-arrow-down-tray')
+                ->modalHeading(__('Отчёт по продавцам в Excel'))
+                ->modalDescription(__('Сводка, список сертификатов и разбивка по месяцам за выбранный период.'))
+                ->modalSubmitActionLabel(__('Скачать'))
+                ->fillForm(fn () => ['basis' => SellerReport::USED, 'preset' => 'this', 'seller' => null])
+                ->schema([
+                    Radio::make('basis')->label('Срез')->options([
+                        SellerReport::USED => __('По использованию (месяц начисления комиссии)'),
+                        SellerReport::SOLD => __('По дате продажи'),
+                    ])->required(),
+                    Select::make('preset')->label('Период')->options([
+                        'this' => __('Этот месяц'), 'last' => __('Прошлый месяц'), 'quarter' => __('Этот квартал'), 'year' => __('Этот год'),
+                        'all' => __('Весь период'), 'custom' => __('Свой период'),
+                    ])->required()->live(),
+                    DatePicker::make('from')->label('С')->native(false)->displayFormat('d.m.Y')->visible(fn (Get $get) => $get('preset') === 'custom'),
+                    DatePicker::make('until')->label('По')->native(false)->displayFormat('d.m.Y')->visible(fn (Get $get) => $get('preset') === 'custom'),
+                    Select::make('seller')->label('Продавец')->options(fn () => User::query()->whereIn('id', Certificate::query()->whereNotNull('issued_at')->whereNotNull('sold_by')->select('sold_by'))->orderBy('name')->pluck('name', 'id'))
+                        ->placeholder(__('Все продавцы')),
+                ])
+                ->action(function (array $data): BinaryFileResponse {
+                    [$from, $to] = SellerReport::range($data['preset'] ?? null, $data['from'] ?? null, $data['until'] ?? null);
+                    $report = new SellerReport($data['basis'] ?? SellerReport::USED, $from, $to, filled($data['seller'] ?? null) ? (int) $data['seller'] : null);
+                    AuditLog::record('seller_report_exported', auth()->user(), null, [
+                        'basis' => $report->basis, 'from' => $report->from, 'to' => $report->to, 'seller_id' => $report->sellerId,
+                    ]);
+
+                    return response()->download($report->toXlsx(), 'sellers-'.now()->format('Ymd-His').'.xlsx')->deleteFileAfterSend();
+                }),
+        ];
     }
 
     public function table(Table $table): Table

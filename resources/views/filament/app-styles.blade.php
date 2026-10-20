@@ -91,13 +91,4 @@
     .dark .gf-checks-badge { color: var(--success-400); }
     .dark .gf-checks [data-status="warn"] .gf-checks-badge { color: var(--warning-400); }
     .dark .gf-checks [data-status="fail"] .gf-checks-badge { color: var(--danger-400); }
-
-    /* 6) Отчёт по продавцам: таблицы сводки и месяцев. */
-    .gf-report-scroll { overflow-x: auto; }
-    .gf-report { width: 100%; border-collapse: collapse; font-size: .875rem; line-height: 1.25rem; }
-    .gf-report th { text-align: left; font-weight: 500; font-size: .75rem; color: var(--gray-500); padding: .5rem .75rem; border-bottom: 1px solid var(--gf-line, color-mix(in oklab, var(--gray-950) 10%, transparent)); white-space: nowrap; }
-    .gf-report td { padding: .5rem .75rem; border-bottom: 1px solid color-mix(in oklab, var(--gray-950) 6%, transparent); }
-    .gf-report .gf-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .gf-report tfoot td { font-weight: 600; border-bottom: 0; border-top: 1px solid color-mix(in oklab, var(--gray-950) 10%, transparent); }
-    .gf-report-muted { margin-top: .75rem; font-size: .8125rem; color: var(--gray-500); }
 </style>
