@@ -14,6 +14,7 @@ use App\Services\OnlineOrderManager;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -82,6 +83,8 @@ class OnlineOrderResource extends Resource
                 TextColumn::make('full_name')->label('Заказчик')->searchable()->weight('bold'),
                 ...ContactFields::maskedColumns(),
                 TextColumn::make('recipient_name')->label('Получатель')->placeholder('—')->toggleable(),
+                TextColumn::make('delivery_method')->label('Получение')->badge()->color('gray')->toggleable(),
+                TextColumn::make('gift_message')->label('Поздравление')->placeholder('—')->wrap()->limit(60)->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('notes')->label('Пожелания')->placeholder('—')->wrap()->limit(80)->toggleable(),
                 TextColumn::make('status')->label('Статус')->badge()
                     ->description(fn (OnlineOrder $record) => $record->reject_reason),
@@ -93,6 +96,17 @@ class OnlineOrderResource extends Resource
             ])
             ->recordActions([
                 ContactFields::revealAction(label: 'Контакты'),
+                Action::make('address')->label('Адрес доставки')->icon('heroicon-o-map-pin')->color('gray')
+                    ->authorize(Permission::RevealContacts)
+                    ->visible(fn (OnlineOrder $record) => filled($record->delivery_address))
+                    ->mountUsing(function (OnlineOrder $record, Action $action) {
+                        if (! ContactFields::logReveal($record)) {
+                            Notification::make()->danger()->title(ContactFields::limitMessage())->send();
+                            $action->halt();
+                        }
+                    })
+                    ->modalDescription(fn (OnlineOrder $record) => $record->delivery_address)
+                    ->modalSubmitAction(false)->modalCancelActionLabel(__('Закрыть')),
                 Action::make('process')->label('Оформить')->icon('heroicon-o-check')->color('success')
                     ->authorize(Permission::ProcessOnlineOrders)
                     ->visible(fn (OnlineOrder $record) => $record->status === OnlineOrderStatus::New)

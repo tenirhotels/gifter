@@ -13,6 +13,7 @@ use App\Models\Customer;
 use App\Models\OnlineOrder;
 use App\Models\Package;
 use App\Models\Service;
+use App\Models\ShopSetting;
 use App\Models\User;
 use App\Services\OnlineOrderManager;
 use App\Services\ServicePricing;
@@ -21,6 +22,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -53,7 +55,7 @@ class OnlineShopTest extends TestCase
     private function form(array $override = []): array
     {
         return array_merge(['last_name' => 'Иванов', 'first_name' => 'Иван', 'phone' => '8 701 123 45 67', 'email' => 'ivan@example.com',
-            'recipient_name' => 'Петрова Анна', 'notes' => 'К 8 марта', 'consent' => '1'], $override);
+            'recipient_name' => 'Петрова Анна', 'gift_message' => 'С днём рождения!', 'delivery_method' => 'pickup', 'notes' => 'К 8 марта', 'consent' => '1'], $override);
     }
 
     public function test_root_is_public_shop_and_shows_only_paid_online_packages_with_price(): void
@@ -63,10 +65,11 @@ class OnlineShopTest extends TestCase
         $this->package('Бесплатный', Service::factory()->create(), online: false, free: true);
         $this->package('Нет цены', $service, online: true);
 
-        $this->get('/')->assertOk()->assertSee('Романтический вечер')->assertSee('50 000')->assertSee('Ужин на двоих')
+        $this->get('/')->assertOk()->assertSee('Романтический вечер')->assertSee('50 000')
             ->assertDontSee('Не онлайн')->assertDontSee('Бесплатный')->assertDontSee('Нет цены')->assertSee('/admin');
         $this->get('/admin')->assertRedirect();
-        $this->get('/?lang=kk')->assertOk()->assertSee('Сыйлық сертификаттары');
+        $this->get('/?lang=kk')->assertOk()->assertSee('Сертификаттар');
+        $this->get('/order/'.$this->online->id)->assertOk()->assertSee('Ужин на двоих')->assertSee('currentColor', false);
         $this->get('/order/'.Package::where('name', 'Не онлайн')->value('id'))->assertNotFound();
     }
 
@@ -137,5 +140,42 @@ class OnlineShopTest extends TestCase
         $second = OnlineOrder::where('status', 'new')->firstOrFail();
         $this->expectException(DomainRuleViolation::class);
         app(OnlineOrderManager::class)->reject($second, $seller, 'нет');
+    }
+
+    public function test_delivery_methods_validation_and_gift_message_reach_the_draft(): void
+    {
+        $this->post('/order/'.$this->online->id, $this->form(['delivery_method' => 'courier', 'delivery_address' => '']))->assertSessionHasErrors('delivery_address');
+        $this->post('/order/'.$this->online->id, $this->form(['delivery_method' => 'pdf', 'email' => '']))->assertSessionHasErrors('email');
+        $this->post('/order/'.$this->online->id, $this->form(['delivery_method' => 'post']))->assertSessionHasErrors('delivery_method');
+
+        $this->post('/order/'.$this->online->id, $this->form(['delivery_method' => 'courier', 'delivery_address' => 'Алматы, Абая 10, кв. 5']))->assertRedirect('/order/thanks');
+        $order = OnlineOrder::firstOrFail();
+        $this->assertSame('Алматы, Абая 10, кв. 5', $order->delivery_address);
+        $this->assertNotSame('Алматы, Абая 10, кв. 5', DB::table('online_orders')->value('delivery_address'));
+
+        $certificate = app(OnlineOrderManager::class)->process($order, User::factory()->create(['roles' => [Role::Sales]]));
+        $this->assertStringContainsString('Курьер по городу', $certificate->notes);
+        $this->assertStringNotContainsString('Абая', $certificate->notes);
+        $this->assertStringContainsString('С днём рождения!', $certificate->notes);
+    }
+
+    public function test_shop_media_serves_only_shop_images_and_settings_page_is_admin_only(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('shop/hero.jpg', 'jpgdata');
+        Storage::disk('public')->put('secret.jpg', 'x');
+        $this->get('/media/hero.jpg')->assertOk();
+        $this->get('/media/secret.jpg')->assertNotFound();
+        $this->get('/media/..%2Fsecret.jpg')->assertNotFound();
+        $this->get('/media/notes.txt')->assertNotFound();
+
+        $this->online->update(['image_path' => 'hero.jpg']);
+        ShopSetting::create(['hero_title' => 'Особенный подарок', 'accent_color' => '#336699']);
+        $this->get('/')->assertSee('Особенный подарок')->assertSee('--accent: #336699', false)->assertSee('/media/hero.jpg', false);
+
+        $this->actingAs(User::factory()->create(['roles' => [Role::Sales]]));
+        $this->get('/admin/shop-settings')->assertForbidden();
+        $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
+        $this->get('/admin/shop-settings')->assertOk();
     }
 }

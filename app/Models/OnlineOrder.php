@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DeliveryMethod;
 use App\Enums\OnlineOrderStatus;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\HasEncryptedContacts;
@@ -18,14 +19,14 @@ class OnlineOrder extends Model
 {
     use Auditable, HasEncryptedContacts, HasPersonName, PreventsDeletion;
 
-    protected $fillable = ['package_id', 'last_name', 'first_name', 'phone', 'email', 'recipient_name', 'notes', 'locale', 'status',
+    protected $fillable = ['package_id', 'last_name', 'first_name', 'phone', 'email', 'recipient_name', 'delivery_method', 'delivery_address', 'gift_message', 'notes', 'locale', 'status',
         'certificate_id', 'handled_by', 'handled_at', 'reject_reason', 'ip_address'];
 
-    protected $attributes = ['status' => 'new', 'locale' => 'ru'];
+    protected $attributes = ['status' => 'new', 'locale' => 'ru', 'delivery_method' => 'pickup'];
 
     protected function casts(): array
     {
-        return ['status' => OnlineOrderStatus::class, 'handled_at' => 'datetime'];
+        return ['status' => OnlineOrderStatus::class, 'handled_at' => 'datetime', 'delivery_method' => DeliveryMethod::class, 'delivery_address' => 'encrypted'];
     }
 
     public function package(): BelongsTo

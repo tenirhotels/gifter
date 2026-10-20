@@ -24,7 +24,7 @@ class Package extends Model
 
     protected $attributes = ['is_active' => true, 'validity_value' => 2, 'validity_unit' => 'months', 'is_complimentary' => false];
 
-    protected $fillable = ['name', 'description', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active', 'sold_online'];
+    protected $fillable = ['name', 'description', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active', 'sold_online', 'image_path'];
 
     protected function casts(): array
     {
@@ -47,6 +47,12 @@ class Package extends Model
     public function validityLabel(): string
     {
         return $this->validity_unit->format($this->validity_value).' с даты продажи';
+    }
+
+    /** Адрес фото на публичной странице (или null, если фото не загружено). */
+    public function imageUrl(): ?string
+    {
+        return $this->image_path ? url('/media/'.basename($this->image_path)) : null;
     }
 
     public function items(): HasMany

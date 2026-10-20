@@ -35,7 +35,7 @@ final class OnlineOrderManager
                 'package_id' => $fresh->package_id,
                 'customer_id' => $customer->id,
                 'recipient_id' => $recipient?->id,
-                'notes' => __('Заявка с сайта № :p1', ['p1' => $fresh->id]),
+                'notes' => $this->notes($fresh),
             ]));
 
             $fresh->update(['status' => OnlineOrderStatus::Processed, 'certificate_id' => $certificate->id, 'handled_by' => $by->id, 'handled_at' => now()]);
@@ -58,6 +58,18 @@ final class OnlineOrderManager
 
             return $fresh;
         });
+    }
+
+    /** Примечание к черновику: номер заявки, способ получения, адрес, поздравление и пожелания клиента. */
+    private function notes(OnlineOrder $order): string
+    {
+        return collect([
+            __('Заявка с сайта № :p1', ['p1' => $order->id]),
+            __('Получение: :p1', ['p1' => $order->delivery_method->getLabel()]),
+            $order->delivery_address ? __('Адрес доставки — в заявке с сайта (контакты открываются с записью в журнал).') : null,
+            $order->gift_message ? __('Поздравление: :p1', ['p1' => $order->gift_message]) : null,
+            $order->notes ? __('Пожелания: :p1', ['p1' => $order->notes]) : null,
+        ])->filter()->implode("\n");
     }
 
     /** Черновик создаётся от имени сотрудника: он автор оформления и продавец. */

@@ -2,16 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DeliveryMethod;
 use App\Mail\OnlineOrderMail;
 use App\Mail\OnlineOrderReceivedMail;
 use App\Models\OnlineOrder;
 use App\Models\Package;
+use App\Models\ShopSetting;
 use App\Services\CertificateManager;
 use App\Support\PhoneNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -30,7 +33,7 @@ class PublicShopController extends Controller
             ->with('items.service')->orderBy('name')->get()
             ->map(fn (Package $package) => $this->offer($package))->filter()->values();
 
-        return view('shop.index', ['offers' => $offers]);
+        return view('shop.index', ['offers' => $offers, 'shop' => ShopSetting::current()]);
     }
 
     public function order(Request $request, Package $package): View
@@ -40,7 +43,7 @@ class PublicShopController extends Controller
 
         abort_if($offer === null, 404);
 
-        return view('shop.order', ['offer' => $offer]);
+        return view('shop.order', ['offer' => $offer, 'shop' => ShopSetting::current()]);
     }
 
     public function store(Request $request, Package $package): RedirectResponse
@@ -58,8 +61,11 @@ class PublicShopController extends Controller
             'last_name' => ['required', 'string', 'max:100'],
             'first_name' => ['required', 'string', 'max:100'],
             'phone' => ['required', 'string', 'max:32', fn ($attribute, $value, $fail) => PhoneNumber::isValid($value) && PhoneNumber::normalize($value) !== null ? null : $fail(__(PhoneNumber::HINT).'.')],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => ['nullable', 'required_if:delivery_method,pdf', 'email', 'max:255'],
             'recipient_name' => ['nullable', 'string', 'max:255'],
+            'gift_message' => ['nullable', 'string', 'max:500'],
+            'delivery_method' => ['required', Rule::enum(DeliveryMethod::class)],
+            'delivery_address' => ['nullable', 'required_if:delivery_method,courier', 'string', 'max:500'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'consent' => ['accepted'],
         ]);
@@ -68,7 +74,9 @@ class PublicShopController extends Controller
             'package_id' => $package->id,
             'last_name' => trim($data['last_name']), 'first_name' => trim($data['first_name']),
             'phone' => $data['phone'], 'email' => $data['email'] ?? null,
-            'recipient_name' => $data['recipient_name'] ?? null, 'notes' => $data['notes'] ?? null,
+            'recipient_name' => $data['recipient_name'] ?? null, 'gift_message' => $data['gift_message'] ?? null, 'notes' => $data['notes'] ?? null,
+            'delivery_method' => $data['delivery_method'],
+            'delivery_address' => $data['delivery_method'] === DeliveryMethod::Courier->value ? $data['delivery_address'] : null,
             'locale' => app()->getLocale(), 'ip_address' => $request->ip(),
         ]);
 
@@ -81,7 +89,21 @@ class PublicShopController extends Controller
     {
         $this->applyLang($request);
 
-        return view('shop.thanks');
+        return view('shop.thanks', ['shop' => ShopSetting::current()]);
+    }
+
+    public function terms(Request $request): View
+    {
+        $this->applyLang($request);
+
+        return view('shop.terms', ['shop' => ShopSetting::current()]);
+    }
+
+    public function faq(Request $request): View
+    {
+        $this->applyLang($request);
+
+        return view('shop.faq', ['shop' => ShopSetting::current()]);
     }
 
     /** Язык страницы: ?lang=kk|en|ru запоминается в сессии. */

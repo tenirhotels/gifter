@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Packages\Schemas;
 
 use App\Enums\ComplimentaryPurpose;
 use App\Enums\ValidityUnit;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -13,6 +14,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Arr;
 
 class PackageForm
 {
@@ -36,6 +38,11 @@ class PackageForm
             Placeholder::make('validity_hint')->label(' ')
                 ->content(__('Считается от даты продажи. Продавец срок не меняет; исключения — менеджер продаж с указанием причины. Новый срок действует только для новых сертификатов.')),
             Textarea::make('description')->label('Описание')->columnSpanFull(),
+            FileUpload::make('image_path')->label('Фото для сайта')->image()->disk('public')->directory('shop')->visibility('public')
+                ->maxSize(4096)->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])->columnSpanFull()
+                ->helperText(__('Показывается на публичной странице; лучше горизонтальное, до 4 МБ.'))
+                ->formatStateUsing(fn ($state) => $state ? ['shop/'.basename((string) $state)] : [])
+                ->dehydrateStateUsing(fn ($state) => ($f = collect(Arr::wrap($state))->first()) ? basename((string) $f) : null),
             Repeater::make('items')->label('Состав сертификата')->relationship()
                 ->helperText(__('Входит в каждый сертификат пакета. Уже выпущенные сертификаты не меняются.'))
                 ->orderColumn('position')
