@@ -50,6 +50,9 @@ enum Permission: string
     case RequestReservationException = 'reservations.exception_request';
     case ApproveReservationException = 'reservations.exception_approve';
 
+    /** Заявки с публичной страницы: просмотреть, оформить в черновик сертификата, отклонить. */
+    case ProcessOnlineOrders = 'online_orders.process';
+
     // Комиссии продавцов
     /** Правила комиссии по пакетам (версии). Только администратор. */
     case ManageCommissionRules = 'commissions.rules';
@@ -84,7 +87,7 @@ enum Permission: string
 
         return match ($this) {
             self::ViewCustomers, self::RevealContacts => [...$sales, Role::FrontOffice, Role::Finance],
-            self::AssignRecipient => $sales,
+            self::AssignRecipient, self::ProcessOnlineOrders => $sales,
             self::EditSaleDate => [Role::SalesManager],
             self::ManageCustomers, self::CreateCertificates, self::EditDrafts, self::ComposeDrafts,
             self::ManagePayments, self::IssueCertificates => $sales,

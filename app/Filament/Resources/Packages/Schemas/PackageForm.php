@@ -21,6 +21,8 @@ class PackageForm
         return $schema->components([
             TextInput::make('name')->label('Название пакета')->required()->maxLength(255),
             Toggle::make('is_active')->label('Активен')->default(true),
+            Toggle::make('sold_online')->label('Продаётся онлайн')->visible(fn (Get $get) => ! $get('is_complimentary'))
+                ->helperText(__('Показывается на публичной странице: клиент оставляет заявку.')),
             Grid::make(2)->columnSpanFull()->schema([
                 Toggle::make('is_complimentary')->label('Бесплатный пакет')->live()
                     ->helperText(__('Выпуск без оплаты, после согласования директора. Продавцу пакет не виден.')),

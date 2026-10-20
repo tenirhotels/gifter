@@ -1,10 +1,15 @@
 <?php
 
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\PublicShopController;
 use App\Http\Controllers\VerifyCertificateController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/admin');
+// Публичная страница: витрина онлайн-пакетов и заявка на сертификат. Сотрудники входят на /admin.
+Route::get('/', [PublicShopController::class, 'index'])->name('shop.index');
+Route::get('/order/thanks', [PublicShopController::class, 'thanks'])->name('shop.thanks');
+Route::get('/order/{package}', [PublicShopController::class, 'order'])->whereNumber('package')->name('shop.order');
+Route::post('/order/{package}', [PublicShopController::class, 'store'])->whereNumber('package')->middleware('throttle:5,1')->name('shop.store');
 
 // Публичная проверка сертификата по QR-коду. Ограничение частоты — защита от перебора.
 Route::get('/v/{token}', VerifyCertificateController::class)

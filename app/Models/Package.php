@@ -24,12 +24,13 @@ class Package extends Model
 
     protected $attributes = ['is_active' => true, 'validity_value' => 2, 'validity_unit' => 'months', 'is_complimentary' => false];
 
-    protected $fillable = ['name', 'description', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active'];
+    protected $fillable = ['name', 'description', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active', 'sold_online'];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'sold_online' => 'boolean',
             'validity_value' => 'integer',
             'validity_unit' => ValidityUnit::class,
             'is_complimentary' => 'boolean',

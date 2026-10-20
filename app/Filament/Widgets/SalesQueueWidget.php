@@ -3,13 +3,17 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\FulfillmentStatus;
+use App\Enums\OnlineOrderStatus;
+use App\Enums\Permission;
 use App\Enums\RefundStatus;
 use App\Enums\Role;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Fulfillments\ServiceFulfillmentResource;
+use App\Filament\Resources\OnlineOrders\OnlineOrderResource;
 use App\Filament\Resources\Refunds\RefundResource;
 use App\Filament\Support\RoleQueueWidget;
+use App\Models\OnlineOrder;
 use App\Support\Money;
 
 class SalesQueueWidget extends RoleQueueWidget
@@ -45,6 +49,11 @@ class SalesQueueWidget extends RoleQueueWidget
             $this->counter('Черновики', $q->drafts(), $list(['status' => ['values' => ['draft']]]), 'gray', 'не выпущены', 'heroicon-o-pencil-square'),
             $this->metric('Продано в этом месяце', (clone $sold)->count(), Money::format((clone $sold)->sum('total_amount')), 'heroicon-o-chart-bar'),
         ];
+
+        if (auth()->user()->can(Permission::ProcessOnlineOrders)) {
+            array_unshift($stats, $this->counter('Заявки с сайта', OnlineOrder::query()->where('status', OnlineOrderStatus::New),
+                OnlineOrderResource::getUrl('index'), 'warning', 'ждут оформления', 'heroicon-o-globe-alt'));
+        }
 
         $batches = fn (string $filter) => CertificateBatchResource::getUrl('index', ['filters' => [$filter => ['isActive' => true]]]);
         if ($q->purchasesReadyToIssue()->exists()) {

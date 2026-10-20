@@ -23,6 +23,7 @@ class PackagesTable
                 TextColumn::make('composition')->label('Состав сертификата')->state(fn (Package $record): string => $record->items
                     ->map(fn ($item) => "{$item->service->name} × {$item->quantity}")->implode(', '))->wrap(),
                 IconColumn::make('is_active')->label('Активен')->boolean(),
+                IconColumn::make('sold_online')->label('Онлайн')->boolean()->toggleable(),
             ])
             ->modifyQueryUsing(fn ($query) => $query->with('items.service'))
             ->recordActions([EditAction::make()])
