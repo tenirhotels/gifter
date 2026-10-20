@@ -9,7 +9,9 @@ return [
     // Цены, добавленные директором, вступают в силу после подтверждения администратором. Аудит 19.10.2026, В7.
     'require_price_approval' => (bool) env('GIFTER_REQUIRE_PRICE_APPROVAL', true),
 
-    'locales' => ['ru' => 'Русский', 'kk' => 'Қазақша', 'en' => 'English'],
+    // Порядок KK · RU · EN — везде. Язык определяет браузер; запасной — default_locale (в тестах ru).
+    'locales' => ['kk' => 'Қазақша', 'ru' => 'Русский', 'en' => 'English'],
+    'default_locale' => env('GIFTER_DEFAULT_LOCALE', 'kk'),
     'currency' => 'KZT',
 
     // Срок действия задаётся в пакете (продукте), а не здесь.

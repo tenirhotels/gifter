@@ -9,7 +9,7 @@
         </div>
 
         <div class="reveal">
-            <a href="{{ route('shop.index') }}#gifts" class="muted" style="text-decoration:none">← {{ __('Все сертификаты') }}</a>
+            <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'gifts') }}" class="muted" style="text-decoration:none">← {{ __('Все сертификаты') }}</a>
             <h1 style="font-size:clamp(2.2rem,4.6vw,3.4rem);margin:14px 0 10px">{{ $offer['package']->name }}</h1>
             @if ($offer['package']->description)<p class="muted">{{ $offer['package']->description }}</p>@endif
             <ul class="includes" style="margin:20px 0">
@@ -18,7 +18,7 @@
             <p class="muted">{{ __('Действует :p1', ['p1' => $offer['validity']]) }}</p>
             <div class="total"><span class="muted">{{ __('Стоимость') }}</span><span class="price">{{ \App\Support\Money::format($offer['price']) }}</span></div>
 
-            <form method="post" action="{{ route('shop.store', $offer['package']) }}" style="margin-top:36px">
+            <form method="post" action="{{ \App\Support\ShopUrl::route('shop.store', $offer['package']) }}" style="margin-top:36px">
                 @csrf
                 <fieldset>
                     <legend><i>1</i>{{ __('Для кого') }}</legend>
@@ -43,7 +43,7 @@
                                     <span class="hint">@switch($method->value)
                                         @case('pickup'){{ __('Менеджер согласует время, когда сертификат будет готов.') }}@break
                                         @case('courier'){{ __('Доставим по городу; стоимость и время согласует менеджер.') }}@break
-                                        @default{{ __('Выпущенный сертификат придёт на email, его можно распечатать.') }}
+                                        @default{{ __('Выпущенный сертификат придёт на email.') }}
                                     @endswitch</span></span></label>
                         @endforeach
                     </div>
@@ -55,7 +55,7 @@
                 <label class="check"><input type="checkbox" name="consent" value="1" @checked(old('consent')) required><span>{{ __('Согласен на обработку персональных данных для оформления заявки.') }}</span></label>
                 @error('consent')<span class="err">{{ $message }}</span>@enderror
                 <button class="btn" type="submit" style="margin-top:20px;width:100%">{{ __('Отправить заявку') }}</button>
-                <p class="hint" style="margin-top:12px;text-align:center">{{ __('Оплата — по счёту Kaspi или Halyk Bank после согласования с менеджером.') }}</p>
+                <p class="hint" style="margin-top:12px;text-align:center">{{ __('Менеджер свяжется с вами для завершения заказа и оплаты.') }}</p>
             </form>
         </div>
     </div>

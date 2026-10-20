@@ -9,6 +9,13 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
+    /** Язык определяет браузер (LocaleResolver): тестовый «браузер» по умолчанию русский, как привычные проверки текстов. */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withHeader('Accept-Language', 'ru');
+    }
+
     /** Пакет без базового состава со сроком 12 месяцев — состав в тестах набирается доп. услугами. */
     protected function emptyPackageId(): int
     {

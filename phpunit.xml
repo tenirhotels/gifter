@@ -18,6 +18,7 @@
         </include>
     </source>
     <php>
+        <env name="GIFTER_DEFAULT_LOCALE" value="ru"/>
         <env name="GIFTER_REQUIRE_PAYMENT_RECONCILED" value="false"/>
         <env name="GIFTER_REQUIRE_PRICE_APPROVAL" value="false"/>
         <env name="APP_ENV" value="testing"/>

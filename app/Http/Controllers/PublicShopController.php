@@ -12,6 +12,7 @@ use App\Services\CertificateManager;
 use App\Support\PhoneNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
@@ -27,18 +28,15 @@ class PublicShopController extends Controller
 
     public function index(Request $request): View
     {
-        $this->applyLang($request);
-
         $offers = Package::query()->where('is_active', true)->where('is_complimentary', false)->where('sold_online', true)
             ->with('items.service')->orderBy('name')->get()
             ->map(fn (Package $package) => $this->offer($package))->filter()->values();
 
-        return view('shop.index', ['offers' => $offers, 'shop' => ShopSetting::current()]);
+        return view('shop.index', ['offers' => $offers, 'shop' => ShopSetting::current(), 'termNote' => $this->termNote($offers)]);
     }
 
     public function order(Request $request, Package $package): View
     {
-        $this->applyLang($request);
         $offer = $this->offer($this->sellable($package));
 
         abort_if($offer === null, 404);
@@ -48,7 +46,6 @@ class PublicShopController extends Controller
 
     public function store(Request $request, Package $package): RedirectResponse
     {
-        $this->applyLang($request);
         $offer = $this->offer($this->sellable($package));
         abort_if($offer === null, 404);
 
@@ -87,33 +84,32 @@ class PublicShopController extends Controller
 
     public function thanks(Request $request): View
     {
-        $this->applyLang($request);
-
         return view('shop.thanks', ['shop' => ShopSetting::current()]);
     }
 
     public function terms(Request $request): View
     {
-        $this->applyLang($request);
-
         return view('shop.terms', ['shop' => ShopSetting::current()]);
     }
 
     public function faq(Request $request): View
     {
-        $this->applyLang($request);
-
         return view('shop.faq', ['shop' => ShopSetting::current()]);
     }
 
-    /** Язык страницы: ?lang=kk|en|ru запоминается в сессии. */
-    private function applyLang(Request $request): void
+    /** «Срок действия — 60 дней»: только если у всех показанных сертификатов срок одинаков. */
+    private function termNote(Collection $offers): ?string
     {
-        $lang = (string) $request->query('lang');
-        if (array_key_exists($lang, config('gifter.locales'))) {
-            $request->session()->put('locale', $lang);
-            app()->setLocale($lang);
+        $terms = $offers->map(fn (array $o) => $o['package']->validity_value.'|'.$o['package']->validity_unit->value)->unique();
+        if ($terms->count() !== 1) {
+            return null;
         }
+        $package = $offers->first()['package'];
+        $term = app()->getLocale() === 'ru'
+            ? $package->validity_unit->format($package->validity_value)
+            : $package->validity_value.' '.$package->validity_unit->getLabel();
+
+        return __('Срок действия — :p1', ['p1' => $term]);
     }
 
     private function sellable(Package $package): ?Package

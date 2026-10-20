@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\LocaleResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -15,6 +16,6 @@ class LocaleController extends Controller
         $request->session()->put('locale', $locale);
         $request->user()?->forceFill(['locale' => $locale])->save();
 
-        return redirect()->back(fallback: '/admin');
+        return redirect()->back(fallback: '/admin')->withCookie(cookie(LocaleResolver::COOKIE, $locale, 60 * 24 * 365, '/', null, $request->isSecure(), false, false, 'lax'));
     }
 }

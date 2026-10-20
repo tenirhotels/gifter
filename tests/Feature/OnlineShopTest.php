@@ -178,4 +178,49 @@ class OnlineShopTest extends TestCase
         $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
         $this->get('/admin/shop-settings')->assertOk();
     }
+
+    public function test_language_follows_browser_order_kk_ru_en_and_is_remembered(): void
+    {
+        $this->assertSame(['kk', 'ru', 'en'], array_keys(config('gifter.locales')));
+        config(['gifter.default_locale' => 'kk']);
+
+        $this->withHeader('Accept-Language', 'kk-KZ,kk;q=0.9,en;q=0.8')->get('/')->assertSee('<html lang="kk">', false)->assertSee('Есте қалатын уақытты сыйлаңыз');
+        $this->withHeader('Accept-Language', 'ru-RU,ru;q=0.9')->get('/')->assertSee('<html lang="ru">', false)->assertSee('Подарите время, которое запомнится');
+        $this->withHeader('Accept-Language', 'en-US,en;q=0.9')->get('/')->assertSee('<html lang="en">', false);
+        $this->withHeader('Accept-Language', 'de-DE,de;q=0.9')->get('/')->assertSee('<html lang="kk">', false);
+
+        // Явный выбор запоминается в cookie и сильнее языка браузера; ссылки несут ?lang.
+        $response = $this->withHeader('Accept-Language', 'en-US')->get('/?lang=ru')->assertSee('<html lang="ru">', false);
+        $response->assertCookie('gifter_lang', 'ru', false);
+        $response->assertSee('?lang=ru', false);
+        $this->withHeader('Accept-Language', 'en-US')->withUnencryptedCookie('gifter_lang', 'ru')->get('/')->assertSee('<html lang="ru">', false);
+        $this->flushSession();
+        $this->withUnencryptedCookie('gifter_lang', 'kk')->get('/faq')->assertSee('<html lang="kk">', false);
+    }
+
+    public function test_public_pages_are_not_cached_and_vary_by_language(): void
+    {
+        $response = $this->get('/');
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->assertStringContainsString('Accept-Language', $response->headers->get('Vary'));
+    }
+
+    public function test_menu_footer_faq_and_no_bank_names_in_public_texts(): void
+    {
+        foreach (['kk', 'ru', 'en'] as $lang) {
+            foreach (['/', '/faq', '/terms', '/order/'.$this->online->id, '/order/thanks'] as $url) {
+                $html = $this->get($url.(str_contains($url, '?') ? '&' : '?').'lang='.$lang)->assertOk()->getContent();
+                $this->assertStringNotContainsStringIgnoringCase('kaspi', $html, "$lang $url");
+                $this->assertStringNotContainsStringIgnoringCase('halyk', $html, "$lang $url");
+            }
+        }
+        $this->get('/?lang=ru')->assertSeeInOrder(['Сертификаты', 'Как это работает', 'FAQ', 'KK', 'RU', 'EN'])
+            ->assertSeeInOrder(['Сертификаты', 'Как это работает', 'Вопросы и ответы', 'Условия сертификата', 'Контакты'], false)
+            ->assertSee('Остались вопросы?')->assertSee('Физический сертификат с доставкой · Срок действия — 3 месяца');
+        $this->get('/faq?lang=ru')->assertSee('Всё о сертификатах')->assertSee('Можно ли использовать сертификат частично?')->assertSee('Что делать, если срок действия сертификата заканчивается?');
+
+        Mail::fake();
+        $this->post('/order/'.$this->online->id, $this->form());
+        Mail::assertSent(OnlineOrderReceivedMail::class, fn ($m) => ! str_contains(strtolower($m->render()), 'kaspi') && str_contains($m->render(), 'завершения заказа'));
+    }
 }

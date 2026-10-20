@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
         $middleware->append(SecurityHeaders::class);
         $middleware->web(append: [SetLocale::class]);
+        // Язык запоминается обычным cookie (его читает и страница без сессии), поэтому не шифруется.
+        $middleware->encryptCookies(except: ['gifter_lang']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Нарушение бизнес-правила — не сбой сервера: сообщение пользователю, без письма и записи в журнал ошибок.

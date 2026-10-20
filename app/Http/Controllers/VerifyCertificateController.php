@@ -15,12 +15,6 @@ class VerifyCertificateController extends Controller
 {
     public function __invoke(Request $request, string $token): Response
     {
-        // Гость может открыть страницу на своём языке: ?lang=kk|en|ru.
-        $lang = (string) $request->query('lang');
-        if (array_key_exists($lang, config('gifter.locales'))) {
-            app()->setLocale($lang);
-        }
-
         $certificate = Certificate::query()->where('verification_token', $token)->whereNotNull('issued_at')->with('package')->first();
 
         [$statusText, $tone] = match ($certificate?->status) {

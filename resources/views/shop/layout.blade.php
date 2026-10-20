@@ -33,6 +33,16 @@
     .brand { display: block; color: var(--accent); line-height: 0; }
     .brand svg { height: 46px; width: auto; display: block; }
     .nav { display: flex; align-items: center; gap: 28px; font-size: .875rem; }
+    .nav .links { display: flex; gap: 26px; }
+    .chip { display: inline-block; margin-top: 22px; padding: 8px 18px; border: 1px solid rgba(255,255,255,.45); border-radius: 999px; font: 500 .75rem var(--label); letter-spacing: .08em; color: #fff; }
+    .feat { display: grid; gap: 18px; margin-top: 28px; }
+    .feat div { display: grid; gap: 2px; padding-left: 18px; border-left: 1px solid var(--warm); }
+    .feat b { font-weight: 500; color: var(--graphite); }
+    .aud { display: grid; gap: 24px; grid-template-columns: repeat(4, 1fr); }
+    @media (max-width: 900px) { .aud { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .aud { grid-template-columns: 1fr; } }
+    .aud div { border-top: 1px solid var(--line); padding-top: 20px; }
+    .aud h3 { font-size: 1.35rem; margin-bottom: 6px; }
     .nav a { text-decoration: none; color: var(--muted); transition: color .2s; }
     .nav a:hover { color: var(--graphite); }
     .lang a { margin-left: 10px; font-size: .75rem; letter-spacing: .12em; }
@@ -94,8 +104,9 @@
     @keyframes sheen { 0% { background-position: 130% 0; } 60%, 100% { background-position: -130% 0; } }
 
     /* Шаги */
-    .steps { display: grid; gap: 32px; grid-template-columns: repeat(3, 1fr); counter-reset: s; }
-    @media (max-width: 760px) { .steps { grid-template-columns: 1fr; } }
+    .steps { display: grid; gap: 32px; grid-template-columns: repeat(4, 1fr); }
+    @media (max-width: 900px) { .steps { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
     .step { border-top: 1px solid var(--line); padding-top: 22px; }
     .step b { font-family: var(--serif); font-size: 2.6rem; color: var(--warm); font-weight: 300; display: block; line-height: 1; margin-bottom: 14px; }
     .step h3 { font-size: 1.4rem; margin-bottom: 6px; }
@@ -153,9 +164,13 @@
 <body>
 <header class="top">
     <div class="wrap">
-        <a class="brand" href="{{ route('shop.index') }}" aria-label="{{ config('gifter.certificate.hotel_name') }}">@include('shop._svg', ['name' => 'tenir-logo-horizontal'])</a>
+        <a class="brand" href="{{ \App\Support\ShopUrl::route('shop.index') }}" aria-label="{{ config('gifter.certificate.hotel_name') }}">@include('shop._svg', ['name' => 'tenir-logo-horizontal'])</a>
         <nav class="nav">
-            <span class="links"><a href="{{ route('shop.index') }}#gifts">{{ __('Сертификаты') }}</a> <a href="{{ route('shop.faq') }}" style="margin-left:24px">{{ __('Вопросы') }}</a></span>
+            <span class="links">
+                <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'gifts') }}">{{ __('Сертификаты') }}</a>
+                <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'how') }}">{{ __('Как это работает') }}</a>
+                <a href="{{ \App\Support\ShopUrl::route('shop.faq') }}">FAQ</a>
+            </span>
             <span class="lang">@foreach (array_keys(config('gifter.locales')) as $code)<a href="?lang={{ $code }}" @class(['on' => app()->getLocale() === $code])>{{ strtoupper($code) }}</a>@endforeach</span>
         </nav>
     </div>
@@ -168,15 +183,18 @@
         <div class="cols">
             <div>
                 <div class="brand">@include('shop._svg', ['name' => 'tenir-logo'])</div>
-                @if (config('gifter.certificate.hotel_contacts'))<p>{{ config('gifter.certificate.hotel_contacts') }}</p>@endif
             </div>
             <div>
-                <a href="{{ route('shop.index') }}#gifts">{{ __('Сертификаты') }}</a>
-                <a href="{{ route('shop.faq') }}">{{ __('Вопросы и ответы') }}</a>
-                <a href="{{ route('shop.terms') }}">{{ __('Условия сертификата') }}</a>
+                <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'gifts') }}">{{ __('Сертификаты') }}</a>
+                <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'how') }}">{{ __('Как это работает') }}</a>
+                <a href="{{ \App\Support\ShopUrl::route('shop.faq') }}">{{ __('Вопросы и ответы') }}</a>
+                <a href="{{ \App\Support\ShopUrl::route('shop.terms') }}">{{ __('Условия сертификата') }}</a>
+                <a href="#contacts">{{ __('Контакты') }}</a>
             </div>
-            <div>
-                <a href="/admin">{{ __('Вход для сотрудников') }}</a>
+            <div id="contacts">
+                <strong>{{ __('Контакты') }}</strong>
+                <p>{{ config('gifter.certificate.hotel_contacts') ?: config('gifter.certificate.hotel_name') }}</p>
+                <a href="/admin" style="margin-top:18px;opacity:.7">{{ __('Вход для сотрудников') }}</a>
             </div>
         </div>
         <small>© {{ date('Y') }} {{ config('gifter.certificate.hotel_name') }}</small>

@@ -16,7 +16,7 @@ enum DeliveryMethod: string implements HasLabel
         return match ($this) {
             self::Pickup => __('Самовывоз в отеле'),
             self::Courier => __('Курьер по городу'),
-            self::Pdf => __('Печатный PDF на email'),
+            self::Pdf => __('Электронный сертификат на email'),
         };
     }
 }

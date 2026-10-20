@@ -24,7 +24,7 @@ class OnlineOrderReceivedMail extends Mailable
         $contacts = config('gifter.certificate.hotel_contacts');
 
         return new Content(htmlString: '<p>'.e(__('Спасибо! Мы получили заявку на сертификат «:p1».', ['p1' => $this->packageName])).'</p>'
-            .'<p>'.e(__('Менеджер свяжется с вами и выставит счёт Kaspi или Halyk Bank. После оплаты сертификат будет выпущен.')).'</p>'
+            .'<p>'.e(__('Менеджер свяжется с вами для завершения заказа.')).'</p>'
             .($contacts ? '<p>'.e($contacts).'</p>' : ''));
     }
 }
