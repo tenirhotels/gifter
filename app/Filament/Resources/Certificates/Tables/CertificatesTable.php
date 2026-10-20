@@ -59,7 +59,7 @@ class CertificatesTable
                 Filter::make('awaiting_approval')->label('Бесплатные: ждут согласования директора')
                     ->query(fn (Builder $query) => $query->where('status', CertificateStatus::Draft)
                         ->where('kind', CertificateKind::Complimentary)->whereNull('complimentary_approved_at')),
-                Filter::make('manual_override')->label('Дата продажи или продавец изменены вручную (30 дней)')
+                Filter::make('manual_override')->label('Правки даты или продавца (30 дней)')
                     ->query(fn (Builder $query) => $query->whereIn('id', AuditLog::query()->whereIn('event', ['sale_date_overridden', 'seller_overridden'])
                         ->where('auditable_type', (new Certificate)->getMorphClass())->where('created_at', '>=', now()->subDays(30))->select('auditable_id'))),
             ])

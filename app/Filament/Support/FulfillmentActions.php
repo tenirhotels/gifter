@@ -59,11 +59,11 @@ final class FulfillmentActions
                         ->live(onBlur: true)->afterStateUpdated(fn (Set $set, Get $get, ServiceFulfillment $record) => $set('request_details',
                             self::requestTemplate($record, $get('guests'), $get('location')))),
                     TextInput::make('location')->label('Место')->maxLength(255)
-                        ->placeholder('Для трансфера — откуда забрать: аэропорт, рейс, адрес')
+                        ->placeholder('Трансфер: аэропорт, рейс, адрес')
                         ->live(onBlur: true)->afterStateUpdated(fn (Set $set, Get $get, ServiceFulfillment $record) => $set('request_details',
                             self::requestTemplate($record, $get('guests'), $get('location')))),
                     Textarea::make('request_details')->label('Текст заявки поставщику')->rows(6)
-                        ->helperText('Без номера сертификата и цен — только то, что нужно исполнителю. Отправьте удобным способом (телефон, мессенджер, почта) и сохраните — текст останется в заявке.'),
+                        ->helperText('Только то, что нужно исполнителю, без цен. Отправьте любым способом и сохраните.'),
                 ])
                 ->action(fn (ServiceFulfillment $record, array $data, Action $action) => $run($action,
                     fn () => $manager()->request($record, $data['request_details'] ?? null, $data['guests'] ?? null, $data['location'] ?? null),
@@ -76,7 +76,7 @@ final class FulfillmentActions
                 ->authorize(Permission::ManageFulfillments)
                 ->visible(fn (ServiceFulfillment $record) => $active($record) && in_array($record->status, [FulfillmentStatus::Requested, FulfillmentStatus::Scheduled], true)
                     && ! ($record->requires_scheduling && ! $record->scheduled_date))
-                ->schema([Textarea::make('note')->label('Комментарий (кто подтвердил, номер брони у поставщика)')])
+                ->schema([Textarea::make('note')->label('Комментарий (кто подтвердил, номер)')])
                 ->action(fn (ServiceFulfillment $record, array $data, Action $action) => $run($action,
                     fn () => $manager()->confirm($record, $data['note'] ?? null), 'Подтверждено поставщиком')),
 
@@ -102,7 +102,7 @@ final class FulfillmentActions
                         ? 'Услуга остаётся в сертификате; заявка вернётся в «'.($record->scheduled_date ? 'Время назначено' : 'Заявка отправлена').'» — подтверждение нужно получить заново.'
                         : 'Услуга остаётся в сертификате; заявка вернётся в «Ожидает», дата и время сбросятся — отправьте заявку заново (тому же или другому исполнителю).')
                     ->schema([Textarea::make('reason')->label('Причина')->required()
-                        ->placeholder('Например: поставщик перенёс, гость попросил другое время')])
+                        ->placeholder('Например: гость попросил другое время')])
                     ->action(fn (ServiceFulfillment $record, array $data, Action $action) => $run($action,
                         fn () => $manager()->revert($record, $data['reason']), 'Статус заявки возвращён')),
             ])->label('Ещё')->icon('heroicon-m-ellipsis-vertical')->color('gray'),

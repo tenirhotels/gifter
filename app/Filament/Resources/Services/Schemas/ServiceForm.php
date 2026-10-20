@@ -41,7 +41,7 @@ class ServiceForm
                             $set('unit', 'шт');
                         }
                     })
-                    ->helperText('Выберите услугу из Exely, которую будете использовать в сертификатах. Название можно изменить — связь с Exely сохраняется по ID.'),
+                    ->helperText('Услуга из Exely. Название можно изменить — связь сохранится.'),
             ]),
             Section::make('Из PMS')->columns(2)->columnSpanFull()
                 ->visible(fn (string $operation, ?Service $record) => $operation === 'edit' && $record?->pmsService !== null)->schema([

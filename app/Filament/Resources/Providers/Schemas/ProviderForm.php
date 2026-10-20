@@ -27,9 +27,9 @@ class ProviderForm
             TextInput::make('name')->label('Название')->required()->maxLength(255),
             Select::make('type')->label('Тип')->options(ProviderType::class)->required()->live(),
             Grid::make(3)->columnSpanFull()->visible($external)->schema([
-                Select::make('legal_form')->label('Форма')->options(LegalForm::class)->required($external)->live(),
+                Select::make('legal_form')->label('Правовая форма')->options(LegalForm::class)->required($external)->live(),
                 TextInput::make('legal_name')->label('Юридическое наименование')->required($external)->maxLength(255)
-                    ->placeholder('как в документах, без «ТОО» / «ИП»'),
+                    ->placeholder('как в документах, без «ТОО»'),
                 TextInput::make('tax_id')->required($external)->length(12)
                     ->label(fn (Get $get) => self::legalForm($get('legal_form'))?->taxIdLabel() ?? 'ИИН / БИН')
                     ->rule(fn () => function (string $attribute, $value, Closure $fail) {

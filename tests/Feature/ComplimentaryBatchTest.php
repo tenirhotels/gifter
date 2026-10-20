@@ -138,7 +138,7 @@ class ComplimentaryBatchTest extends TestCase
         $this->as(Role::SalesDirector);
         $queries = new DashboardQueries(auth()->user());
         $this->assertSame([1, 5], [$queries->freeIssuesAwaitingApproval()->count(), $queries->complimentaryAwaitingApproval()->count()]);
-        Livewire::test(DirectorQueueWidget::class)->assertSee('Бесплатные сертификаты ждут согласования')->assertSee('в группах: 1')
+        Livewire::test(DirectorQueueWidget::class)->assertSee('Бесплатные ждут согласования')->assertSee('в группах: 1')
             ->assertDontSee('покупк');
         $this->assertSame('Группа №'.$batch->id, $batch->shortLabel());
         Livewire::test(ViewCertificateBatch::class, ['record' => $batch->id])->callAction('approveBatch', ['comment' => 'Ок']);

@@ -42,7 +42,7 @@ class DirectorQueueWidget extends RoleQueueWidget
         $freeIssues = $q->freeIssuesAwaitingApproval()->count();
 
         return [
-            $this->counter('Бесплатные сертификаты ждут согласования', $q->complimentaryAwaitingApproval(),
+            $this->counter('Бесплатные ждут согласования', $q->complimentaryAwaitingApproval(),
                 CertificateResource::getUrl('index', ['filters' => ['awaiting_approval' => ['isActive' => true]]]), 'danger',
                 $freeIssues > 0 ? "нужно ваше решение · в группах: {$freeIssues}" : 'нужно ваше решение', 'heroicon-o-hand-raised'),
             $this->metric('Продажи за месяц', Money::format(Money::fromMinor($revenue)),

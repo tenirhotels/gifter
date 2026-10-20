@@ -51,7 +51,7 @@ class ServicesTable
                 SelectFilter::make('provider_id')->label('Поставщик')->relationship('provider', 'name'),
                 TernaryFilter::make('requires_fulfillment')->label('Предварительная подготовка'),
                 TernaryFilter::make('is_active')->label('Активна'),
-                Filter::make('incomplete')->label('Не хватает данных (категория, поставщик, цена)')
+                Filter::make('incomplete')->label('Не заполнены данные услуги')
                     ->query(fn (Builder $query) => $query->where(fn (Builder $q) => $q->whereNull('category_id')->orWhereNull('provider_id')
                         ->orWhereDoesntHave('prices', fn (Builder $p) => $p->effectiveOn(today())))),
             ])

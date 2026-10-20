@@ -23,7 +23,7 @@ class PackageForm
             Toggle::make('is_active')->label('Активен')->default(true),
             Grid::make(2)->columnSpanFull()->schema([
                 Toggle::make('is_complimentary')->label('Бесплатный пакет')->live()
-                    ->helperText('Сертификаты выпускаются без оплаты для маркетинговых, партнёрских и иных специальных целей. Выпуск — после согласования с директором; допускается массовый выпуск. Срок можно задать при выпуске. Продавцу пакет не виден.'),
+                    ->helperText('Выпуск без оплаты, после согласования директора. Продавцу пакет не виден.'),
                 Select::make('complimentary_purpose')->label('Цель по умолчанию')->options(ComplimentaryPurpose::class)
                     ->visible(fn (Get $get) => (bool) $get('is_complimentary'))->required(fn (Get $get) => (bool) $get('is_complimentary')),
             ]),
@@ -35,7 +35,7 @@ class PackageForm
                 ->content('Считается от даты продажи. Продавец срок не меняет; исключения — менеджер продаж с указанием причины. Новый срок действует только для новых сертификатов.'),
             Textarea::make('description')->label('Описание')->columnSpanFull(),
             Repeater::make('items')->label('Состав сертификата')->relationship()
-                ->helperText('Входит в каждый сертификат пакета. Доп. услуги продавец добавляет в сертификате. Изменения не затрагивают созданные сертификаты.')
+                ->helperText('Входит в каждый сертификат пакета. Уже выпущенные сертификаты не меняются.')
                 ->orderColumn('position')
                 ->schema([
                     Select::make('service_id')->label('Услуга')
