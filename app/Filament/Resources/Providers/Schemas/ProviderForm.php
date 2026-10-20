@@ -41,6 +41,8 @@ class ProviderForm
             TextInput::make('contact_person')->label('Контактное лицо')->maxLength(255),
             ContactFields::phoneInput(),
             TextInput::make('email')->label('Email')->email()->maxLength(255),
+            Select::make('request_locale')->label('Язык заявок')->options(config('gifter.locales'))->default('ru')->required()
+                ->helperText(__('На этом языке составляется текст заявки поставщику.')),
             Toggle::make('is_active')->label('Активен')->default(true),
             Textarea::make('notes')->label('Примечание (условия, как заказывать)')->columnSpanFull(),
         ];

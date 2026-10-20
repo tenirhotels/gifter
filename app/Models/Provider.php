@@ -17,7 +17,7 @@ class Provider extends Model
 
     protected $attributes = ['is_active' => true];
 
-    protected $fillable = ['name', 'type', 'legal_form', 'legal_name', 'tax_id', 'contact_person', 'phone', 'email', 'notes', 'is_active'];
+    protected $fillable = ['name', 'type', 'legal_form', 'legal_name', 'tax_id', 'contact_person', 'phone', 'email', 'notes', 'request_locale', 'is_active'];
 
     protected function casts(): array
     {

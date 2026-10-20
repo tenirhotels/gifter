@@ -314,4 +314,19 @@ class FulfillmentTest extends TestCase
         $this->expectException(DomainRuleViolation::class);
         $this->dinner($this->reserved())->delete();
     }
+
+    public function test_request_text_follows_provider_language_and_can_be_switched(): void
+    {
+        $certificate = $this->reserved();
+        $certificate->update(['booking_guest_name' => 'Baimukhanov Akhan', 'arrival_date' => '2026-10-20', 'departure_date' => '2026-10-22']);
+        $dinner = $this->dinner($certificate->refresh());
+
+        $this->assertStringContainsString('Гости: Baimukhanov Akhan', FulfillmentActions::requestTemplate($dinner, 'Baimukhanov Akhan'));
+        $this->assertStringContainsString('Қонақтар: Baimukhanov Akhan', FulfillmentActions::requestTemplate($dinner, 'Baimukhanov Akhan', null, 'kk'));
+        $this->assertStringContainsString('Stay: check-in 20.10.2026, check-out 22.10.2026', FulfillmentActions::requestTemplate($dinner, null, null, 'en'));
+
+        $dinner->provider->update(['request_locale' => 'en']);
+        $this->assertStringContainsString('Request from', FulfillmentActions::requestTemplate($dinner->refresh(), 'Baimukhanov Akhan'));
+        $this->assertSame('ru', app()->getLocale());
+    }
 }

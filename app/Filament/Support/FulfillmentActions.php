@@ -50,18 +50,23 @@ final class FulfillmentActions
                 ->fillForm(function (ServiceFulfillment $record) {
                     $guests = $record->guests ?? self::defaultGuests($record);
 
-                    return ['guests' => $guests, 'location' => $record->location,
-                        'request_details' => self::requestTemplate($record, $guests, $record->location)];
+                    $locale = self::requestLocale($record);
+
+                    return ['request_locale' => $locale, 'guests' => $guests, 'location' => $record->location,
+                        'request_details' => self::requestTemplate($record, $guests, $record->location, $locale)];
                 })
                 ->schema([
+                    Select::make('request_locale')->label('Язык заявки')->options(config('gifter.locales'))->required()->live()->dehydrated(false)
+                        ->afterStateUpdated(fn (Set $set, Get $get, ServiceFulfillment $record) => $set('request_details',
+                            self::requestTemplate($record, $get('guests'), $get('location'), $get('request_locale')))),
                     TextInput::make('guests')->label('Гости')->required()->maxLength(255)
                         ->helperText(__('Имена, как в брони; при необходимости — количество человек.'))
                         ->live(onBlur: true)->afterStateUpdated(fn (Set $set, Get $get, ServiceFulfillment $record) => $set('request_details',
-                            self::requestTemplate($record, $get('guests'), $get('location')))),
+                            self::requestTemplate($record, $get('guests'), $get('location'), $get('request_locale')))),
                     TextInput::make('location')->label('Место')->maxLength(255)
                         ->placeholder(__('Трансфер: аэропорт, рейс, адрес'))
                         ->live(onBlur: true)->afterStateUpdated(fn (Set $set, Get $get, ServiceFulfillment $record) => $set('request_details',
-                            self::requestTemplate($record, $get('guests'), $get('location')))),
+                            self::requestTemplate($record, $get('guests'), $get('location'), $get('request_locale')))),
                     Textarea::make('request_details')->label('Текст заявки поставщику')->rows(6)
                         ->helperText(__('Только то, что нужно исполнителю, без цен. Отправьте любым способом и сохраните.')),
                 ])
@@ -172,22 +177,39 @@ final class FulfillmentActions
      * Текст заявки исполнителю: только то, что нужно для услуги — гости, даты проживания,
      * когда и где. Номер сертификата, срок и цены поставщику не нужны.
      */
-    public static function requestTemplate(ServiceFulfillment $record, ?string $guests = null, ?string $location = null): string
+    public static function requestTemplate(ServiceFulfillment $record, ?string $guests = null, ?string $location = null, ?string $locale = null): string
     {
-        $certificate = $record->certificate;
-        $stay = $certificate->arrival_date
-            ? 'Проживание: заезд '.$certificate->arrival_date->format('d.m.Y').($certificate->departure_date ? ', выезд '.$certificate->departure_date->format('d.m.Y') : '')
-            : null;
+        $previous = app()->getLocale();
+        app()->setLocale(self::requestLocale($record, $locale));
 
-        return collect([
-            'Заявка от '.config('gifter.certificate.hotel_name'),
-            'Услуга: '.$record->serviceLabel(),
-            'Гости: '.(filled($guests) ? $guests : __('уточняется')),
-            $stay,
-            'Когда: '.($record->whenLabel() ?? __('уточним')),
-            filled($location) ? "Место: {$location}" : null,
-            filled(config('gifter.certificate.hotel_contacts')) ? 'Контакты отеля: '.config('gifter.certificate.hotel_contacts') : null,
-        ])->filter()->implode("\n");
+        try {
+            $certificate = $record->certificate;
+            $stay = $certificate->arrival_date
+                ? ($certificate->departure_date
+                    ? __('Проживание: заезд :p1, выезд :p2', ['p1' => $certificate->arrival_date->format('d.m.Y'), 'p2' => $certificate->departure_date->format('d.m.Y')])
+                    : __('Проживание: заезд :p1', ['p1' => $certificate->arrival_date->format('d.m.Y')]))
+                : null;
+
+            return collect([
+                __('Заявка от :p1', ['p1' => config('gifter.certificate.hotel_name')]),
+                __('Услуга: :p1', ['p1' => $record->serviceLabel()]),
+                __('Гости: :p1', ['p1' => filled($guests) ? $guests : __('уточняется')]),
+                $stay,
+                __('Когда: :p1', ['p1' => $record->whenLabel() ?? __('уточним')]),
+                filled($location) ? __('Место: :p1', ['p1' => $location]) : null,
+                filled(config('gifter.certificate.hotel_contacts')) ? __('Контакты отеля: :p1', ['p1' => config('gifter.certificate.hotel_contacts')]) : null,
+            ])->filter()->implode("\n");
+        } finally {
+            app()->setLocale($previous);
+        }
+    }
+
+    /** Язык заявки: выбранный в окне, иначе из карточки поставщика, иначе русский. */
+    private static function requestLocale(ServiceFulfillment $record, ?string $locale = null): string
+    {
+        $locale ??= $record->provider?->request_locale;
+
+        return array_key_exists((string) $locale, config('gifter.locales')) ? $locale : 'ru';
     }
 
     private static function providerContacts(ServiceFulfillment $record): ?string
