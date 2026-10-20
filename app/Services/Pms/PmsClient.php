@@ -8,6 +8,7 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Чтение брони из PMS. Два источника на выбор (один формат ответа — `{"booking": {...}}`):
@@ -69,9 +70,42 @@ class PmsClient
             $reached = str_contains($e->getMessage(), 'не найдена') || str_contains($e->getMessage(), 'PMS не принимает');
 
             return $reached
-                ? ['ok' => true, 'message' => 'Связь есть, ключи приняты (тестовая бронь не найдена — так и должно быть).']
+                ? ['ok' => true, 'message' => 'Связь есть, ключи приняты (тестовая бронь не найдена — так и должно быть).'.$this->contentNote()]
                 : ['ok' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    /** Для Exely: доступен ли справочник услуг (Content API) — отдельное право ключей. */
+    private function contentNote(): string
+    {
+        if (! $this->settings->isExely()) {
+            return '';
+        }
+        try {
+            $this->catalogServices();
+
+            return ' Список услуг (Content API) доступен.';
+        } catch (PmsException $e) {
+            return ' Список услуг: '.$e->getMessage();
+        }
+    }
+
+    /** Краткая причина сбоя соединения — без адреса с параметрами и без секретов. */
+    private function connectionReason(ConnectionException $e, string $url): string
+    {
+        $host = (string) parse_url($url, PHP_URL_HOST);
+        $text = $e->getMessage();
+        $reason = match (true) {
+            (bool) preg_match('/timed out|cURL error 28|timeout/i', $text) => 'таймаут соединения',
+            (bool) preg_match('/resolve host|cURL error 6\b/i', $text) => 'не удалось определить адрес (DNS)',
+            (bool) preg_match('/SSL|certificate|cURL error (35|51|58|60)\b/i', $text) => 'ошибка сертификата SSL',
+            (bool) preg_match('/refused|cURL error 7\b/i', $text) => 'соединение отклонено',
+            (bool) preg_match('/cURL error (\d+)/i', $text, $m) => 'сетевая ошибка cURL '.$m[1],
+            default => 'сетевая ошибка',
+        };
+        Log::warning('PMS: нет соединения', ['host' => $host, 'reason' => $reason]);
+
+        return "{$reason}: {$host}";
     }
 
     /** Номер как в PMS: без пробелов, невидимых знаков и «умных» тире из копирования. */
@@ -116,13 +150,13 @@ class PmsClient
         $code = rawurlencode((string) $this->settings->property_code);
         $url = $this->settings->baseUrl()."/api/content/v1/properties/{$code}";
         try {
-            $response = $this->request()->get($url);
+            $response = $this->request(20)->get($url);
             if ($response->status() === 401) {
                 Cache::forget($this->tokenKey());
-                $response = $this->request()->get($url);
+                $response = $this->request(20)->get($url);
             }
-        } catch (ConnectionException) {
-            throw new PmsException('Exely не отвечает — список услуг не обновлён. Попробуйте позже.');
+        } catch (ConnectionException $e) {
+            throw new PmsException('Exely не отвечает ('.$this->connectionReason($e, $url).') — список услуг не обновлён. Попробуйте позже.');
         }
         if (in_array($response->status(), [401, 403], true)) {
             throw new PmsException('Exely не пускает Gifter в Content API (нет доступа у ключей) — запросите доступ к Content API у Exely.');
@@ -183,16 +217,16 @@ class PmsClient
 
         try {
             return $this->request()->get($this->settings->baseUrl().$path);
-        } catch (ConnectionException) {
-            throw new PmsException('PMS не отвечает — бронь не подтверждена и не сохранена. Попробуйте позже.');
+        } catch (ConnectionException $e) {
+            throw new PmsException('PMS не отвечает ('.$this->connectionReason($e, $this->settings->baseUrl().$path).') — бронь не подтверждена и не сохранена. Попробуйте позже.');
         }
     }
 
-    private function request(): PendingRequest
+    private function request(int $timeout = 8): PendingRequest
     {
         $token = $this->settings->isExely() ? $this->exelyToken() : (string) $this->settings->token;
 
-        return Http::withToken($token)->acceptJson()->timeout(8)->connectTimeout(4);
+        return Http::withToken($token)->acceptJson()->timeout($timeout)->connectTimeout(10)->retry(2, 400, fn (\Throwable $e) => $e instanceof ConnectionException, false);
     }
 
     private function tokenKey(): string
@@ -212,13 +246,14 @@ class PmsClient
         }
 
         try {
-            $response = Http::asForm()->acceptJson()->timeout(8)->connectTimeout(4)->post($this->settings->baseUrl().'/auth/token', [
+            $response = Http::asForm()->acceptJson()->timeout(15)->connectTimeout(10)->retry(2, 400, fn (\Throwable $e) => $e instanceof ConnectionException, false)->post($this->settings->baseUrl().'/auth/token', [
                 'grant_type' => 'client_credentials',
                 'client_id' => $this->settings->client_id,
                 'client_secret' => $this->settings->client_secret,
             ]);
-        } catch (ConnectionException) {
-            throw new PmsException('Exely не отвечает — бронь не подтверждена и не сохранена. Попробуйте позже.');
+        } catch (ConnectionException $e) {
+            $host = (string) parse_url($this->settings->baseUrl(), PHP_URL_HOST);
+            throw new PmsException('Exely не отвечает ('.$this->connectionReason($e, $this->settings->baseUrl().'/auth/token')."): Gifter не смог получить токен. Если повторяется — проверьте адрес в настройках и исходящий доступ хостинга к {$host}:443.");
         }
         if (in_array($response->status(), [400, 401, 403], true)) {
             throw new PmsException('Exely отклонил ключи Gifter (client_id / client_secret) — обратитесь к администратору.');

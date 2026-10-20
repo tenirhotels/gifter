@@ -10,8 +10,11 @@ use App\Models\PmsSetting;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\Pms\PmsCatalogSync;
+use App\Services\Pms\PmsClient;
 use App\Services\Pms\PmsException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
@@ -130,6 +133,55 @@ class PmsCatalogTest extends TestCase
         PmsSetting::query()->update(['provider' => 'hub']);
         $this->expectException(PmsException::class);
         app(PmsCatalogSync::class)->run();
+    }
+
+    public function test_connection_failure_shows_the_reason_without_secrets_or_booking_wording(): void
+    {
+        Http::swap(new Factory);
+        $attempts = 0;
+        Http::fake(function () use (&$attempts) {
+            $attempts++;
+
+            throw new ConnectionException('cURL error 28: Operation timed out after 10001 milliseconds fictional-secret');
+        });
+
+        try {
+            app(PmsCatalogSync::class)->run();
+            $this->fail('Нет соединения');
+        } catch (PmsException $e) {
+            $this->assertStringContainsString('таймаут соединения: connect.hopenapi.com', $e->getMessage());
+            $this->assertStringContainsString('connect.hopenapi.com:443', $e->getMessage());
+            $this->assertStringNotContainsString('бронь', mb_strtolower($e->getMessage()));
+            $this->assertStringNotContainsString('fictional-secret', $e->getMessage());
+        }
+        $this->assertSame(2, $attempts, 'Один повтор при сбое соединения');
+    }
+
+    public function test_dns_and_ssl_reasons(): void
+    {
+        foreach (['cURL error 6: Could not resolve host: connect.hopenapi.com' => 'DNS', 'cURL error 60: SSL certificate problem' => 'SSL'] as $error => $word) {
+            Http::swap(new Factory);
+            Http::fake(fn () => throw new ConnectionException($error));
+            try {
+                PmsClient::make()->catalogServices();
+                $this->fail('Нет соединения');
+            } catch (PmsException $e) {
+                $this->assertStringContainsString($word, $e->getMessage());
+            }
+        }
+    }
+
+    public function test_ping_reports_content_api_access(): void
+    {
+        Http::swap(new Factory);
+        Http::fake(fn ($request) => str_contains($request->url(), '/auth/token') ? Http::response(['access_token' => 't', 'expires_in' => 900])
+            : (str_contains($request->url(), 'content') ? Http::response([], 403) : Http::response(['error' => 'not_found'], 404)));
+
+        $result = PmsClient::make()->ping();
+
+        $this->assertTrue($result['ok']);
+        $this->assertStringContainsString('Content API', $result['message']);
+        $this->assertStringContainsString('нет доступа', $result['message']);
     }
 
     public function test_command_and_page(): void
