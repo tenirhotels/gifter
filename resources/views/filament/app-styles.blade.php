@@ -91,4 +91,12 @@
     .dark .gf-checks-badge { color: var(--success-400); }
     .dark .gf-checks [data-status="warn"] .gf-checks-badge { color: var(--warning-400); }
     .dark .gf-checks [data-status="fail"] .gf-checks-badge { color: var(--danger-400); }
+
+    /* 6) Комиссии: список сертификатов продавца за период (окно «Сертификаты»). */
+    .gf-report-scroll { overflow-x: auto; }
+    .gf-report { width: 100%; border-collapse: collapse; font-size: .8125rem; line-height: 1.25rem; }
+    .gf-report th { text-align: left; font-weight: 500; font-size: .75rem; color: var(--gray-500); padding: .5rem .625rem; border-bottom: 1px solid color-mix(in oklab, var(--gray-950) 10%, transparent); white-space: nowrap; }
+    .gf-report td { padding: .5rem .625rem; border-bottom: 1px solid color-mix(in oklab, var(--gray-950) 6%, transparent); vertical-align: top; }
+    .gf-report .gf-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .gf-report-muted { font-size: .75rem; color: var(--gray-500); }
 </style>

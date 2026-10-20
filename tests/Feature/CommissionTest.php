@@ -639,4 +639,20 @@ class CommissionTest extends TestCase
             ->filterTable('report', ['basis' => 'sold', 'preset' => 'last'])
             ->assertCanNotSeeTableRecords([$this->seller, $other]);
     }
+
+    public function test_commissions_page_shows_certificate_details_for_seller(): void
+    {
+        $this->rule('percent', '5');
+        $certificate = $this->sold();
+        $this->redeem($certificate);
+        $this->actingAs(User::factory()->create(['roles' => [Role::SalesDirector]]));
+
+        Livewire::test(Commissions::class)->assertTableColumnExists('to_approve')->assertTableColumnExists('approved')
+            ->assertActionVisible(TestAction::make('details')->table($this->seller));
+
+        $html = view('filament.pages.seller-report-details', ['rows' => (new SellerReport(SellerReport::SOLD, null, null, $this->seller->id))->details()])->render();
+        $this->assertStringContainsString($certificate->number, $html);
+        $this->assertStringContainsString('Дата использования', $html);
+        $this->assertStringContainsString('Дата выплаты', $html);
+    }
 }

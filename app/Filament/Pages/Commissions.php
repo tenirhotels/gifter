@@ -147,11 +147,10 @@ class Commissions extends Page implements HasTable
                 TextColumn::make('no_reservation')->label('Без брони')->state(fn (User $record) => $this->row($record->id)['no_reservation'])
                     ->color(fn (User $record) => $this->row($record->id)['no_reservation'] > 0 ? 'warning' : null),
                 TextColumn::make('earned')->label('Начислено')->state(fn (User $record) => $money($this->row($record->id)['earned_minor']))->weight('bold'),
-                TextColumn::make('pending')->label('К выплате')
-                    ->state(fn (User $record) => $money($this->row($record->id)['to_approve_minor'] + $this->row($record->id)['approved_minor']))
-                    ->description(fn (User $record) => ($r = $this->row($record->id))['to_approve_minor'] + $r['approved_minor']
-                        ? __('согласовать: :p1 · выплатить: :p2', ['p1' => $money($r['to_approve_minor']), 'p2' => $money($r['approved_minor'])]) : null)
-                    ->color(fn (User $record) => $this->row($record->id)['to_approve_minor'] + $this->row($record->id)['approved_minor'] > 0 ? 'warning' : null),
+                TextColumn::make('to_approve')->label('К согласованию')->state(fn (User $record) => $money($this->row($record->id)['to_approve_minor']))
+                    ->color(fn (User $record) => $this->row($record->id)['to_approve_minor'] > 0 ? 'warning' : null),
+                TextColumn::make('approved')->label('К выплате')->state(fn (User $record) => $money($this->row($record->id)['approved_minor']))
+                    ->color(fn (User $record) => $this->row($record->id)['approved_minor'] > 0 ? 'info' : null),
                 TextColumn::make('paid')->label('Выплачено')->state(fn (User $record) => $money($this->row($record->id)['paid_minor']))->color('success'),
                 TextColumn::make('by_month')->label('По месяцам')->html()->wrap()
                     ->visible(fn () => ! empty($this->getTableFilterState('report')['by_month'] ?? null))
@@ -188,10 +187,17 @@ class Commissions extends Page implements HasTable
             ])
             ->filtersFormColumns(2)
             ->recordActions([
-                Action::make('certificates')->label('Сертификаты')->icon('heroicon-o-list-bullet')
+                Action::make('details')->label('Сертификаты')->icon('heroicon-o-list-bullet')
+                    ->modalHeading(fn (User $record) => __('Сертификаты: :p1', ['p1' => $record->name]))
+                    ->modalDescription(fn () => $this->report()->periodLabel())
+                    ->slideOver()->modalWidth('7xl')->modalSubmitAction(false)->modalCancelActionLabel(__('Закрыть'))
+                    ->modalContent(fn (User $record) => view('filament.pages.seller-report-details', [
+                        'rows' => (new SellerReport($this->report()->basis, $this->report()->from, $this->report()->to, $record->id))->details(),
+                    ])),
+                Action::make('payouts')->label('Согласование и выплаты')->icon('heroicon-o-banknotes')->color('gray')
                     ->url(fn (User $record) => SellerCommissions::getUrl(['seller' => $record->id])),
             ])
-            ->recordUrl(fn (User $record) => SellerCommissions::getUrl(['seller' => $record->id]))
+            ->recordAction('details')
             ->defaultSort('name')
             ->emptyStateHeading(__('Продаж с комиссией пока нет'));
     }
