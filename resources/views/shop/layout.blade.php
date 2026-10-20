@@ -19,6 +19,7 @@
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
+    body { overflow-x: clip; }
     body { margin: 0; background: var(--ivory); color: var(--ink); font-family: var(--sans); line-height: 1.65; -webkit-font-smoothing: antialiased; }
     a { color: inherit; }
     h1, h2 { font-family: var(--serif); font-weight: 300; text-transform: uppercase; letter-spacing: .04em; line-height: 1.12; margin: 0; color: var(--graphite); }
@@ -116,7 +117,9 @@
     @media (max-width: 900px) { .product { grid-template-columns: 1fr; gap: 40px; } }
     .product .photo { border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 3; background: linear-gradient(135deg, var(--cream), var(--light-green)); }
     .product .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .product .sticky { position: sticky; top: 100px; display: grid; gap: 28px; }
+    .product .sticky { display: grid; gap: 28px; }
+    /* Закрепление колонки с фото — только когда страница в две колонки; на телефоне блок идёт в потоке и не наезжает на форму. */
+    @media (min-width: 901px) { .product .sticky { position: sticky; top: 100px; } }
     .includes { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
     .includes li { padding-left: 22px; position: relative; }
     .includes li::before { content: ""; position: absolute; left: 0; top: .72em; width: 10px; height: 1px; background: var(--accent); }
