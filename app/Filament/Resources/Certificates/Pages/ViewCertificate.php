@@ -72,7 +72,7 @@ class ViewCertificate extends ViewRecord
             Action::make('requestException')->label('Бронь по исключению')->icon('heroicon-o-calendar-days')->color('warning')
                 ->authorize(Permission::RequestReservationException)
                 ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Expired && ! $record->hasPendingException())
-                ->modalDescription('Сертификат истёк без брони. Выберите свободную и доступную дату и внесите бронь PMS — заявку согласует директор по продажам. После согласования сертификат вернётся в работу до даты выезда.')
+                ->modalDescription('Сертификат истёк без брони. Выберите свободные даты и внесите бронь из PMS: заявку согласует директор по продажам, после чего сертификат вернётся в работу.')
                 ->modalSubmitActionLabel('Отправить директору')
                 ->fillForm(fn (Certificate $record) => ['guest_name' => trim($record->recipient?->last_name.' '.$record->recipient?->first_name)])
                 ->schema([
@@ -89,7 +89,7 @@ class ViewCertificate extends ViewRecord
                 ])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                     fn () => app(ReservationExceptionManager::class)->request($record, $data), 'Заявка отправлена директору')),
-            Action::make('approveException')->label('Согласовать бронь по исключению')->icon('heroicon-o-hand-thumb-up')->color('success')
+            Action::make('approveException')->label('Согласовать исключение')->icon('heroicon-o-hand-thumb-up')->color('success')
                 ->authorize(Permission::ApproveReservationException)
                 ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Expired && $record->hasPendingException())
                 ->modalDescription(function (Certificate $record) {
@@ -101,7 +101,7 @@ class ViewCertificate extends ViewRecord
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                     fn () => app(ReservationExceptionManager::class)->approve($record->reservationExceptions()->where('status', 'pending')->latest('id')->firstOrFail(), $data['comment'] ?? null),
                     'Исключение согласовано, сертификат возвращён в работу')),
-            Action::make('rejectException')->label('Отклонить бронь по исключению')->icon('heroicon-o-hand-thumb-down')->color('danger')
+            Action::make('rejectException')->label('Отклонить исключение')->icon('heroicon-o-hand-thumb-down')->color('danger')
                 ->authorize(Permission::ApproveReservationException)
                 ->visible(fn (Certificate $record) => $record->status === CertificateStatus::Expired && $record->hasPendingException())
                 ->schema([Textarea::make('comment')->label('Причина отказа')->required()])
@@ -111,10 +111,10 @@ class ViewCertificate extends ViewRecord
             Action::make('setSeller')->label('Продавец')->icon('heroicon-o-user-circle')->color('gray')
                 ->authorize(Permission::AssignSeller)
                 ->visible(fn (Certificate $record) => $record->isDraft() && ! $record->isComplimentary() && ! $record->batch_id)
-                ->modalDescription('Комиссия после использования сертификата достанется выбранному продавцу. После выпуска продавец закрепляется навсегда.')
+                ->modalDescription('Комиссию после использования сертификата получит выбранный продавец. После выпуска сменить продавца нельзя.')
                 ->fillForm(fn (Certificate $record) => ['seller' => $record->sold_by])
                 ->schema([Select::make('seller')->label('Продавец')->required()->searchable()->options(fn () => User::sellerOptions()),
-                    Textarea::make('reason')->label('Причина смены продавца')->required()->minLength(5)->helperText('Увидит директор по продажам.')])
+                    Textarea::make('reason')->label('Причина смены продавца')->required()->minLength(5)->helperText('Причину увидит директор по продажам.')])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                     fn () => $this->manager()->setSeller($record, (int) $data['seller'], reason: $data['reason'] ?? null), 'Продавец назначен')),
 
@@ -142,7 +142,7 @@ class ViewCertificate extends ViewRecord
                 ->schema([
                     Select::make('method')->label('Способ')->options(PaymentMethod::class)->required(),
                     TextInput::make('amount')->label('Сумма, ₸')->numeric()->minValue(1)->required()->helperText('По умолчанию — весь неоплаченный остаток.'),
-                    TextInput::make('invoice_number')->label('№ счёта в банке')->maxLength(255),
+                    TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255),
                 ])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => app(PaymentManager::class)->invoice(
                     $record, $data['method'] instanceof PaymentMethod ? $data['method'] : PaymentMethod::from($data['method']),
@@ -227,7 +227,7 @@ class ViewCertificate extends ViewRecord
                     ->visible(fn (Certificate $record) => in_array($record->reservation_review_status, [ReservationReview::Pending, ReservationReview::Approved], true)
                         && ! $record->status->isFinal())
                     ->modalDescription(fn (Certificate $record) => self::reviewSummary($record).' Пока спор не снят, отметить сертификат использованным нельзя.')
-                    ->schema([Textarea::make('comment')->label('Что не так')->required()])
+                    ->schema([Textarea::make('comment')->label('Что не так с бронью')->required()])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                         fn () => app(ReservationManager::class)->dispute($record, $data['comment']), 'Бронь оспорена')),
 
@@ -249,14 +249,14 @@ class ViewCertificate extends ViewRecord
                         && Money::toMinor($record->paidAmount()) === 0 && ! $record->hasPendingRefund()
                         && ! ($record->isDraft() && $record->batch_id))
                     ->schema([Textarea::make('reason')->label('Причина')->required()])
-                    ->modalDescription('Сертификат не удаляется: он остаётся в реестре со статусом «Аннулирован».')
+                    ->modalDescription('Сертификат останется в реестре со статусом «Аннулирован» — удалить его нельзя.')
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => $this->manager()->cancel($record, $data['reason']), 'Сертификат аннулирован')),
 
                 Action::make('requestRefund')->label('Возврат и аннулирование')->icon('heroicon-o-receipt-refund')->color('danger')
                     ->authorize(Permission::RequestRefunds)
                     ->visible(fn (Certificate $record) => $record->status->canTransitionTo(CertificateStatus::Cancelled)
                         && Money::toMinor($record->paidAmount()) > 0 && ! $record->hasPendingRefund())
-                    ->modalDescription('Редкий случай. Запрос уйдёт на согласование Финансам; до решения сертификат заблокирован. После согласования он будет аннулирован.')
+                    ->modalDescription('Запрос уйдёт на согласование Финансам. До решения сертификат заблокирован; после согласования он будет аннулирован.')
                     ->fillForm(fn (Certificate $record) => ['amount' => $record->paidAmount()])
                     ->schema([
                         TextInput::make('amount')->label('Сумма к возврату, ₸')->numeric()->minValue(0)->required()
@@ -270,14 +270,14 @@ class ViewCertificate extends ViewRecord
             ActionGroup::make([
                 Action::make('adminSetStatus')->label('Исправить статус')->icon('heroicon-o-wrench-screwdriver')
                     ->authorize(Permission::AdminCorrections)
-                    ->modalDescription('Для исправления ошибок: обычные правила переходов не действуют. Прежняя история сохраняется, исправление записывается отдельно.')
+                    ->modalDescription('Только для исправления ошибок: обычные правила смены статуса не действуют. История сохранится, исправление запишется отдельно.')
                     ->schema([
                         Select::make('status')->label('Новый статус')->options(CertificateStatus::class)->required(),
                         Textarea::make('reason')->label('Причина')->required(),
                     ])
                     ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action, fn () => app(AdminCorrections::class)
                         ->setStatus($record, $data['status'] instanceof CertificateStatus ? $data['status'] : CertificateStatus::from($data['status']), $data['reason']), 'Статус исправлен')),
-                Action::make('adminRevokeApproval')->label('Отозвать согласование бесплатного')->icon('heroicon-o-hand-thumb-down')
+                Action::make('adminRevokeApproval')->label('Отозвать согласование')->icon('heroicon-o-hand-thumb-down')
                     ->authorize(Permission::AdminCorrections)
                     ->visible(fn (Certificate $record) => $record->isDraft() && $record->isComplimentaryApproved())
                     ->schema([Textarea::make('reason')->label('Причина')->required()])

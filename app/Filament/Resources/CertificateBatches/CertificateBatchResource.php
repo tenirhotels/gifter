@@ -95,7 +95,7 @@ class CertificateBatchResource extends Resource
                     ->state(fn (CertificateBatch $record) => Money::format($record->certificates()->sum('total_amount')))->weight('bold'),
                 TextEntry::make('payable')->label('К оплате заказчиком')->weight('bold')
                     ->state(fn (CertificateBatch $record) => Money::format($record->certificates()->sum('payable_amount')))
-                    ->helperText('Платные доп. услуги; остальное бесплатно.')
+                    ->helperText('Только платные допуслуги; остальное бесплатно.')
                     ->visible(fn (CertificateBatch $record) => $record->isComplimentary() && $record->certificates()->sum('payable_amount') > 0),
                 TextEntry::make('invoice')->label('Счёт')
                     ->visible(fn (CertificateBatch $record) => ! $record->isComplimentary() || $record->certificates()->sum('payable_amount') > 0)

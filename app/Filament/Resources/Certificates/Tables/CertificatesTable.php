@@ -31,22 +31,22 @@ class CertificatesTable
             ->columns([
                 TextColumn::make('number')->label('Номер')->searchable()->sortable()->copyable(),
                 TextColumn::make('status')->label('Статус')->badge()->sortable(),
-                TextColumn::make('kind')->label('Тип')->badge()->toggleable(),
+                TextColumn::make('kind')->label('Вид выпуска')->badge()->toggleable(),
                 TextColumn::make('customer.full_name')->label('Заказчик')->placeholder('—')->searchable(),
                 TextColumn::make('recipient.full_name')->label('Получатель')->searchable(),
                 TextColumn::make('total_amount')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state))->sortable(),
                 TextColumn::make('batch_id')->label('Группа')->placeholder('—')->toggleable()
                     ->formatStateUsing(fn ($state) => '№'.$state)
                     ->url(fn (Certificate $record) => $record->batch_id ? CertificateBatchResource::getUrl('view', ['record' => $record->batch_id]) : null),
-                TextColumn::make('sold_at')->label('Продан')->date('d.m.Y')->sortable(),
+                TextColumn::make('sold_at')->label('Дата продажи')->date('d.m.Y')->sortable(),
                 TextColumn::make('valid_until')->label('Действует по')->date('d.m.Y')->sortable()
                     ->color(fn ($record) => in_array($record->status, [CertificateStatus::Active, CertificateStatus::Reserved], true)
                         && $record->valid_until->lte(today()->addDays(14)) ? 'danger' : null),
             ])
             ->filters([
                 SelectFilter::make('status')->label('Статус')->options(CertificateStatus::class)->multiple(),
-                SelectFilter::make('kind')->label('Тип')->options(CertificateKind::class),
-                Filter::make('mine')->label('Мои')
+                SelectFilter::make('kind')->label('Вид выпуска')->options(CertificateKind::class),
+                Filter::make('mine')->label('Только мои')
                     ->query(fn (Builder $query) => $query->where('created_by', auth()->id())),
                 Filter::make('no_recipient')->label('Без получателя')
                     ->query(fn (Builder $query) => $query->whereNull('recipient_id')),

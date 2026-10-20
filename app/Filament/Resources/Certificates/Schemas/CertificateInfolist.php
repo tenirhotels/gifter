@@ -36,7 +36,7 @@ class CertificateInfolist
                 TextEntry::make('pending_refund')->label('Внимание')->color('danger')->columnSpanFull()
                     ->state('Запрос на возврат ждёт решения Финансов — действия с сертификатом заблокированы.')
                     ->visible(fn (Certificate $record) => $record->hasPendingRefund()),
-                TextEntry::make('customer_name')->label('Покупатель')->placeholder('—')
+                TextEntry::make('customer_name')->label('Заказчик')->placeholder('—')
                     ->state(fn (Certificate $record) => $record->customer?->displayName())
                     ->helperText(fn (Certificate $record) => self::maskedContacts($record->customer)),
                 TextEntry::make('recipient.full_name')->label('Получатель')->placeholder('Не указан')
@@ -50,14 +50,14 @@ class CertificateInfolist
                 TextEntry::make('notes')->label('Комментарий')->placeholder('—'),
                 TextEntry::make('verify_url')->label('Ссылка проверки сертификата')->columnSpanFull()->copyable()
                     ->state(fn (Certificate $record) => app(CertificateDocument::class)->verificationUrl($record))
-                    ->helperText('Её же содержит QR-код в PDF. Страница показывает только номер, статус, срок и пакет.')
+                    ->helperText('Эта ссылка зашита в QR-код на PDF. Гость увидит только номер, статус, срок и пакет.')
                     ->visible(fn (Certificate $record) => $record->isPrintable()),
                 TextEntry::make('cancellation_reason')->label('Причина аннулирования')->visible(fn (Certificate $record) => filled($record->cancellation_reason))->color('danger'),
             ]),
             Section::make('Стоимость и комиссия')->columnSpan(1)->schema([
                 TextEntry::make('total_amount')->label(fn (Certificate $record) => $record->isComplimentary() ? 'Стоимость по прайсу' : 'Стоимость сертификата')->state(fn (Certificate $record) => Money::format($record->total_amount))->size('lg')->weight('bold'),
                 TextEntry::make('payable_amount')->label('К оплате заказчиком')->state(fn (Certificate $record) => Money::format($record->payable_amount))
-                    ->helperText('Платные доп. услуги; остальное бесплатно и идёт в маркетинговый расход.')->weight('bold')
+                    ->helperText('Только платные допуслуги; остальное бесплатно (маркетинговый расход).')->weight('bold')
                     ->visible(fn (Certificate $record) => $record->isComplimentary() && $record->hasPayablePart()),
                 TextEntry::make('total_cost')->label(fn (Certificate $record) => $record->isComplimentary() ? 'Маркетинговый расход (себестоимость)' : 'Себестоимость')
                     ->state(fn (Certificate $record) => Money::format($record->isComplimentary() ? $record->marketing_cost : $record->total_cost))
@@ -110,7 +110,7 @@ class CertificateInfolist
                         ->helperText(fn (Certificate $record) => collect([
                             $record->reservationReviewer?->name, $record->reservation_reviewed_at?->format('d.m.Y H:i'), $record->reservation_review_comment,
                         ])->filter()->implode(' · ') ?: null),
-                    TextEntry::make('reservation_note')->label('Причина / комментарий')->columnSpanFull()
+                    TextEntry::make('reservation_note')->label('Причина или комментарий')->columnSpanFull()
                         ->visible(fn (Certificate $record) => filled($record->reservation_note)),
                 ]),
         ]);

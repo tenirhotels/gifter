@@ -62,7 +62,7 @@ class PaymentsRelationManager extends RelationManager
                         TextInput::make('amount')->label('Сумма, ₸')->numeric()->minValue(1)->required()
                             ->default(fn () => Money::fromMinor(Money::toMinor($this->certificate()->payable_amount) - Money::toMinor($this->certificate()->invoicedAmount())))
                             ->helperText('По умолчанию — весь неоплаченный остаток.'),
-                        TextInput::make('invoice_number')->label('№ счёта в банке')->maxLength(255),
+                        TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255),
                         Textarea::make('comment')->label('Комментарий'),
                     ])
                     ->action(function (array $data, Action $action) {

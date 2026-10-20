@@ -74,7 +74,7 @@ class CreateCertificate extends CreateRecord
                     $package->columnSpanFull(),
                     TextInput::make('certificate_count')->label('Количество сертификатов')->integer()
                         ->minValue(1)->maxValue(CertificateBatchManager::MAX_QUANTITY)->default(1)->required()->live(onBlur: true)
-                        ->helperText('Больше 1 — группа: общий счёт для платных, получатель у каждого свой.'),
+                        ->helperText('Больше 1 — группа: один счёт на всех, у каждого сертификата свой получатель.'),
                     $soldAt,
                     $soldAtReason,
                     // Комиссия после использования — продавцу; по умолчанию тот, кто оформляет. Другого назначает менеджер продаж.
@@ -83,7 +83,7 @@ class CreateCertificate extends CreateRecord
                         ->visible(fn (Get $get) => auth()->user()?->can(Permission::AssignSeller) && ! CertificateForm::isComplimentary($get))
                         ->helperText('Получит комиссию, когда сертификат будет использован.'),
                     Textarea::make('seller_reason')->label('Причина: продавец не автор оформления')->minLength(5)->columnSpanFull()
-                        ->helperText('Увидит директор по продажам.')
+                        ->helperText('Причину увидит директор по продажам.')
                         ->visible(fn (Get $get) => auth()->user()?->can(Permission::AssignSeller) && ! CertificateForm::isComplimentary($get) && filled($get('sold_by')) && (int) $get('sold_by') !== auth()->id())
                         ->required(),
                 ]),
@@ -100,7 +100,7 @@ class CreateCertificate extends CreateRecord
                         ->content('У каждого сертификата свой получатель — укажите их после оформления.'),
                 ]),
             Step::make('Состав')->icon('heroicon-o-list-bullet')->schema([
-                Repeater::make('extras')->label('Доп. услуги к пакету')->addActionLabel('Добавить доп. услугу')
+                Repeater::make('extras')->label('Допуслуги к пакету')->addActionLabel('Добавить допуслугу')
                     ->defaultItems(0)->live()->columns(['default' => 1, 'md' => 3])->reorderable(false)
                     ->schema([
                         Select::make('service_id')->label('Услуга')->required()->searchable()->live()
@@ -121,7 +121,7 @@ class CreateCertificate extends CreateRecord
                         ->label(fn (Get $get) => self::count($get) > 1 ? 'Сразу выставить один счёт на всю группу' : 'Сразу выставить счёт на всю сумму'),
                     Grid::make(2)->visible(fn (Get $get) => (bool) $get('create_invoice'))->schema([
                         Select::make('payment_method')->label('Способ')->options(PaymentMethod::class)->default(PaymentMethod::KaspiInvoice->value)->required(),
-                        TextInput::make('invoice_number')->label('№ счёта в банке')->maxLength(255),
+                        TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255),
                     ]),
                     Placeholder::make('invoice_hint')->hiddenLabel()
                         ->content('Оплату отметите на странице сертификата (или группы), когда деньги поступят; перечисление на р/с и наличные подтверждают Финансы. После оплаты — «Выпустить».'),

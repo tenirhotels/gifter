@@ -56,7 +56,7 @@ class CertificateForm
                 ->hidden(fn (Get $get) => ! $withValidityPreview || self::isComplimentary($get))
                 ->content(fn (Get $get) => ValidityFields::preview(Package::find($get('package_id')), $get('validity'), $get('sold_at'))),
             DatePicker::make('sold_at')->label('Дата продажи')->default(today())->required()->live()
-                ->helperText('Цены и срок считаются от этой даты.')
+                ->helperText('От этой даты считаются цены и срок действия.')
                 ->visible(fn () => auth()->user()?->can(Permission::EditSaleDate)),
             Textarea::make('sold_at_reason')->label('Причина изменения даты продажи')->minLength(5)->columnSpanFull()
                 ->helperText('Дата влияет на цены и правило комиссии — причину увидит директор по продажам.')

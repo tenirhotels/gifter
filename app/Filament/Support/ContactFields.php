@@ -72,7 +72,7 @@ final class ContactFields
             ->authorize(Permission::RevealContacts)
             ->visible(fn (Model $record) => $person($record) !== null)
             ->modalHeading(fn (Model $record) => $person($record)?->full_name)
-            ->modalDescription('Открытие контактов записано в журнал аудита.')
+            ->modalDescription('Просмотр контактов фиксируется: сохраняется, кто и когда их открыл.')
             ->mountUsing(function (Model $record, Action $action) use ($person) {
                 if (! self::logReveal($person($record))) {
                     Notification::make()->danger()->title(self::limitMessage())->send();

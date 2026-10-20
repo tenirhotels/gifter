@@ -62,7 +62,7 @@ class ViewCertificateBatch extends ViewRecord
                 ->modalDescription(fn (CertificateBatch $record) => 'Один счёт на всю группу: '.Money::format($record->certificates()->sum('payable_amount')).($record->isComplimentary() ? ' (только платные услуги)' : '').'.')
                 ->schema([
                     Select::make('method')->label('Способ')->options(PaymentMethod::class)->required()->default(PaymentMethod::KaspiInvoice->value),
-                    TextInput::make('invoice_number')->label('№ счёта в банке')->maxLength(255),
+                    TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255),
                     Textarea::make('comment')->label('Комментарий'),
                 ])
                 ->action(fn (CertificateBatch $record, array $data, Action $action) => $this->run($action, fn () => app(CertificateBatchManager::class)->invoice(

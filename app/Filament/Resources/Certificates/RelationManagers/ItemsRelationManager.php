@@ -31,7 +31,7 @@ class ItemsRelationManager extends RelationManager
         $editable = fn (): bool => $this->certificate()->isDraft() && ! $this->certificate()->isComplimentaryApproved() && ! $this->certificate()->batch_id;
 
         return $table
-            ->description('Услуги пакета неизменны — это и есть продукт. Доп. услуги можно добавлять и убирать в черновике; в бесплатном сертификате доп. услуга может быть платной — её оплачивает заказчик. Сертификат используется только целиком.')
+            ->description('Состав пакета не меняется. Допуслуги можно добавлять и убирать, пока сертификат — черновик; в бесплатном их может оплатить заказчик.')
             ->columns([
                 TextColumn::make('service_name_snapshot')->label('Услуга')
                     ->description(fn (CertificateItem $record) => $record->from_package ? 'из пакета' : 'доп. услуга'),
@@ -50,17 +50,17 @@ class ItemsRelationManager extends RelationManager
                 TextColumn::make('fulfillment')->label('Исполнение')->state(fn (CertificateItem $record) => $record->requires_fulfillment
                     ? collect(['подготовка', $record->requires_scheduling ? 'время' : null, $record->requires_confirmation ? 'подтверждение' : null])->filter()->implode(', ')
                     : 'не требуется')->color(fn (CertificateItem $record) => $record->requires_fulfillment ? 'warning' : 'gray')->toggleable(),
-                TextColumn::make('priceVersion.valid_from')->label('Тариф с')->date('d.m.Y')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('priceVersion.valid_from')->label('Цена с')->date('d.m.Y')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->paginated(false)
             ->headerActions([
-                Action::make('addItem')->label('Добавить доп. услугу')->icon('heroicon-o-plus')->visible($editable)->authorize(Permission::ComposeDrafts)
+                Action::make('addItem')->label('Добавить допуслугу')->icon('heroicon-o-plus')->visible($editable)->authorize(Permission::ComposeDrafts)
                     ->schema([
                         Select::make('service_id')->label('Услуга')->required()->searchable()->preload()
                             ->options(fn () => Service::where('is_active', true)->orderBy('name')->pluck('name', 'id')),
                         TextInput::make('quantity')->label('Количество')->integer()->minValue(1)->default(1)->required(),
                         Toggle::make('paid')->label('Платная — оплачивает заказчик')->default(false)
-                            ->helperText('Выключено — бесплатно, идёт в маркетинговый расход. Включено — войдёт в счёт заказчику.')
+                            ->helperText('Выключено — бесплатно (маркетинговый расход). Включено — оплачивает заказчик, войдёт в счёт.')
                             ->visible(fn () => $this->certificate()->isComplimentary()),
                     ])
                     ->action(function (array $data, Action $action) {
