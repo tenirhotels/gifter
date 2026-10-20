@@ -45,7 +45,7 @@
 
 <div class="section">В сертификат входит</div>
 <table class="items">
-    <thead><tr><th>Услуга</th><th class="q" style="text-align:right">Количество</th><th class="u">Единица</th></tr></thead>
+    <thead><tr><th>Услуга</th><th class="q" style="text-align:right">Количество</th><th class="u">Ед. изм.</th></tr></thead>
     <tbody>
     @foreach ($page['certificate']->items as $item)
         <tr><td>{{ $item->service_name_snapshot }}</td><td class="q">{{ $item->quantity }}</td><td class="u">{{ $item->unit_snapshot }}</td></tr>

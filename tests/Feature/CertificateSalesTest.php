@@ -160,7 +160,7 @@ class CertificateSalesTest extends TestCase
         $this->reserve($certificate);
         app(CertificateManager::class)->transition($certificate, CertificateStatus::InUse);
         app(CertificateManager::class)->transition($certificate, CertificateStatus::Used);
-        $this->get("/v/{$certificate->verification_token}")->assertOk()->assertSee('Использован');
+        $this->get("/v/{$certificate->verification_token}")->assertOk()->assertSee('Уже использован');
     }
 
     public function test_verification_of_expired_by_date_and_unknown_token(): void

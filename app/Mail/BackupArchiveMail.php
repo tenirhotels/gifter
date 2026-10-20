@@ -20,7 +20,7 @@ class BackupArchiveMail extends Mailable
     public function content(): Content
     {
         return new Content(htmlString: '<p>Резервная копия базы Gifter от '.e($this->date).'.</p>'
-            .'<p>Архив зашифрован; пароль хранится у владельца отдельно. Сохраните вложение вне хостинга.</p>');
+            .'<p>Архив защищён паролем, пароль хранится отдельно. Сохраните вложение вне хостинга.</p>');
     }
 
     /** @return list<Attachment> */

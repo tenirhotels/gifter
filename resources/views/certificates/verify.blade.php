@@ -25,10 +25,10 @@
             <dl>
                 <dt>Номер</dt><dd>{{ $certificate->number }}</dd>
                 <dt>Статус</dt><dd class="{{ $tone }}">{{ $statusText }}</dd>
-                <dt>Действует по</dt><dd>{{ $certificate->valid_until->format('d.m.Y') }}</dd>
+                <dt>Действителен до</dt><dd>{{ $certificate->valid_until->format('d.m.Y') }}</dd>
                 <dt>Пакет</dt><dd>{{ $certificate->package?->name }}</dd>
             </dl>
-            <p class="small">Для бронирования свяжитесь с отелем{{ config('gifter.certificate.hotel_contacts') ? ': '.config('gifter.certificate.hotel_contacts') : '' }}.</p>
+            <p class="small">Чтобы забронировать, свяжитесь с отелем{{ config('gifter.certificate.hotel_contacts') ? ': '.config('gifter.certificate.hotel_contacts') : '' }}.</p>
         @else
             <p class="bad">Сертификат не найден. Проверьте ссылку или обратитесь в отель.</p>
         @endif

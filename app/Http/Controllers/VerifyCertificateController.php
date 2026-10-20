@@ -18,8 +18,8 @@ class VerifyCertificateController extends Controller
 
         [$statusText, $tone] = match ($certificate?->status) {
             CertificateStatus::Active, CertificateStatus::Reserved => ['Действителен', 'ok'],
-            CertificateStatus::InUse => ['Используется', 'warn'],
-            CertificateStatus::Used => ['Использован', 'bad'],
+            CertificateStatus::InUse => ['Гость проживает', 'warn'],
+            CertificateStatus::Used => ['Уже использован', 'bad'],
             CertificateStatus::Expired => ['Срок действия истёк', 'bad'],
             CertificateStatus::Cancelled => ['Аннулирован', 'bad'],
             default => ['Недействителен', 'bad'],
