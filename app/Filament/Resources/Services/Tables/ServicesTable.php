@@ -10,9 +10,11 @@ use App\Support\Money;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ServicesTable
 {
@@ -49,6 +51,9 @@ class ServicesTable
                 SelectFilter::make('provider_id')->label('Поставщик')->relationship('provider', 'name'),
                 TernaryFilter::make('requires_fulfillment')->label('Требует подготовки'),
                 TernaryFilter::make('is_active')->label('Активна'),
+                Filter::make('incomplete')->label('Не хватает данных (категория, поставщик, цена)')
+                    ->query(fn (Builder $query) => $query->where(fn (Builder $q) => $q->whereNull('category_id')->orWhereNull('provider_id')
+                        ->orWhereDoesntHave('prices', fn (Builder $p) => $p->effectiveOn(today())))),
             ])
             ->recordActions([EditAction::make()])
             ->defaultSort('name');

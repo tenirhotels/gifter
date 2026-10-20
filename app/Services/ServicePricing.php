@@ -68,6 +68,12 @@ class ServicePricing
         });
     }
 
+    /** Есть подтверждённая цена на сегодня (услугу можно продавать). */
+    public function hasApprovedPrice(Service $service): bool
+    {
+        return $service->prices()->getQuery()->reorder()->effectiveOn(today())->exists();
+    }
+
     /** Цену директора подтверждает администратор (решение владельца 19.10.2026). Выключается GIFTER_REQUIRE_PRICE_APPROVAL=false. */
     public function needsApproval(): bool
     {

@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Enums\Permission;
 use App\Exceptions\DomainRuleViolation;
+use App\Filament\Resources\Services\ServiceResource;
 use App\Filament\Support\TranslatesPageLabels;
 use App\Models\PmsService;
 use App\Models\Service;
@@ -15,8 +16,8 @@ use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\TernaryFilter;
@@ -25,8 +26,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use UnitEnum;
 
 /**
- * Услуги из PMS (Exely): список обновляется раз в ночь и по кнопке. Тумблер «Можно включать в сертификат» создаёт услугу Gifter
- * (без цены — цену вводит директор). Ключ — ID услуги в PMS; названия могут быть на разных языках.
+ * Услуги из PMS (Exely): список обновляется раз в ночь и по кнопке. «Создать услугу из этой» открывает общую форму создания услуги
+ * (название подставляется, цена вводится там же). Ключ — ID услуги в PMS; названия могут быть на разных языках.
  */
 class PmsServices extends Page implements HasTable
 {
@@ -82,28 +83,14 @@ class PmsServices extends Page implements HasTable
 
     public function table(Table $table): Table
     {
-        $can = fn () => (bool) auth()->user()?->can(Permission::ManageCatalog);
-
         return $table
             ->query(fn () => PmsService::query()->with('service'))
             ->columns([
                 TextColumn::make('name')->label('Название в PMS')->searchable()->sortable()
                     ->description(fn (PmsService $record) => 'ID '.$record->external_id.($record->kind ? ' · '.$record->kind : '')),
-                ToggleColumn::make('allowed_in_certificate')->label('Можно включать в сертификат')
-                    ->disabled(fn (PmsService $record) => ! $can() || $record->isMissing())
-                    ->updateStateUsing(function (PmsService $record, bool $state) {
-                        try {
-                            app(PmsCatalogSync::class)->setAllowed($record, $state);
-                        } catch (DomainRuleViolation $e) {
-                            Notification::make()->danger()->title($e->getMessage())->send();
-
-                            return ! $state;
-                        }
-
-                        return $state;
-                    }),
-                TextColumn::make('service.name')->label('Услуга в Gifter')->placeholder('—')
-                    ->description(fn (PmsService $record) => $record->service_id && $record->allowed_in_certificate ? __('цену вводит директор') : null),
+                IconColumn::make('allowed_in_certificate')->label('Можно включать в сертификат')->boolean(),
+                TextColumn::make('service.name')->label('Услуга в Gifter')->placeholder('не заведена')
+                    ->url(fn (PmsService $record) => $record->service_id ? ServiceResource::getUrl('edit', ['record' => $record->service_id]) : null),
                 TextColumn::make('missing_since')->label('Статус в PMS')->badge()
                     ->state(fn (PmsService $record) => $record->isMissing() ? __('Пропала в PMS') : ($record->status ?: __('Есть')))
                     ->color(fn (PmsService $record) => $record->isMissing() ? 'danger' : 'gray'),
@@ -113,6 +100,10 @@ class PmsServices extends Page implements HasTable
                 TernaryFilter::make('allowed_in_certificate')->label('Можно включать в сертификат'),
             ])
             ->recordActions([
+                Action::make('create')->label('Создать услугу из этой')->icon('heroicon-o-plus')
+                    ->authorize(Permission::ManageCatalog)
+                    ->visible(fn (PmsService $record) => ! $record->service_id && ! $record->isMissing())
+                    ->url(fn (PmsService $record) => ServiceResource::getUrl('create', ['pms' => $record->external_id])),
                 Action::make('link')->label('Связать с услугой Gifter')->icon('heroicon-o-link')->color('gray')
                     ->authorize(Permission::ManageCatalog)
                     ->visible(fn (PmsService $record) => ! $record->service_id && ! $record->isMissing())
