@@ -9,6 +9,8 @@ use App\Models\Certificate;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use OpenSpout\Common\Entity\Cell;
+use OpenSpout\Common\Entity\Cell\StringCell;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Writer\XLSX\Writer;
@@ -165,34 +167,45 @@ final class SellerReport
         $date = fn ($d) => $d?->format('d.m.Y');
 
         $writer->getCurrentSheet()->setName(__('Сводка'));
-        $writer->addRow(Row::fromValues([__('Отчёт по продавцам'), $this->periodLabel()], $head));
-        $writer->addRow(Row::fromValues([__('Продавец'), __('Сертификатов'), __('Сумма продаж, ₸'), __('Использовано'), __('Не использовано'), __('Без брони'),
+        $writer->addRow(self::row([__('Отчёт по продавцам'), $this->periodLabel()], $head));
+        $writer->addRow(self::row([__('Продавец'), __('Сертификатов'), __('Сумма продаж, ₸'), __('Использовано'), __('Не использовано'), __('Без брони'),
             __('Начислено, ₸'), __('К согласованию, ₸'), __('К выплате, ₸'), __('Выплачено, ₸')], $head));
         $summary = $this->summary();
         foreach ($summary as $s) {
-            $writer->addRow(Row::fromValues([$s['seller'], $s['count'], $money($s['sales_minor']), $s['used'], $s['not_used'], $s['no_reservation'],
+            $writer->addRow(self::row([$s['seller'], $s['count'], $money($s['sales_minor']), $s['used'], $s['not_used'], $s['no_reservation'],
                 $money($s['earned_minor']), $money($s['to_approve_minor']), $money($s['approved_minor']), $money($s['paid_minor'])]));
         }
-        $writer->addRow(Row::fromValues([__('Итого'), $summary->sum('count'), $money($summary->sum('sales_minor')), $summary->sum('used'), $summary->sum('not_used'), $summary->sum('no_reservation'),
+        $writer->addRow(self::row([__('Итого'), $summary->sum('count'), $money($summary->sum('sales_minor')), $summary->sum('used'), $summary->sum('not_used'), $summary->sum('no_reservation'),
             $money($summary->sum('earned_minor')), $money($summary->sum('to_approve_minor')), $money($summary->sum('approved_minor')), $money($summary->sum('paid_minor'))], $head));
 
         $writer->addNewSheetAndMakeItCurrent()->setName(__('Сертификаты'));
-        $writer->addRow(Row::fromValues([__('Продавец'), __('Номер'), __('Дата продажи'), __('Пакет'), __('Заказчик'), __('Статус сертификата'),
+        $writer->addRow(self::row([__('Продавец'), __('Номер'), __('Дата продажи'), __('Пакет'), __('Заказчик'), __('Статус сертификата'),
             __('Дата использования'), __('Сумма продажи, ₸'), __('Комиссия'), __('Комиссия, ₸'), __('Дата выплаты'), __('Номер платежа или ведомости')], $head));
         foreach ($this->details() as $r) {
-            $writer->addRow(Row::fromValues([$r['seller'], $r['number'], $date($r['sold_at']), $r['package'], $r['customer'], $r['status'],
+            $writer->addRow(self::row([$r['seller'], $r['number'], $date($r['sold_at']), $r['package'], $r['customer'], $r['status'],
                 $date($r['used_at']), $money($r['sale_minor']), $r['commission_status'], $money($r['commission_minor']), $date($r['paid_at']), $r['reference']]));
         }
 
         $writer->addNewSheetAndMakeItCurrent()->setName(__('По месяцам'));
         $months = $this->months();
-        $writer->addRow(Row::fromValues([__('Продавец'), ...$months['months'], __('Итого')], $head));
+        $writer->addRow(self::row([__('Продавец'), ...$months['months'], __('Итого')], $head));
         foreach ($months['rows'] as $r) {
-            $writer->addRow(Row::fromValues([$r['seller'], ...array_map($money, array_values($r['values'])), $money($r['total'])]));
+            $writer->addRow(self::row([$r['seller'], ...array_map($money, array_values($r['values'])), $money($r['total'])]));
         }
         $writer->close();
 
         return $path;
+    }
+
+    /**
+     * Строка Excel: текст всегда ячейка-строка. Иначе OpenSpout превращает значение, начинающееся с «=», в формулу,
+     * а ФИО заказчика и номера платежей вводят люди (в т. ч. из публичной формы) — это формульная инъекция.
+     *
+     * @param  list<mixed>  $values
+     */
+    private static function row(array $values, ?Style $style = null): Row
+    {
+        return new Row(array_map(fn ($value) => is_string($value) ? new StringCell($value, $style) : Cell::fromValue($value, $style), $values));
     }
 
     public function periodLabel(): string

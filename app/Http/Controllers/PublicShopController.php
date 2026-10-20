@@ -13,9 +13,13 @@ use App\Support\PhoneNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -67,6 +71,13 @@ class PublicShopController extends Controller
             'consent' => ['accepted'],
         ]);
 
+        $limits = $this->limits($request, $data);
+        foreach ($limits as [$key, $max]) {
+            if (RateLimiter::tooManyAttempts($key, $max)) {
+                throw ValidationException::withMessages(['phone' => __('Слишком много заявок. Попробуйте позже или свяжитесь с отелем.')]);
+            }
+        }
+
         $order = OnlineOrder::create([
             'package_id' => $package->id,
             'last_name' => trim($data['last_name']), 'first_name' => trim($data['first_name']),
@@ -77,6 +88,9 @@ class PublicShopController extends Controller
             'locale' => app()->getLocale(), 'ip_address' => $request->ip(),
         ]);
 
+        foreach ($limits as [$key, , $seconds]) {
+            RateLimiter::hit($key, $seconds);
+        }
         $this->notify($order, $package);
 
         return redirect()->route('shop.thanks');
@@ -112,6 +126,26 @@ class PublicShopController extends Controller
         return __('Срок действия — :p1', ['p1' => $term]);
     }
 
+    /**
+     * Ограничения заявок, не зависящие от подмены IP: по адресу почты (3 в час), телефону (5 в сутки) и IP (20 в сутки).
+     * Защита от рассылки писем на чужие адреса и засорения базы.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<array{0: string, 1: int, 2: int}>
+     */
+    private function limits(Request $request, array $data): array
+    {
+        $limits = [
+            ['shop-ip:'.$request->ip(), 20, 86400],
+            ['shop-phone:'.sha1((string) PhoneNumber::normalize($data['phone'])), 5, 86400],
+        ];
+        if (filled($data['email'] ?? null)) {
+            $limits[] = ['shop-email:'.sha1(Str::lower(trim($data['email']))), 3, 3600];
+        }
+
+        return $limits;
+    }
+
     private function sellable(Package $package): ?Package
     {
         return $package->is_active && ! $package->is_complimentary && $package->sold_online ? $package : null;
@@ -123,7 +157,8 @@ class PublicShopController extends Controller
         if ($package === null) {
             return null;
         }
-        $quote = $this->certificates->quote($package, [], today());
+        // Расчёт цены — несколько запросов на пакет: на минуту кешируем, цена всё равно пересчитывается при оформлении.
+        $quote = Cache::remember('shop.quote.'.$package->id.'.'.today()->toDateString().'.'.$package->updated_at?->timestamp, 60, fn () => $this->certificates->quote($package, [], today()));
         if ($quote['missing'] !== [] || $quote['lines'] === [] || (float) $quote['total'] <= 0) {
             return null;
         }
@@ -142,7 +177,7 @@ class PublicShopController extends Controller
             if ($to = config('gifter.online.mail_to')) {
                 Mail::to($to)->send(new OnlineOrderMail($order->id, $package->name));
             }
-            if (filled($order->email)) {
+            if (filled($order->email) && RateLimiter::attempt('shop-mail:'.sha1(Str::lower($order->email)), 1, fn () => true, 3600)) {
                 Mail::to($order->email)->send(new OnlineOrderReceivedMail($package->name, $order->locale));
             }
         } catch (\Throwable $e) {

@@ -26,7 +26,20 @@ class OnlineOrder extends Model
 
     protected function casts(): array
     {
-        return ['status' => OnlineOrderStatus::class, 'handled_at' => 'datetime', 'delivery_method' => DeliveryMethod::class, 'delivery_address' => 'encrypted'];
+        return ['status' => OnlineOrderStatus::class, 'handled_at' => 'datetime', 'delivery_method' => DeliveryMethod::class, 'delivery_address' => 'encrypted',
+            'recipient_name' => 'encrypted', 'gift_message' => 'encrypted'];
+    }
+
+    /** В журнал аудита личные данные не попадают: только отметка, что поле заполнено. */
+    protected function maskContactsForAudit(array $attributes): array
+    {
+        foreach ([...self::ENCRYPTED_CONTACTS, 'phone_hash', 'email_hash', 'recipient_name', 'gift_message', 'delivery_address', 'last_name', 'first_name', 'full_name'] as $key) {
+            if (array_key_exists($key, $attributes)) {
+                $attributes[$key] = $attributes[$key] === null ? null : __('[скрыто]');
+            }
+        }
+
+        return $attributes;
     }
 
     public function package(): BelongsTo

@@ -19,6 +19,7 @@ use App\Services\OnlineOrderManager;
 use App\Services\ServicePricing;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -222,5 +223,44 @@ class OnlineShopTest extends TestCase
         Mail::fake();
         $this->post('/order/'.$this->online->id, $this->form());
         Mail::assertSent(OnlineOrderReceivedMail::class, fn ($m) => ! str_contains(strtolower($m->render()), 'kaspi') && str_contains($m->render(), 'завершения заказа'));
+    }
+
+    public function test_form_limits_by_email_phone_and_confirmation_mail_once_per_hour(): void
+    {
+        // Поминутный лимит маршрута проверяется отдельно; здесь — суточные и почасовые лимиты по почте и телефону.
+        $this->withoutMiddleware(ThrottleRequests::class);
+        Mail::fake();
+        $this->post('/order/'.$this->online->id, $this->form(['phone' => '+77010000001']))->assertRedirect('/order/thanks');
+        $this->post('/order/'.$this->online->id, $this->form(['phone' => '+77010000002']))->assertRedirect('/order/thanks');
+        $this->post('/order/'.$this->online->id, $this->form(['phone' => '+77010000003']))->assertRedirect('/order/thanks');
+        // Четвёртая заявка с тем же email за час отклоняется, база не растёт.
+        $this->post('/order/'.$this->online->id, $this->form(['phone' => '+77010000004']))->assertSessionHasErrors('phone');
+        $this->assertSame(3, OnlineOrder::count());
+        Mail::assertSent(OnlineOrderReceivedMail::class, 1);
+
+        // Один телефон — не больше 5 заявок в сутки, даже с разными адресами почты.
+        foreach (range(1, 5) as $n) {
+            $this->post('/order/'.$this->online->id, $this->form(['phone' => '+77019999999', 'email' => "a{$n}@example.com"]));
+        }
+        $this->post('/order/'.$this->online->id, $this->form(['phone' => '+77019999999', 'email' => 'a9@example.com']))->assertSessionHasErrors('phone');
+    }
+
+    public function test_personal_text_is_encrypted_and_hidden_in_audit_and_csp_header_is_set(): void
+    {
+        $this->post('/order/'.$this->online->id, $this->form(['recipient_name' => 'Петрова Анна', 'gift_message' => 'Секретное поздравление']));
+        $order = OnlineOrder::firstOrFail();
+        $this->assertSame('Секретное поздравление', $order->gift_message);
+        foreach (['recipient_name', 'gift_message', 'phone', 'email'] as $column) {
+            $this->assertStringNotContainsString('Петрова', (string) DB::table('online_orders')->value($column));
+            $this->assertStringNotContainsString('Секретное', (string) DB::table('online_orders')->value($column));
+        }
+        $audit = json_encode(DB::table('audit_logs')->where('auditable_type', $order->getMorphClass())->pluck('after')->all(), JSON_UNESCAPED_UNICODE);
+        foreach (['Петрова', 'Секретное', 'ivan@example.com', 'Иванов'] as $secret) {
+            $this->assertStringNotContainsString($secret, $audit);
+        }
+
+        $csp = $this->get('/')->headers->get('Content-Security-Policy');
+        $this->assertStringContainsString("frame-ancestors 'none'", $csp);
+        $this->assertStringContainsString("form-action 'self'", $csp);
     }
 }

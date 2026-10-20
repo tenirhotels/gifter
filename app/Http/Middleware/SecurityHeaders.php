@@ -20,6 +20,8 @@ class SecurityHeaders
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'same-origin');
+        // Базовые директивы без запрета inline-скриптов (их использует Filament): не встраивать, не менять base, формы только на свой адрес.
+        $response->headers->set('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'");
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
         $response->headers->remove('X-Powered-By');
         if ($request->isSecure()) {

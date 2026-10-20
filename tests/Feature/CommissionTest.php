@@ -639,4 +639,29 @@ class CommissionTest extends TestCase
         $this->assertCount(0, $page->instance()->report()->summary());
         $page->set('data.preset', 'all')->assertSee('Начисленная комиссия по месяцам');
     }
+
+    public function test_excel_export_never_turns_user_text_into_formulas(): void
+    {
+        $this->rule('percent', '5');
+        $certificate = $this->sold();
+        $certificate->customer->update(['last_name' => '=HYPERLINK("http://evil.example","x")', 'first_name' => '+cmd']);
+        $this->redeem($certificate);
+
+        $path = (new SellerReport(SellerReport::SOLD))->toXlsx();
+        // Читатель OpenSpout сам превращает «=…» в формулу, поэтому проверяем XML листов: ни одной формулы <f>, текст на месте.
+        $zip = new \ZipArchive;
+        $zip->open($path);
+        $xml = '';
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = $zip->getNameIndex($i);
+            if (str_starts_with($name, 'xl/worksheets/') || $name === 'xl/sharedStrings.xml') {
+                $xml .= $zip->getFromIndex($i);
+            }
+        }
+        $zip->close();
+        @unlink($path);
+        $this->assertStringNotContainsString('<f>', $xml);
+        $this->assertStringNotContainsString('<f ', $xml);
+        $this->assertStringContainsString('=HYPERLINK', html_entity_decode($xml));
+    }
 }
