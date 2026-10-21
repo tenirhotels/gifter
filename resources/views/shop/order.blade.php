@@ -1,5 +1,19 @@
 @extends('shop.layout')
 @section('title', $offer['package']->name.' — '.config('gifter.certificate.hotel_name'))
+@section('description', \Illuminate\Support\Str::limit(strip_tags($offer['package']->description ?: __('Подарочный сертификат: :p1.', ['p1' => collect($offer['lines'])->pluck('name')->implode(', ')])), 200))
+@section('image', $offer['package']->imageUrl() ?? '')
+@section('wa_text', __('Здравствуйте! Хочу заказать сертификат «:p1».', ['p1' => $offer['package']->name]))
+@section('jsonld')
+{!! json_encode(array_filter([
+    '@context' => 'https://schema.org', '@type' => 'Product',
+    'name' => $offer['package']->name,
+    'description' => strip_tags((string) $offer['package']->description) ?: null,
+    'image' => $offer['package']->imageUrl(),
+    'brand' => ['@type' => 'Brand', 'name' => config('gifter.certificate.hotel_name')],
+    'offers' => ['@type' => 'Offer', 'priceCurrency' => config('gifter.currency'), 'price' => (string) $offer['price'],
+        'availability' => 'https://schema.org/InStock', 'url' => url()->current()],
+]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+@endsection
 @section('content')
 <div class="wrap">
     <div class="product">

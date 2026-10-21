@@ -35,3 +35,4 @@
 - [ ] Выполнены `migrate --force`, `optimize:clear`, `optimize`.
 - [ ] Cron `schedule:run` каждую минуту работает (напоминания о заявках и сроках сертификатов идут через планировщик); `GIFTER_ORDERS_MAIL_TO` задан.
 - [ ] `QUEUE_CONNECTION=database` в `.env`: письма гостям и сотрудникам уходят через очередь, её разбирает планировщик каждую минуту (`queue:work --stop-when-empty`). Упавшие письма — `php artisan queue:failed`, повтор — `php artisan queue:retry all`.
+- [ ] После выката: `migrate --force`, в «Настройках сайта» задать GA4, Метрику, WhatsApp; проверить `/sitemap.xml` и `/robots.txt`; очистить кеш Cloudflare (robots.txt раньше был статическим файлом).

@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PublicShopController;
+use App\Http\Controllers\SeoController;
 use App\Http\Controllers\ShopMediaController;
 use App\Http\Controllers\VerifyCertificateController;
 use App\Http\Middleware\PublicPage;
 use Illuminate\Support\Facades\Route;
 
 // Публичная страница: витрина онлайн-пакетов и заявка на сертификат. Сотрудники входят на /admin.
+Route::get('/robots.txt', [SeoController::class, 'robots']);
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 Route::get('/media/{file}', ShopMediaController::class)->where('file', '[A-Za-z0-9._-]+')->name('shop.media');
 Route::middleware(PublicPage::class)->group(function () {
     Route::get('/', [PublicShopController::class, 'index'])->name('shop.index');

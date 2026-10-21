@@ -32,11 +32,17 @@ class PublicShopController extends Controller
 
     public function index(Request $request): View
     {
-        $offers = Package::query()->where('is_active', true)->where('is_complimentary', false)->where('sold_online', true)
-            ->with('items.service')->orderBy('name')->get()
-            ->map(fn (Package $package) => $this->offer($package))->filter()->values();
+        $offers = $this->offers();
 
         return view('shop.index', ['offers' => $offers, 'shop' => ShopSetting::current(), 'termNote' => $this->termNote($offers)]);
+    }
+
+    /** Пакеты витрины с ценой на сегодня: их показывает «/» и перечисляет sitemap.xml. */
+    public function offers(): Collection
+    {
+        return Package::query()->where('is_active', true)->where('is_complimentary', false)->where('sold_online', true)
+            ->with('items.service')->orderBy('name')->get()
+            ->map(fn (Package $package) => $this->offer($package))->filter()->values();
     }
 
     public function order(Request $request, Package $package): View

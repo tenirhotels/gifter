@@ -1,5 +1,12 @@
 @extends('shop.layout')
+@section('robots', 'noindex, nofollow')
 @section('content')
+@if ($shop->ga4() || $shop->metrika())
+<script>
+    @if ($shop->ga4()) gtag('event', 'order_submitted'); @endif
+    @if ($shop->metrika()) ym({{ $shop->metrika() }}, 'reachGoal', 'order_submitted'); @endif
+</script>
+@endif
 <div class="wrap">
     <div class="prose" style="text-align:center;margin:0 auto">
         <div class="eyebrow">{{ __('Заявка принята') }}</div>

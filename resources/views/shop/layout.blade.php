@@ -3,10 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>@yield('title', config('gifter.certificate.hotel_name').' — '.__('Подарочные сертификаты'))</title>
 <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg">
 <noscript><style>.reveal { opacity: 1; transform: none; }</style></noscript>
-<meta name="description" content="{{ __('Подарочные сертификаты отеля: проживание, ужины, спа и впечатления.') }}">
+@include('shop._head')
 <style>
     :root {
         /* Брендбук TENIR Eco Hotels: Dark Green #5F7872, Ochre #EAA55A, Gill Sans (основной) и Montserrat (вспомогательный) */
@@ -158,6 +157,15 @@
     .prose details { border-top: 1px solid var(--line); padding: 18px 0; }
     .prose summary { cursor: pointer; font-family: var(--serif); font-size: 1.25rem; color: var(--graphite); }
 
+    /* WhatsApp и уведомление о cookie */
+    .wa { position: fixed; right: 18px; bottom: 18px; z-index: 30; display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 999px; background: #25D366; color: #fff; text-decoration: none; font: 600 .875rem var(--sans); box-shadow: 0 10px 24px -10px rgba(0,0,0,.45); transition: transform .25s var(--ease); }
+    .wa:hover { transform: translateY(-2px); }
+    @media (max-width: 520px) { .wa span { display: none; } .wa { padding: 14px; } }
+    .cookie { position: fixed; left: 18px; bottom: 18px; z-index: 29; max-width: 26rem; display: flex; gap: 14px; align-items: center; padding: 14px 18px; border-radius: 16px; background: var(--graphite); color: #fff; font-size: .8125rem; line-height: 1.45; }
+    .cookie[hidden] { display: none; }
+    .cookie .btn { padding: 8px 16px; font-size: .8125rem; flex: none; }
+    @media (max-width: 520px) { .cookie { right: 82px; left: 12px; bottom: 12px; flex-direction: column; align-items: flex-start; } }
+
     /* Появление при прокрутке */
     .reveal { opacity: 0; transform: translateY(22px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
     .reveal.in { opacity: 1; transform: none; }
@@ -203,6 +211,7 @@
         <small>© {{ date('Y') }} {{ config('gifter.certificate.hotel_name') }}</small>
     </div>
 </footer>
+@include('shop._widgets')
 <script>
     (function () {
         var els = document.querySelectorAll('.reveal');

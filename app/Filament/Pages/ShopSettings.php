@@ -6,6 +6,7 @@ use App\Enums\Permission;
 use App\Filament\Support\TranslatesPageLabels;
 use App\Models\AuditLog;
 use App\Models\ShopSetting;
+use App\Support\PhoneNumber;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\ColorPicker;
@@ -40,6 +41,8 @@ class ShopSettings extends Page
 
     protected static ?string $slug = 'shop-settings';
 
+    private const TRACKED = ['hero_image_path', 'hero_title', 'hero_subtitle', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone'];
+
     /** @var array<string, mixed> */
     public array $data = [];
 
@@ -54,6 +57,7 @@ class ShopSettings extends Page
         $this->form->fill([
             'hero_image_path' => $setting->hero_image_path ? ['shop/'.$setting->hero_image_path] : [],
             'hero_title' => $setting->hero_title, 'hero_subtitle' => $setting->hero_subtitle, 'accent_color' => $setting->accent(),
+            'ga4_id' => $setting->ga4_id, 'metrika_id' => $setting->metrika_id, 'whatsapp_phone' => $setting->whatsapp_phone,
         ]);
     }
 
@@ -68,6 +72,15 @@ class ShopSettings extends Page
                 TextInput::make('hero_subtitle')->label('Подзаголовок')->maxLength(300),
                 ColorPicker::make('accent_color')->label('Акцентный цвет')->helperText(__('Один цвет бренда для кнопок и линий; по умолчанию тёмно-зелёный из брендбука.')),
             ])->columns(1),
+            Section::make('Аналитика и связь')->description(__('Пусто — ничего не подключается. Скрипты аналитики грузятся только на публичной витрине.'))->schema([
+                TextInput::make('ga4_id')->label('Google Analytics 4')->placeholder('G-XXXXXXXXXX')->maxLength(20)
+                    ->regex('/^G-[A-Z0-9]{4,15}$/')->validationMessages(['regex' => __('Идентификатор вида G-XXXXXXXXXX.')]),
+                TextInput::make('metrika_id')->label('Яндекс.Метрика (номер счётчика)')->placeholder('12345678')->maxLength(12)
+                    ->regex('/^\d{4,12}$/')->validationMessages(['regex' => __('Только цифры, 4–12 знаков.')]),
+                TextInput::make('whatsapp_phone')->label('Номер WhatsApp')->placeholder('+7 701 123 45 67')->maxLength(20)
+                    ->rule(fn () => fn (string $attribute, $value, \Closure $fail) => PhoneNumber::isValid($value) ? null : $fail(__(PhoneNumber::HINT).'.'))
+                    ->helperText(__('Кнопка «WhatsApp» на витрине. Цель «order_submitted» (заявка отправлена) уходит в Google Analytics и Метрику.')),
+            ])->columns(1),
         ]);
     }
 
@@ -81,15 +94,18 @@ class ShopSettings extends Page
         $state = $this->form->getState();
         $setting = ShopSetting::current();
         $image = collect($state['hero_image_path'] ?? [])->first();
-        $before = $setting->only(['hero_image_path', 'hero_title', 'hero_subtitle', 'accent_color']);
+        $before = $setting->only(self::TRACKED);
         $setting->fill([
             'hero_image_path' => $image ? basename((string) $image) : null,
             'hero_title' => filled($state['hero_title'] ?? null) ? trim((string) $state['hero_title']) : null,
             'hero_subtitle' => filled($state['hero_subtitle'] ?? null) ? trim((string) $state['hero_subtitle']) : null,
             'accent_color' => filled($state['accent_color'] ?? null) ? $state['accent_color'] : null,
+            'ga4_id' => filled($state['ga4_id'] ?? null) ? trim((string) $state['ga4_id']) : null,
+            'metrika_id' => filled($state['metrika_id'] ?? null) ? trim((string) $state['metrika_id']) : null,
+            'whatsapp_phone' => filled($state['whatsapp_phone'] ?? null) ? PhoneNumber::normalize($state['whatsapp_phone']) : null,
             'updated_by' => auth()->id(),
         ])->save();
-        AuditLog::record('shop_settings_changed', $setting, $before, $setting->only(['hero_image_path', 'hero_title', 'hero_subtitle', 'accent_color']));
+        AuditLog::record('shop_settings_changed', $setting, $before, $setting->only(self::TRACKED));
         Notification::make()->success()->title(__('Настройки сохранены'))->send();
     }
 }
