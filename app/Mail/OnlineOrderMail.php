@@ -2,13 +2,17 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\QueuedMail;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
 /** Сотрудникам: пришла заявка с сайта. Контакты клиента в письмо не попадают — они в Gifter. */
-class OnlineOrderMail extends Mailable
+class OnlineOrderMail extends Mailable implements ShouldQueueAfterCommit
 {
+    use QueuedMail;
+
     public function __construct(public readonly int $orderId, public readonly string $packageName) {}
 
     public function envelope(): Envelope

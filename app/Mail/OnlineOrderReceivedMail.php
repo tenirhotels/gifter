@@ -2,13 +2,17 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\QueuedMail;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
 /** Клиенту: заявка принята. Язык — тот, на котором оставлена заявка. */
-class OnlineOrderReceivedMail extends Mailable
+class OnlineOrderReceivedMail extends Mailable implements ShouldQueueAfterCommit
 {
+    use QueuedMail;
+
     public function __construct(public readonly string $packageName, string $lang = 'ru')
     {
         $this->locale($lang);

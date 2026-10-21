@@ -34,3 +34,4 @@
 - [ ] `composer audit` без уязвимостей (запускать в CI или локально).
 - [ ] Выполнены `migrate --force`, `optimize:clear`, `optimize`.
 - [ ] Cron `schedule:run` каждую минуту работает (напоминания о заявках и сроках сертификатов идут через планировщик); `GIFTER_ORDERS_MAIL_TO` задан.
+- [ ] `QUEUE_CONNECTION=database` в `.env`: письма гостям и сотрудникам уходят через очередь, её разбирает планировщик каждую минуту (`queue:work --stop-when-empty`). Упавшие письма — `php artisan queue:failed`, повтор — `php artisan queue:retry all`.

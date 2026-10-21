@@ -2,13 +2,17 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\QueuedMail;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
 /** Гостю: срок сертификата скоро истечёт. Текст на казахском и русском — язык гостя неизвестен. */
-class CertificateExpiringMail extends Mailable
+class CertificateExpiringMail extends Mailable implements ShouldQueueAfterCommit
 {
+    use QueuedMail;
+
     public function __construct(public readonly string $number, public readonly string $validUntil, public readonly ?string $verifyUrl = null) {}
 
     public function envelope(): Envelope

@@ -2,16 +2,20 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\QueuedMail;
 use App\Models\Certificate;
 use App\Services\CertificateDocument;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
 /** Гостю: электронный сертификат — PDF во вложении и ссылка проверки. PDF собирается при отправке, на языке письма. */
-class CertificateIssuedMail extends Mailable
+class CertificateIssuedMail extends Mailable implements ShouldQueueAfterCommit
 {
+    use QueuedMail;
+
     public function __construct(public readonly int $certificateId, string $lang = 'ru')
     {
         $this->locale($lang);

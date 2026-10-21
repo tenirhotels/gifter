@@ -86,9 +86,9 @@ class OnlineShopTest extends TestCase
         $this->assertSame('+77011234567', $order->phone);
         $this->assertSame(OnlineOrderStatus::New, $order->status);
         $this->assertNotSame('+77011234567', DB::table('online_orders')->value('phone'));
-        Mail::assertSent(OnlineOrderMail::class, fn (OnlineOrderMail $m) => $m->hasTo('orders@example.com')
+        Mail::assertQueued(OnlineOrderMail::class, fn (OnlineOrderMail $m) => $m->hasTo('orders@example.com')
             && ! str_contains($m->render(), '701') && ! str_contains($m->render(), 'ivan@example.com'));
-        Mail::assertSent(OnlineOrderReceivedMail::class, fn ($m) => $m->hasTo('ivan@example.com'));
+        Mail::assertQueued(OnlineOrderReceivedMail::class, fn ($m) => $m->hasTo('ivan@example.com'));
         $this->get('/order/thanks')->assertOk()->assertSee('Заявка принята');
     }
 
@@ -225,7 +225,7 @@ class OnlineShopTest extends TestCase
 
         Mail::fake();
         $this->post('/order/'.$this->online->id, $this->form());
-        Mail::assertSent(OnlineOrderReceivedMail::class, fn ($m) => ! str_contains(strtolower($m->render()), 'kaspi') && str_contains($m->render(), 'завершения заказа'));
+        Mail::assertQueued(OnlineOrderReceivedMail::class, fn ($m) => ! str_contains(strtolower($m->render()), 'kaspi') && str_contains($m->render(), 'завершения заказа'));
     }
 
     public function test_form_limits_by_email_phone_and_confirmation_mail_once_per_hour(): void
@@ -239,7 +239,7 @@ class OnlineShopTest extends TestCase
         // Четвёртая заявка с тем же email за час отклоняется, база не растёт.
         $this->post('/order/'.$this->online->id, $this->form(['phone' => '+77010000004']))->assertSessionHasErrors('phone');
         $this->assertSame(3, OnlineOrder::count());
-        Mail::assertSent(OnlineOrderReceivedMail::class, 1);
+        Mail::assertQueued(OnlineOrderReceivedMail::class, 1);
 
         // Один телефон — не больше 5 заявок в сутки, даже с разными адресами почты.
         foreach (range(1, 5) as $n) {

@@ -15,10 +15,13 @@ use App\Models\Recipient;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\CertificateDocument;
+use App\Services\CertificateMailer;
 use App\Services\CertificateManager;
 use App\Services\OnlineOrderManager;
 use App\Services\PaymentManager;
 use App\Services\ServicePricing;
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
@@ -58,7 +61,7 @@ class CertificateEmailTest extends TestCase
             'email' => 'guest@example.com', 'delivery_method' => 'pdf', 'locale' => 'kk', 'gift_message' => 'Туған күніңмен!']);
         $certificate = $this->issue(app(OnlineOrderManager::class)->process($order, User::factory()->create(['roles' => [Role::Sales]])));
 
-        Mail::assertSent(CertificateIssuedMail::class, function (CertificateIssuedMail $mail) use ($certificate) {
+        Mail::assertQueued(CertificateIssuedMail::class, function (CertificateIssuedMail $mail) use ($certificate) {
             return $mail->hasTo('guest@example.com') && $mail->locale === 'kk' && $mail->certificateId === $certificate->id
                 && $mail->attachments()[0]->as === 'certificate-'.$certificate->number.'.pdf'
                 && str_contains($mail->render(), '/v/'.$certificate->verification_token);
@@ -73,7 +76,7 @@ class CertificateEmailTest extends TestCase
         Mail::fake();
         $certificate = $this->issue(app(CertificateManager::class)->createDraft(['package_id' => $this->package->id,
             'customer_id' => Customer::factory()->create(['email' => 'buyer@example.com'])->id]));
-        Mail::assertNothingSent();
+        Mail::assertNothingOutgoing();
 
         Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
             ->assertActionVisible('emailPdf')
@@ -82,7 +85,7 @@ class CertificateEmailTest extends TestCase
 
         Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
             ->callAction('emailPdf', ['email' => 'friend@example.com', 'lang' => 'en'])->assertHasNoActionErrors();
-        Mail::assertSent(CertificateIssuedMail::class, fn (CertificateIssuedMail $mail) => $mail->hasTo('friend@example.com') && $mail->locale === 'en');
+        Mail::assertQueued(CertificateIssuedMail::class, fn (CertificateIssuedMail $mail) => $mail->hasTo('friend@example.com') && $mail->locale === 'en');
         $this->assertTrue($certificate->history()->where('event', HistoryEvent::Emailed)->exists());
 
         $draft = app(CertificateManager::class)->createDraft(['package_id' => $this->package->id, 'customer_id' => Customer::factory()->create()->id]);
@@ -102,5 +105,30 @@ class CertificateEmailTest extends TestCase
         $this->assertStringContainsString('С юбилеем, дорогая!', $html);
         $this->assertStringContainsString('data:image/svg+xml;base64,', $html);
         $this->assertStringStartsWith('%PDF', $documents->pdf($certificate));
+    }
+
+    public function test_guest_mails_go_through_queue_with_retries_and_queue_is_worked_by_scheduler(): void
+    {
+        $mail = new CertificateIssuedMail(1, 'kk');
+        $this->assertInstanceOf(ShouldQueueAfterCommit::class, $mail);
+        $this->assertSame(3, $mail->tries);
+        $this->assertSame([60, 300], $mail->backoff);
+
+        $events = collect(app(Schedule::class)->events())->map(fn ($event) => $event->command)->implode("\n");
+        $this->assertStringContainsString('queue:work --stop-when-empty --tries=3 --max-time=50', $events);
+        $this->assertStringContainsString('gifter:remind-online-orders', $events);
+        $this->assertStringContainsString('gifter:remind-expiring', $events);
+    }
+
+    public function test_queued_mail_is_really_delivered_with_pdf_attachment(): void
+    {
+        $certificate = $this->issue(app(CertificateManager::class)->createDraft(['package_id' => $this->package->id, 'customer_id' => Customer::factory()->create()->id]));
+        app(CertificateMailer::class)->send($certificate, 'guest@example.com', 'en');
+
+        $messages = app('mailer')->getSymfonyTransport()->messages();
+        $this->assertCount(1, $messages);
+        $email = $messages[0]->getOriginalMessage();
+        $this->assertSame('certificate-'.$certificate->number.'.pdf', $email->getAttachments()[0]->getFilename());
+        $this->assertStringContainsString('gift certificate', $email->getSubject());
     }
 }

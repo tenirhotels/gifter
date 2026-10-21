@@ -80,7 +80,7 @@ class OnlineRemindersTest extends TestCase
         $this->order();
 
         $this->artisan('gifter:remind-online-orders')->assertSuccessful();
-        Mail::assertSent(OnlineOrdersReminderMail::class, function (OnlineOrdersReminderMail $mail) use ($old) {
+        Mail::assertQueued(OnlineOrdersReminderMail::class, function (OnlineOrdersReminderMail $mail) use ($old) {
             $html = $mail->render();
 
             return array_keys($mail->orders) === [$old->id] && $mail->hasTo('sales@example.com')
@@ -89,7 +89,7 @@ class OnlineRemindersTest extends TestCase
         $this->assertNotNull($old->refresh()->reminded_at);
 
         $this->artisan('gifter:remind-online-orders')->assertSuccessful();
-        Mail::assertSentCount(1);
+        Mail::assertQueuedCount(1);
     }
 
     public function test_guest_is_reminded_14_days_before_expiry_once_and_only_with_email(): void
@@ -107,15 +107,15 @@ class OnlineRemindersTest extends TestCase
         $later->forceFill(['valid_until' => today()->addDays(30)])->save();
 
         $this->artisan('gifter:remind-expiring')->assertSuccessful();
-        Mail::assertSent(CertificateExpiringMail::class, fn (CertificateExpiringMail $mail) => $mail->hasTo('guest@example.com')
+        Mail::assertQueued(CertificateExpiringMail::class, fn (CertificateExpiringMail $mail) => $mail->hasTo('guest@example.com')
             && $mail->number === $withEmail->number && str_contains($mail->render(), '/v/'.$withEmail->verification_token));
-        Mail::assertSentCount(1);
+        Mail::assertQueuedCount(1);
         $this->assertNotNull($withEmail->refresh()->expiry_reminded_at);
         $this->assertTrue($withEmail->history()->where('event', HistoryEvent::ExpiryReminded)->exists());
         $this->assertNull($noEmail->refresh()->expiry_reminded_at);
 
         $this->artisan('gifter:remind-expiring')->assertSuccessful();
-        Mail::assertSentCount(1);
+        Mail::assertQueuedCount(1);
     }
 
     public function test_funnel_counts_orders_processed_paid_issued_and_sum_for_period(): void

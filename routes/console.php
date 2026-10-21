@@ -18,6 +18,9 @@ Schedule::command('gifter:backup-mail')->monthlyOn(1, '02:30');
 Schedule::command('gifter:backup-verify')->weeklyOn(0, '03:30');
 
 Schedule::command('gifter:heartbeat')->everyMinute();
+
+// Очередь писем: на shared-хостинге нет постоянного воркера — разбираем очередь каждую минуту из cron schedule:run.
+Schedule::command('queue:work --stop-when-empty --tries=3 --max-time=50')->everyMinute()->withoutOverlapping();
 Schedule::command('gifter:security-check')->dailyAt('06:50');
 
 // Брони по PMS в день заезда (мало запросов): утром — расхождения, в 16:00 (заселение в 15:30) и вечером — заселились ли.
