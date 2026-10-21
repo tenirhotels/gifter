@@ -429,7 +429,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$locale\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 3
 			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
 
 		-
@@ -523,6 +523,12 @@ parameters:
 			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
 
 		-
+			message: '#^Cannot call method isGateway\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
 			message: '#^Cannot call method requiresFinanceConfirmation\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -597,7 +603,7 @@ parameters:
 		-
 			message: '#^Using nullsafe property access "\?\-\>locale" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
-			count: 1
+			count: 3
 			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
 
 		-
@@ -655,6 +661,12 @@ parameters:
 			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
 
 		-
+			message: '#^Cannot call method isGateway\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
+
+		-
 			message: '#^Cannot call method requiresFinanceConfirmation\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 2
@@ -663,6 +675,12 @@ parameters:
 		-
 			message: '#^Method App\\Filament\\Resources\\Certificates\\RelationManagers\\PaymentsRelationManager\:\:certificate\(\) should return App\\Models\\Certificate but returns Illuminate\\Database\\Eloquent\\Model\.$#'
 			identifier: return.type
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
 			count: 1
 			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
 
@@ -2173,6 +2191,108 @@ parameters:
 			path: app/Services/CommissionManager.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$locale\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Constant App\\Services\\EpayPayments\:\:FAILED_STATES is unused\.$#'
+			identifier: classConstant.unused
+			count: 1
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Method App\\Services\\EpayPayments\:\:settle\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Parameter \#1 \$certificate of method App\\Services\\CertificateHistoryRecorder\:\:record\(\) expects App\\Models\\Certificate, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 4
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\PaymentMethod\:\:HalykEpay will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 2
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\PaymentStatus\:\:Pending will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 2
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\PaymentStatus\:\:Cancelled will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\PaymentStatus\:\:Pending will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 3
+			path: app/Services/EpayPayments.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>locale" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/EpayPayments.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 4
@@ -2389,6 +2509,12 @@ parameters:
 			path: app/Services/PaymentManager.php
 
 		-
+			message: '#^Cannot call method isGateway\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Services/PaymentManager.php
+
+		-
 			message: '#^Cannot call method requiresFinanceConfirmation\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -2401,7 +2527,7 @@ parameters:
 			path: app/Services/PaymentManager.php
 
 		-
-			message: '#^Method App\\Services\\PaymentManager\:\:invoice\(\) should return App\\Models\\Payment but returns null\.$#'
+			message: '#^Method App\\Services\\PaymentManager\:\:createInvoice\(\) should return App\\Models\\Payment but returns null\.$#'
 			identifier: return.type
 			count: 1
 			path: app/Services/PaymentManager.php
