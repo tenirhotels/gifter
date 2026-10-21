@@ -35,6 +35,7 @@ class CertificateManager
         private readonly CertificateHistoryRecorder $history,
         private readonly FulfillmentManager $fulfillments,
         private readonly CommissionManager $commissions,
+        private readonly CertificateMailer $mailer,
     ) {}
 
     /**
@@ -82,6 +83,7 @@ class CertificateManager
                 'custom_validity' => $validity->isCustom(),
                 'currency' => config('gifter.currency'),
                 'notes' => $data['notes'] ?? null,
+                'gift_message' => filled($data['gift_message'] ?? null) ? trim($data['gift_message']) : null,
                 'source' => $data['source'] ?? SaleSource::Staff,
                 'online_order_id' => $data['online_order_id'] ?? null,
                 'created_by' => auth()->id(),
@@ -154,7 +156,10 @@ class CertificateManager
         return $this->locked($certificate, function (Certificate $certificate) use ($data) {
             $this->assertDraft($certificate);
             $soldAtReason = $data['sold_at_reason'] ?? null;
-            $data = array_intersect_key($data, array_flip(['customer_id', 'recipient_id', 'package_id', 'complimentary_reason', 'complimentary_purpose', 'sold_at', 'notes']));
+            $data = array_intersect_key($data, array_flip(['customer_id', 'recipient_id', 'package_id', 'complimentary_reason', 'complimentary_purpose', 'sold_at', 'notes', 'gift_message']));
+            if (array_key_exists('gift_message', $data)) {
+                $data['gift_message'] = filled($data['gift_message']) ? trim($data['gift_message']) : null;
+            }
             $soldAtChanged = isset($data['sold_at']) && ! Carbon::parse($data['sold_at'])->isSameDay($certificate->sold_at);
             if ($soldAtChanged) {
                 $soldAtReason = $this->overrideReason('Изменена дата продажи', $soldAtReason);
@@ -415,7 +420,7 @@ class CertificateManager
     /** Выпуск: черновик с составом, полностью оплаченный, становится активным. */
     public function issue(Certificate $certificate, bool $viaBatch = false): Certificate
     {
-        return $this->locked($certificate, function (Certificate $certificate) use ($viaBatch) {
+        $issued = $this->locked($certificate, function (Certificate $certificate) use ($viaBatch) {
             $this->assertDraft($certificate);
             $this->assertNotInBatch($certificate, $viaBatch);
             if (! $certificate->items()->exists()) {
@@ -449,6 +454,10 @@ class CertificateManager
 
             return $certificate;
         });
+        // Заявка с сайта со способом «на email» — сертификат уходит гостю сразу после выпуска.
+        $this->mailer->sendAfterIssue($issued);
+
+        return $issued;
     }
 
     /**
@@ -749,6 +758,8 @@ class CertificateManager
             'valid_from' => $certificate->valid_from?->toDateString(),
             'valid_until' => $certificate->valid_until?->toDateString(),
             'notes' => $certificate->notes,
+            // Текст поздравления в историю не пишется: только отметка, что он изменился.
+            'gift_message' => $certificate->gift_message === null ? null : __('[скрыто]').' #'.substr(hash_hmac('sha256', $certificate->gift_message, (string) config('app.key')), 0, 8),
         ];
     }
 

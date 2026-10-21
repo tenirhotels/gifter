@@ -17,6 +17,8 @@ use chillerlan\QRCode\QROptions;
  */
 class CertificateDocument
 {
+    public const BRAND_GREEN = '#5F7872';
+
     public function __construct(private readonly CertificateHistoryRecorder $history) {}
 
     public function verificationUrl(Certificate $certificate): string
@@ -39,6 +41,17 @@ class CertificateDocument
         return (new QRCode($options))->render($content);
     }
 
+    /** Оригинальный логотип TENIR из брендбука в цвете Dark Green — для PDF (DomPDF читает SVG из data-URI). */
+    public function logoDataUri(): ?string
+    {
+        $path = public_path('brand/tenir-logo.svg');
+        if (! is_file($path)) {
+            return null;
+        }
+
+        return 'data:image/svg+xml;base64,'.base64_encode(str_replace('currentColor', self::BRAND_GREEN, (string) file_get_contents($path)));
+    }
+
     public function pdf(Certificate $certificate): string
     {
         if (! $certificate->isPrintable()) {
@@ -50,6 +63,7 @@ class CertificateDocument
         return Pdf::loadView('certificates.pdf', [
             'pages' => [['certificate' => $certificate, 'qr' => $this->qrDataUri($url), 'verifyUrl' => $url]],
             'hotel' => config('gifter.certificate'),
+            'logo' => $this->logoDataUri(),
         ])->setPaper('a4')->output();
     }
 
@@ -69,7 +83,7 @@ class CertificateDocument
             $this->history->record($certificate, HistoryEvent::DocumentDownloaded, "В составе блока №{$batch->id}");
         }
 
-        return Pdf::loadView('certificates.pdf', ['pages' => $pages, 'hotel' => config('gifter.certificate')])->setPaper('a4')->output();
+        return Pdf::loadView('certificates.pdf', ['pages' => $pages, 'hotel' => config('gifter.certificate'), 'logo' => $this->logoDataUri()])->setPaper('a4')->output();
     }
 
     /** Скачивание фиксируется в истории: видно, кто и когда выдал документ. */

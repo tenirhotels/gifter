@@ -33,6 +33,7 @@ class CertificateForm
             Section::make('Продукт')->columns(3)->schema(self::productFields()),
             Section::make('Бесплатный сертификат')->columns(2)->visible(fn (Get $get) => self::isComplimentary($get))->schema(self::complimentaryFields()),
             Section::make('Заказчик и получатель')->columns(2)->schema([self::customerField(), self::recipientField()]),
+            self::giftMessageField(),
             self::notesField(),
         ]);
     }
@@ -95,6 +96,12 @@ class CertificateForm
             ->relationship('recipient', 'full_name')->searchable(['last_name', 'first_name'])->preload()
             ->createOptionForm(RecipientForm::fields())
             ->helperText(__('Можно не указывать, если получатель пока неизвестен, и добавить позже.'));
+    }
+
+    public static function giftMessageField(): Textarea
+    {
+        return Textarea::make('gift_message')->label('Поздравление на сертификате')->maxLength(300)->rows(2)->columnSpanFull()
+            ->helperText(__('Печатается в PDF сертификата. Хранится зашифрованным.'));
     }
 
     public static function notesField(): Textarea

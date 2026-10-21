@@ -37,6 +37,7 @@ final class OnlineOrderManager
                 'customer_id' => $customer->id,
                 'recipient_id' => $recipient?->id,
                 'notes' => $this->notes($fresh),
+                'gift_message' => $fresh->gift_message,
                 'source' => SaleSource::Website,
                 'online_order_id' => $fresh->id,
             ]));
@@ -70,7 +71,6 @@ final class OnlineOrderManager
             __('Заявка с сайта № :p1', ['p1' => $order->id]),
             __('Получение: :p1', ['p1' => $order->delivery_method->getLabel()]),
             $order->delivery_address ? __('Адрес доставки — в заявке с сайта (контакты открываются с записью в журнал).') : null,
-            $order->gift_message ? __('Поздравление: :p1', ['p1' => $order->gift_message]) : null,
             $order->notes ? __('Пожелания: :p1', ['p1' => $order->notes]) : null,
         ])->filter()->implode("\n");
     }

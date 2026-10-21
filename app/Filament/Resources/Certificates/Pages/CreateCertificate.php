@@ -112,6 +112,7 @@ class CreateCertificate extends CreateRecord
                             ->visible(fn (Get $get) => (bool) Package::find($get('../../package_id'))?->is_complimentary),
                     ]),
                 Placeholder::make('quote')->label('Расчёт по прайсу')->content(fn (Get $get) => $this->quoteTable($get)),
+                CertificateForm::giftMessageField()->visible(fn (Get $get) => self::count($get) === 1),
                 CertificateForm::notesField(),
             ]),
             Step::make('Счёт')->icon('heroicon-o-banknotes')

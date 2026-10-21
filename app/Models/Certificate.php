@@ -32,7 +32,7 @@ class Certificate extends Model
     protected $fillable = [
         'number', 'verification_token', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'complimentary_purpose', 'batch_id', 'complimentary_approved_by', 'complimentary_approved_at', 'sold_at', 'valid_from',
         'valid_until', 'custom_validity', 'total_amount', 'total_cost', 'payable_amount', 'marketing_cost', 'currency', 'issued_at', 'cancelled_at', 'cancellation_reason',
-        'notes', 'created_by', 'sold_by', 'updated_by', 'source', 'online_order_id', 'expiry_reminded_at',
+        'notes', 'gift_message', 'created_by', 'sold_by', 'updated_by', 'source', 'online_order_id', 'expiry_reminded_at',
         'pms_booking_number', 'pms_verified_at', 'pms_data_age_minutes', 'pms_checked_at', 'pms_check_status', 'pms_check_note', 'booking_guest_name', 'arrival_date', 'departure_date', 'name_match', 'reservation_note',
         'reservation_review_status', 'reservation_reviewed_by', 'reservation_reviewed_at', 'reservation_review_comment',
     ];
@@ -43,6 +43,7 @@ class Certificate extends Model
             'status' => CertificateStatus::class,
             'kind' => CertificateKind::class,
             'source' => SaleSource::class,
+            'gift_message' => 'encrypted',
             'expiry_reminded_at' => 'datetime',
             'complimentary_purpose' => ComplimentaryPurpose::class,
             'sold_at' => 'date',

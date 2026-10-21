@@ -36,6 +36,7 @@ enum HistoryEvent: string implements HasLabel
     case ReservationReleased = 'reservation_released';
     case ReservationReviewed = 'reservation_reviewed';
     case ExpiryReminded = 'expiry_reminded';
+    case Emailed = 'emailed';
 
     public function getLabel(): string
     {
@@ -70,6 +71,7 @@ enum HistoryEvent: string implements HasLabel
             self::ReservationReleased => __('Бронь снята'),
             self::ReservationReviewed => __('Проверка брони Финансами'),
             self::ExpiryReminded => __('Напоминание о сроке отправлено гостю'),
+            self::Emailed => __('Сертификат отправлен на email'),
         };
     }
 }

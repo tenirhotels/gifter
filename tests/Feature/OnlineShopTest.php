@@ -157,7 +157,10 @@ class OnlineShopTest extends TestCase
         $certificate = app(OnlineOrderManager::class)->process($order, User::factory()->create(['roles' => [Role::Sales]]));
         $this->assertStringContainsString('Курьер по городу', $certificate->notes);
         $this->assertStringNotContainsString('Абая', $certificate->notes);
-        $this->assertStringContainsString('С днём рождения!', $certificate->notes);
+        $this->assertStringNotContainsString('С днём рождения!', $certificate->notes);
+        $this->assertSame('С днём рождения!', $certificate->refresh()->gift_message);
+        $this->assertNotSame('С днём рождения!', DB::table('certificates')->value('gift_message'));
+        $this->assertStringNotContainsString('С днём рождения!', $certificate->history()->get()->toJson(JSON_UNESCAPED_UNICODE));
     }
 
     public function test_shop_media_serves_only_shop_images_and_settings_page_is_admin_only(): void

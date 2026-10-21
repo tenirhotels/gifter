@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Services\AdminCorrections;
 use App\Services\ArrivalSync;
 use App\Services\CertificateDocument;
+use App\Services\CertificateMailer;
 use App\Services\CertificateManager;
 use App\Services\PaymentManager;
 use App\Services\Pms\PmsClient;
@@ -174,6 +175,19 @@ class ViewCertificate extends ViewRecord
 
                     return response()->streamDownload(fn () => print ($pdf), $documents->filename($record), ['Content-Type' => 'application/pdf']);
                 }),
+
+            Action::make('emailPdf')->label('Отправить на email')->icon('heroicon-o-envelope')->color('gray')
+                ->authorize(Permission::IssueCertificates)
+                ->visible(fn (Certificate $record) => $record->isPrintable())
+                ->modalDescription(__('Гость получит письмо с PDF сертификата и ссылкой проверки. Отправка записывается в историю.'))
+                ->fillForm(fn (Certificate $record) => ['email' => app(CertificateMailer::class)->defaultEmail($record),
+                    'lang' => $record->onlineOrder?->locale ?? app()->getLocale()])
+                ->schema([
+                    TextInput::make('email')->label('Email')->email()->required(),
+                    Select::make('lang')->label('Язык письма и PDF')->options(config('gifter.locales'))->required(),
+                ])
+                ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
+                    fn () => app(CertificateMailer::class)->send($record, $data['email'], $data['lang']), __('Сертификат отправлен на email'))),
 
             $this->reservationAction('reserve', 'Отметить бронь', [CertificateStatus::Active]),
             $this->checkInAction(),
