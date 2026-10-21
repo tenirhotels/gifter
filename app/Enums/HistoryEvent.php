@@ -37,6 +37,8 @@ enum HistoryEvent: string implements HasLabel
     case ReservationReviewed = 'reservation_reviewed';
     case ExpiryReminded = 'expiry_reminded';
     case Emailed = 'emailed';
+    case PaymentLinkSent = 'payment_link_sent';
+    case GatewayNote = 'gateway_note';
 
     public function getLabel(): string
     {
@@ -72,6 +74,8 @@ enum HistoryEvent: string implements HasLabel
             self::ReservationReviewed => __('Проверка брони Финансами'),
             self::ExpiryReminded => __('Напоминание о сроке отправлено гостю'),
             self::Emailed => __('Сертификат отправлен на email'),
+            self::PaymentLinkSent => __('Ссылка на оплату отправлена клиенту'),
+            self::GatewayNote => __('Событие банка по оплате'),
         };
     }
 }

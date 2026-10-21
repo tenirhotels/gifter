@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Console\Commands\BackupVerify;
 use App\Console\Commands\Heartbeat;
 use App\Models\User;
+use App\Services\Epay\EpayClient;
 use App\Support\Backups;
 use App\Support\TrustedProxies;
 use Illuminate\Support\Facades\Cache;
@@ -48,6 +49,9 @@ class SecurityAudit
         $add('Сессии зашифрованы', (bool) config('session.encrypt'), 'SESSION_ENCRYPT=true.', false);
         $add('Подробные логи выключены', config('logging.channels.single.level', 'debug') !== 'debug', 'LOG_LEVEL=warning.', false);
         $add('База — MySQL, не файл SQLite', config('database.default') !== 'sqlite', 'DB_CONNECTION=mysql: файл базы в папке сайта легко утечь.');
+        $epay = filled(config('gifter.epay.client_id')) || filled(config('gifter.epay.client_secret')) || filled(config('gifter.epay.terminal'));
+        $add('Оплата картой: ключи заданы полностью', ! $epay || EpayClient::configured(), 'EPAY_CLIENT_ID, EPAY_CLIENT_SECRET, EPAY_TERMINAL и EPAY_ENV (test или prod) — все вместе или ничего.', false);
+        $add('Оплата картой: боевой терминал', ! $epay || ! $production || config('gifter.epay.env') === 'prod', 'EPAY_ENV=prod: на рабочем сервере тестовый терминал платежи не принимает.', false);
         $add('Двухфакторный вход обязателен', (bool) config('gifter.security.require_two_factor'), 'Уберите GIFTER_REQUIRE_2FA=false из .env.');
         $withoutTwoFactor = User::query()->where('is_active', true)->whereNull('app_authentication_secret')->count();
         $add('Все активные пользователи настроили 2FA', $withoutTwoFactor === 0,

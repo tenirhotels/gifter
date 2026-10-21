@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EpayCallbackController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PublicShopController;
 use App\Http\Controllers\SeoController;
@@ -9,6 +10,8 @@ use App\Http\Middleware\PublicPage;
 use Illuminate\Support\Facades\Route;
 
 // Публичная страница: витрина онлайн-пакетов и заявка на сертификат. Сотрудники входят на /admin.
+// Уведомления банка об оплате картой: без CSRF (внешний вызов), подлинность проверяется запросом в банк.
+Route::post('/pay/halyk/postlink', EpayCallbackController::class)->middleware('throttle:120,1')->name('epay.postlink');
 Route::get('/robots.txt', [SeoController::class, 'robots']);
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 Route::get('/media/{file}', ShopMediaController::class)->where('file', '[A-Za-z0-9._-]+')->name('shop.media');

@@ -16,6 +16,7 @@ class Payment extends Model
     protected $fillable = [
         'certificate_id', 'batch_id', 'method', 'status', 'amount', 'currency', 'invoice_number', 'invoiced_at',
         'paid_at', 'cancelled_at', 'reconciled_at', 'reconciled_by', 'comment', 'recorded_by',
+        'epay_invoice_id', 'epay_link_id', 'epay_transaction_id', 'pay_url', 'pay_expires_at', 'epay_status', 'epay_checked_at',
     ];
 
     protected function casts(): array
@@ -28,6 +29,8 @@ class Payment extends Model
             'paid_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'reconciled_at' => 'datetime',
+            'pay_expires_at' => 'datetime',
+            'epay_checked_at' => 'datetime',
         ];
     }
 

@@ -9,7 +9,7 @@ class SeoController extends Controller
 {
     public function robots(): Response
     {
-        $body = "User-agent: *\nDisallow: /admin\nDisallow: /v/\nDisallow: /order/thanks\n\nSitemap: ".url('/sitemap.xml')."\n";
+        $body = "User-agent: *\nDisallow: /admin\nDisallow: /v/\nDisallow: /order/thanks\nDisallow: /pay/\n\nSitemap: ".url('/sitemap.xml')."\n";
 
         return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }

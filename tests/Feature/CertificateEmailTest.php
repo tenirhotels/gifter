@@ -80,8 +80,12 @@ class CertificateEmailTest extends TestCase
 
         Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
             ->assertActionVisible('emailPdf')
-            ->mountAction('emailPdf')->assertSchemaStateSet(['email' => 'buyer@example.com'], 'mountedActionSchema0')
+            // Адрес заказчика в форму не подставляется: контакты открываются только по кнопке с аудитом.
+            ->mountAction('emailPdf')->assertSchemaStateSet(['email' => null], 'mountedActionSchema0')
             ->setActionData(['email' => 'not-an-email', 'lang' => 'ru'])->callMountedAction()->assertHasActionErrors(['email']);
+
+        Livewire::test(ViewCertificate::class, ['record' => $certificate->id])->callAction('emailPdf', ['email' => '', 'lang' => 'ru'])->assertHasNoActionErrors();
+        Mail::assertQueued(CertificateIssuedMail::class, fn (CertificateIssuedMail $mail) => $mail->hasTo('buyer@example.com'));
 
         Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
             ->callAction('emailPdf', ['email' => 'friend@example.com', 'lang' => 'en'])->assertHasNoActionErrors();

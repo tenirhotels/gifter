@@ -27,6 +27,21 @@ class PaymentManager
      */
     public function invoice(Certificate $certificate, PaymentMethod $method, ?string $amount = null, ?string $invoiceNumber = null, ?string $comment = null, ?int $batchId = null): Payment
     {
+        if ($method->isGateway()) {
+            throw new DomainRuleViolation(__('Ссылку на оплату картой создаёт отдельное действие «Ссылка на оплату картой».'));
+        }
+
+        return $this->createInvoice($certificate, $method, $amount, $invoiceNumber, $comment, $batchId);
+    }
+
+    /** Платёж по ссылке банка на весь неоплаченный остаток (вызывает только EpayPayments). */
+    public function invoiceByGateway(Certificate $certificate): Payment
+    {
+        return $this->createInvoice($certificate, PaymentMethod::HalykEpay, null, null, null, null);
+    }
+
+    private function createInvoice(Certificate $certificate, PaymentMethod $method, ?string $amount, ?string $invoiceNumber, ?string $comment, ?int $batchId): Payment
+    {
         return DB::transaction(function () use ($certificate, $method, $amount, $invoiceNumber, $comment, $batchId) {
             $certificate = Certificate::query()->lockForUpdate()->findOrFail($certificate->id);
             if ($certificate->batch_id && $batchId !== $certificate->batch_id) {
@@ -80,11 +95,20 @@ class PaymentManager
      */
     public function markPaid(Payment $payment, ?Carbon $paidAt = null): Payment
     {
+        if ($payment->method->isGateway()) {
+            throw new DomainRuleViolation(__('Оплату картой по ссылке отмечает банк автоматически — вручную её отметить нельзя.'));
+        }
         // Счёт группы — один для заказчика: отмечаются все его строки.
         if ($payment->batch_id) {
             return $this->forBatchSiblings($payment, PaymentStatus::Pending, fn (Payment $line) => $this->markPaidLine($line, $paidAt));
         }
 
+        return $this->markPaidLine($payment, $paidAt);
+    }
+
+    /** Оплата, подтверждённая API банка (EpayPayments): сверка с банком уже выполнена, повторная сверка Финансами не нужна. */
+    public function markPaidByGateway(Payment $payment, ?Carbon $paidAt = null): Payment
+    {
         return $this->markPaidLine($payment, $paidAt);
     }
 
@@ -96,7 +120,7 @@ class PaymentManager
             $payment->update([
                 'status' => PaymentStatus::Paid,
                 'paid_at' => $paidAt ?? now(),
-                'reconciled_at' => $reconciled ? now() : null,
+                'reconciled_at' => $reconciled || $payment->method->isGateway() ? now() : null,
                 'reconciled_by' => $reconciled ? auth()->id() : null,
             ]);
             $this->history->record($payment->certificate, HistoryEvent::PaymentPaid,
@@ -109,6 +133,9 @@ class PaymentManager
     /** Отменить неоплаченный счёт. Поступившую оплату отменить нельзя. */
     public function cancel(Payment $payment, string $reason): Payment
     {
+        if ($payment->method->isGateway()) {
+            app(EpayPayments::class)->beforeCancel($payment);
+        }
         if ($payment->batch_id) {
             return $this->forBatchSiblings($payment, PaymentStatus::Pending, fn (Payment $line) => $this->cancelLine($line, $reason));
         }

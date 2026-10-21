@@ -43,6 +43,7 @@ class PaymentsRelationManager extends RelationManager
                 TextColumn::make('amount')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state)),
                 TextColumn::make('status')->label('Статус оплаты')->badge(),
                 TextColumn::make('invoice_number')->label('Номер счёта')->placeholder('—'),
+                TextColumn::make('epay_status')->label('Состояние в банке')->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('invoiced_at')->label('Дата выставления')->dateTime('d.m.Y H:i'),
                 TextColumn::make('paid_at')->label('Дата оплаты')->dateTime('d.m.Y H:i')->placeholder('—'),
                 TextColumn::make('recorder.name')->label('Принял оплату')->placeholder('—'),
@@ -58,7 +59,7 @@ class PaymentsRelationManager extends RelationManager
                     ->authorize(Permission::ManagePayments)
                     ->visible(fn () => $this->certificate()->isDraft() && (! $this->certificate()->isComplimentary() || $this->certificate()->hasPayablePart()) && ! $this->certificate()->batch_id)
                     ->schema(fn () => [
-                        Select::make('method')->label('Способ')->options(PaymentMethod::class)->required()->default(PaymentMethod::KaspiInvoice->value),
+                        Select::make('method')->label('Способ')->options(PaymentMethod::manualOptions())->required()->default(PaymentMethod::KaspiInvoice->value),
                         TextInput::make('amount')->label('Сумма, ₸')->numeric()->minValue(1)->required()
                             ->default(fn () => Money::fromMinor(Money::toMinor($this->certificate()->payable_amount) - Money::toMinor($this->certificate()->invoicedAmount())))
                             ->helperText(__('По умолчанию — весь неоплаченный остаток.')),
@@ -77,7 +78,7 @@ class PaymentsRelationManager extends RelationManager
                 Action::make('markPaid')->label('Оплачен')->icon('heroicon-o-check')->color('success')
                     ->authorize(fn (Payment $record) => auth()->user()->can($record->method->requiresFinanceConfirmation()
                         ? Permission::ReceiveBankTransfers : Permission::ReceivePayments))
-                    ->visible(fn (Payment $record) => $record->status === PaymentStatus::Pending && ! $record->batch_id)
+                    ->visible(fn (Payment $record) => $record->status === PaymentStatus::Pending && ! $record->batch_id && ! $record->method->isGateway())
                     ->modalDescription(fn (Payment $record) => $record->method->requiresFinanceConfirmation()
                         ? __('Перечисление на р/с: отметка Финансов по выписке одновременно считается сверкой.') : null)
                     ->schema([DateTimePicker::make('paid_at')->label('Дата поступления')->default(now())->required()->maxDate(now())])

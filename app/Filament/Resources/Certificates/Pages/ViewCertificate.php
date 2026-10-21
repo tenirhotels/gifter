@@ -23,6 +23,7 @@ use App\Services\ArrivalSync;
 use App\Services\CertificateDocument;
 use App\Services\CertificateMailer;
 use App\Services\CertificateManager;
+use App\Services\EpayPayments;
 use App\Services\PaymentManager;
 use App\Services\Pms\PmsClient;
 use App\Services\Pms\PmsException;
@@ -40,6 +41,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
@@ -141,7 +143,7 @@ class ViewCertificate extends ViewRecord
                     'amount' => Money::fromMinor(Money::toMinor($record->payable_amount) - Money::toMinor($record->invoicedAmount())),
                 ])
                 ->schema([
-                    Select::make('method')->label('Способ')->options(PaymentMethod::class)->required(),
+                    Select::make('method')->label('Способ')->options(PaymentMethod::manualOptions())->required(),
                     TextInput::make('amount')->label('Сумма, ₸')->numeric()->minValue(1)->required()->helperText(__('По умолчанию — весь неоплаченный остаток.')),
                     TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255),
                 ])
@@ -150,7 +152,7 @@ class ViewCertificate extends ViewRecord
                     (string) $data['amount'], $data['invoice_number'] ?? null), __('Счёт выставлен'))),
 
             Action::make('markPaid')->label('Оплачен')->icon('heroicon-o-check')->color('success')
-                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment() !== null)
+                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment() !== null && ! $record->pendingPayment()->method->isGateway())
                 ->authorize(fn (Certificate $record) => auth()->user()->can($record->pendingPayment()?->method->requiresFinanceConfirmation()
                     ? Permission::ReceiveBankTransfers : Permission::ReceivePayments))
                 ->modalDescription(fn (Certificate $record) => ($line = $record->pendingPayment())
@@ -158,6 +160,46 @@ class ViewCertificate extends ViewRecord
                 ->schema([DateTimePicker::make('paid_at')->label('Дата поступления')->default(now())->maxDate(now())->required()])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                     fn () => app(PaymentManager::class)->markPaid($record->pendingPayment(), Carbon::parse($data['paid_at'])), __('Оплата отмечена'))),
+
+            // Оплата картой по ссылке банка: платёж подтверждает банк (API), вручную его не отмечают.
+            Action::make('epayLink')->label('Ссылка на оплату картой')->icon('heroicon-o-credit-card')
+                ->authorize(Permission::ManagePayments)
+                ->visible(fn (Certificate $record) => app(EpayPayments::class)->enabled() && $this->isOwnSaleDraft($record) && ! $record->pendingPayment()
+                    && Money::toMinor($record->invoicedAmount()) < Money::toMinor($record->payable_amount))
+                ->modalDescription(fn (Certificate $record) => __('Клиент получит письмо со ссылкой на оплату картой (:p1). Оплату подтвердит банк — отмечать вручную не нужно.',
+                    ['p1' => Money::format(Money::fromMinor(Money::toMinor($record->payable_amount) - Money::toMinor($record->invoicedAmount())))]))
+                ->fillForm(fn (Certificate $record) => ['lang' => $record->onlineOrder?->locale ?? app()->getLocale()])
+                ->schema([
+                    TextInput::make('email')->label('Email клиента')->email()->maxLength(255)
+                        ->helperText(__('Пусто — письмо уйдёт на адрес заказчика из его карточки (он здесь не показывается).')),
+                    Select::make('lang')->label('Язык письма')->options(config('gifter.locales'))->required(),
+                ])
+                ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
+                    fn () => app(EpayPayments::class)->createLink($record, $data['email'] ?? null, $data['lang']), __('Ссылка на оплату отправлена клиенту'))),
+
+            Action::make('epayResend')->label('Отправить ссылку ещё раз')->icon('heroicon-o-envelope')->color('gray')
+                ->authorize(Permission::ManagePayments)
+                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment()?->method->isGateway())
+                ->fillForm(fn (Certificate $record) => ['lang' => $record->onlineOrder?->locale ?? app()->getLocale()])
+                ->schema([
+                    TextInput::make('email')->label('Email клиента')->email()->maxLength(255)
+                        ->helperText(__('Пусто — адрес заказчика из его карточки.')),
+                    Select::make('lang')->label('Язык письма')->options(config('gifter.locales'))->required(),
+                ])
+                ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
+                    fn () => app(EpayPayments::class)->resend($record->pendingPayment(), $data['email'] ?? null, $data['lang']), __('Ссылка отправлена клиенту ещё раз'))),
+
+            Action::make('epayCheck')->label('Проверить оплату в банке')->icon('heroicon-o-arrow-path')->color('gray')
+                ->authorize(Permission::ManagePayments)
+                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment()?->method->isGateway())
+                ->action(function (Certificate $record, Action $action) {
+                    $paid = false;
+                    RunsDomainActions::run($action, function () use ($record, &$paid) {
+                        $paid = app(EpayPayments::class)->checkNow($record->pendingPayment()) === EpayPayments::PAID;
+                    });
+                    Notification::make()->{$paid ? 'success' : 'warning'}()->title($paid ? __('Оплата поступила') : __('Оплата пока не поступила'))->send();
+                    $this->redirect(CertificateResource::getUrl('view', ['record' => $this->getRecord()]));
+                }),
 
             Action::make('issue')->label('Выпустить')->icon('heroicon-o-check-badge')->color('success')
                 ->authorize(Permission::IssueCertificates)
@@ -180,14 +222,14 @@ class ViewCertificate extends ViewRecord
                 ->authorize(Permission::IssueCertificates)
                 ->visible(fn (Certificate $record) => $record->isPrintable())
                 ->modalDescription(__('Гость получит письмо с PDF сертификата и ссылкой проверки. Отправка записывается в историю.'))
-                ->fillForm(fn (Certificate $record) => ['email' => app(CertificateMailer::class)->defaultEmail($record),
-                    'lang' => $record->onlineOrder?->locale ?? app()->getLocale()])
+                ->fillForm(fn (Certificate $record) => ['lang' => $record->onlineOrder?->locale ?? app()->getLocale()])
                 ->schema([
-                    TextInput::make('email')->label('Email')->email()->required(),
+                    TextInput::make('email')->label('Email')->email()->maxLength(255)
+                        ->helperText(__('Пусто — адрес из заявки или карточки заказчика (контакты здесь не показываются).')),
                     Select::make('lang')->label('Язык письма и PDF')->options(config('gifter.locales'))->required(),
                 ])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
-                    fn () => app(CertificateMailer::class)->send($record, $data['email'], $data['lang']), __('Сертификат отправлен на email'))),
+                    fn () => app(CertificateMailer::class)->send($record, ($data['email'] ?? null) ?: (string) app(CertificateMailer::class)->defaultEmail($record), $data['lang']), __('Сертификат отправлен на email'))),
 
             $this->reservationAction('reserve', 'Отметить бронь', [CertificateStatus::Active]),
             $this->checkInAction(),

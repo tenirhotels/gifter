@@ -121,7 +121,7 @@ class CreateCertificate extends CreateRecord
                     Toggle::make('create_invoice')->live()->default(true)
                         ->label(fn (Get $get) => self::count($get) > 1 ? __('Сразу выставить один счёт на всю группу') : __('Сразу выставить счёт на всю сумму')),
                     Grid::make(2)->visible(fn (Get $get) => (bool) $get('create_invoice'))->schema([
-                        Select::make('payment_method')->label('Способ')->options(PaymentMethod::class)->default(PaymentMethod::KaspiInvoice->value)->required(),
+                        Select::make('payment_method')->label('Способ')->options(PaymentMethod::manualOptions())->default(PaymentMethod::KaspiInvoice->value)->required(),
                         TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255),
                     ]),
                     Placeholder::make('invoice_hint')->hiddenLabel()

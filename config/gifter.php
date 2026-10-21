@@ -33,6 +33,19 @@ return [
         'mail_to' => env('GIFTER_ORDERS_MAIL_TO'),
     ],
 
+    // Оплата картой по ссылке (эквайринг Halyk Epay). Ключи — только в .env; пусто — функция выключена.
+    'epay' => [
+        'env' => env('EPAY_ENV', 'test'), // test | prod
+        'client_id' => env('EPAY_CLIENT_ID'),
+        'client_secret' => env('EPAY_CLIENT_SECRET'),
+        'terminal' => env('EPAY_TERMINAL'),
+        'expire_period' => env('EPAY_EXPIRE_DAYS', 3),
+        'hosts' => [
+            'test' => ['oauth' => 'https://test-epay-oauth.epayment.kz', 'api' => 'https://test-epay-api.epayment.kz'],
+            'prod' => ['oauth' => 'https://epay-oauth.homebank.kz', 'api' => 'https://epay-api.homebank.kz'],
+        ],
+    ],
+
     'number' => [
         // Шаблон номера: {PREFIX}, {YYYY}, {YY}, {SEQ}. Если в шаблоне есть год,
         // нумерация начинается заново каждый год (по дате продажи).

@@ -8,6 +8,9 @@ Schedule::command('gifter:expire-certificates')->dailyAt('00:10');
 Schedule::command('gifter:remind-online-orders')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('gifter:remind-expiring')->dailyAt('10:00')->withoutOverlapping();
 
+// Оплата картой по ссылке: если уведомление банка потерялось — проверяем платежи сами; истёкшие ссылки отменяем.
+Schedule::command('gifter:epay-reconcile')->everyTenMinutes()->withoutOverlapping();
+
 // Резервные копии базы: зашифрованный архив каждую ночь, чистка старых, проверка свежести;
 // раз в неделю — копия на почту BACKUP_MAIL_TO (вне хостинга). См. docs/security.md.
 Schedule::command('backup:clean')->dailyAt('01:20');
