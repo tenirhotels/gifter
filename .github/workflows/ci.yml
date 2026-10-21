@@ -17,9 +17,8 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: cp .env.example .env && php artisan key:generate
       - run: vendor/bin/pint --test
-      # Статический анализ. Пока не создан phpstan-baseline.neon с полным списком старых замечаний, шаг не блокирует CI.
+      # Статический анализ (Larastan): старые замечания — в phpstan-baseline.neon, CI ругается только на новые.
       - run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
-        continue-on-error: true
       - run: php artisan test
       - run: composer audit
 
