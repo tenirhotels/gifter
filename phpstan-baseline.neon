@@ -1,4 +1,2995 @@
-# Старые замечания Larastan. Создаётся командой: vendor/bin/phpstan analyse --generate-baseline
-# CI ругается только на новые ошибки.
 parameters:
-    ignoreErrors: []
+	ignoreErrors:
+		-
+			message: '#^Call to an undefined method Filament\\Schemas\\Components\\Component\:\:helperText\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Auth/EditProfile.php
+
+		-
+			message: '#^Access to an undefined property App\\Filament\\Pages\\Commissions\:\:\$form\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/Commissions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/MyCommission.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/MyCommission.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Pages/MyCommission.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\CertificateStatus\:\:Active, App\\Enums\\CertificateStatus\:\:Expired\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Filament/Pages/MyCommission.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Filament/Pages/MyCommission.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Expired will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Pages/MyCommission.php
+
+		-
+			message: '#^Access to an undefined property App\\Filament\\Pages\\PmsSettings\:\:\$form\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Filament/Pages/PmsSettings.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/ReservationExceptions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$valid_until\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/ReservationExceptions.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Filament/Pages/ReservationExceptions.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ExceptionStatus\:\:Pending will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Filament/Pages/ReservationExceptions.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>full_name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Filament/Pages/ReservationExceptions.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Filament/Pages/ReservationExceptions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/ReservationReviews.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:displayName\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Filament/Pages/ReservationReviews.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string\|null, array\{App\\Enums\\ReservationReview\:\:Pending, App\\Enums\\ReservationReview\:\:Approved\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Filament/Pages/ReservationReviews.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string\|null, array\{App\\Enums\\ReservationReview\:\:Pending, App\\Enums\\ReservationReview\:\:Disputed\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Filament/Pages/ReservationReviews.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Filament/Pages/ReservationReviews.php
+
+		-
+			message: '#^Cannot call method getColor\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Pages/ReservationReviews.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Pages/ReservationReviews.php
+
+		-
+			message: '#^Cannot call method isFinal\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Pages/ReservationReviews.php
+
+		-
+			message: '#^Cannot call method shortLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Pages/ReservationReviews.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Pages/SellerCommissions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/SellerCommissions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$package\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/SellerCommissions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$valid_from\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/SellerCommissions.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Pages/SellerCommissions.php
+
+		-
+			message: '#^Parameter \#1 \$commissions of method App\\Services\\CommissionManager\:\:each\(\) expects iterable\<App\\Models\\CertificateCommission\>, Illuminate\\Database\\Eloquent\\Collection given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Filament/Pages/SellerCommissions.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CommissionStatus\:\:Approved will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Filament/Pages/SellerCommissions.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CommissionStatus\:\:Earned will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Pages/SellerCommissions.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CommissionStatus\:\:Paid will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Pages/SellerCommissions.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Filament/Pages/SellerCommissions.php
+
+		-
+			message: '#^Access to an undefined property App\\Filament\\Pages\\ShopSettings\:\:\$form\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Pages/ShopSettings.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/UpcomingArrivals.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Filament/Pages/UpcomingArrivals.php
+
+		-
+			message: '#^Cannot call method diffInDays\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Pages/UpcomingArrivals.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Pages/UpcomingArrivals.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Pages/UpcomingArrivals.php
+
+		-
+			message: '#^Cannot call method isOpen\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Pages/UpcomingArrivals.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: non\-falsy\-string, Closure\(App\\Models\\ServiceFulfillment\)\: non\-falsy\-string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Filament/Pages/UpcomingArrivals.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:filter\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|null, Closure\(App\\Models\\ServiceFulfillment\)\: bool given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Filament/Pages/UpcomingArrivals.php
+
+		-
+			message: '#^Parameter \#1 \$date of static method App\\Filament\\Pages\\UpcomingArrivals\:\:dayLabel\(\) expects Illuminate\\Support\\Carbon, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Filament/Pages/UpcomingArrivals.php
+
+		-
+			message: '#^Call to function is_scalar\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Filament/Resources/AuditLogs/Tables/AuditLogsTable.php
+
+		-
+			message: '#^Parameter \#1 \$keys of method Illuminate\\Support\\Collection\<int,string\>\:\:except\(\) expects array\<0\>\|Illuminate\\Support\\Enumerable\<\(int\|string\), 0\>\|string, array\{''created_at'', ''updated_at'', ''id''\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Filament/Resources/AuditLogs/Tables/AuditLogsTable.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between \*NEVER\* and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/AuditLogs/Tables/AuditLogsTable.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$invoice_number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/CertificateBatches/CertificateBatchResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$method\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/CertificateBatches/CertificateBatchResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/CertificateBatches/CertificateBatchResource.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:awaitingApproval\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/CertificateBatches/CertificateBatchResource.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:readyToIssue\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/CertificateBatches/CertificateBatchResource.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:displayName\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/CertificateBatches/CertificateBatchResource.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:validityLabel\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/CertificateBatches/CertificateBatchResource.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Filament/Resources/CertificateBatches/CertificateBatchResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$method\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/CertificateBatches/Pages/ViewCertificateBatch.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/CertificateBatches/Pages/ViewCertificateBatch.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\BatchStatus\:\:Draft, App\\Enums\\BatchStatus\:\:Approved\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 2
+			path: app/Filament/Resources/CertificateBatches/Pages/ViewCertificateBatch.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Filament/Resources/CertificateBatches/Pages/ViewCertificateBatch.php
+
+		-
+			message: '#^Left side of && is always false\.$#'
+			identifier: booleanAnd.leftAlwaysFalse
+			count: 3
+			path: app/Filament/Resources/CertificateBatches/Pages/ViewCertificateBatch.php
+
+		-
+			message: '#^Parameter \#1 \$payment of method App\\Services\\PaymentManager\:\:reconcile\(\) expects App\\Models\\Payment, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Filament/Resources/CertificateBatches/Pages/ViewCertificateBatch.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\BatchStatus\:\:Draft will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Filament/Resources/CertificateBatches/Pages/ViewCertificateBatch.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\BatchStatus\:\:Issued will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/CertificateBatches/Pages/ViewCertificateBatch.php
+
+		-
+			message: '#^Parameter \#1 \$certificate of method App\\Services\\CertificateManager\:\:updateDraft\(\) expects App\\Models\\Certificate, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/EditCertificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$arrival_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$booking_number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$departure_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$first_name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$full_name\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$guest_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$last_name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$locale\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$reason\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:displayName\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isComplimentary\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:serviceLabel\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:shortLabel\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\CertificateStatus\:\:Active, App\\Enums\\CertificateStatus\:\:Reserved\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\CertificateStatus\:\:InUse, App\\Enums\\CertificateStatus\:\:Reserved\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string\|null, array\{App\\Enums\\ReservationReview\:\:Pending, App\\Enums\\ReservationReview\:\:Approved\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string\|null, array\{App\\Enums\\ReservationReview\:\:Pending, App\\Enums\\ReservationReview\:\:Disputed\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Cannot call method canTransitionTo\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Cannot call method isFinal\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Cannot call method requiresFinanceConfirmation\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Left side of \|\| is always false\.$#'
+			identifier: booleanOr.leftAlwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Parameter \#1 \$exception of method App\\Services\\ReservationExceptionManager\:\:approve\(\) expects App\\Models\\ReservationException, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Parameter \#1 \$exception of method App\\Services\\ReservationExceptionManager\:\:reject\(\) expects App\\Models\\ReservationException, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Right side of \|\| is always false\.$#'
+			identifier: booleanOr.rightAlwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Active will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Expired will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 3
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Reserved will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string\|null and App\\Enums\\ReservationReview\:\:Pending will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>full_name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>locale" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:items\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/FulfillmentsRelationManager.php
+
+		-
+			message: '#^Call to function is_array\(\) with non\-empty\-string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 2
+			path: app/Filament/Resources/Certificates/RelationManagers/HistoryRelationManager.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>full_name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Filament/Resources/Certificates/RelationManagers/HistoryRelationManager.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/HistoryRelationManager.php
+
+		-
+			message: '#^Method App\\Filament\\Resources\\Certificates\\RelationManagers\\ItemsRelationManager\:\:certificate\(\) should return App\\Models\\Certificate but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/ItemsRelationManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:hasPayablePart\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isComplimentary\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
+
+		-
+			message: '#^Cannot call method requiresFinanceConfirmation\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
+
+		-
+			message: '#^Method App\\Filament\\Resources\\Certificates\\RelationManagers\\PaymentsRelationManager\:\:certificate\(\) should return App\\Models\\Certificate but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\PaymentStatus\:\:Paid will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\PaymentStatus\:\:Pending will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/PaymentsRelationManager.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:refunds\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/RelationManagers/RefundsRelationManager.php
+
+		-
+			message: '#^Anonymous function never returns null so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateForm.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateForm.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:displayName\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:shortLabel\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:validityLabel\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Cannot call method diffInDays\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 8
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\CommissionStatus\:\:Approved is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\CommissionStatus\:\:Earned is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\CommissionStatus\:\:Paid is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\CommissionStatus\:\:PendingRedemption is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Parameter \#1 \$commission of static method App\\Filament\\Resources\\Certificates\\Schemas\\CertificateInfolist\:\:commissionNote\(\) expects App\\Models\\CertificateCommission, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CommissionStatus\:\:PendingRedemption will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CommissionType\:\:Percent will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Schemas/CertificateInfolist.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Certificates/Tables/CertificatesTable.php
+
+		-
+			message: '#^Cannot call method isFuture\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Resources/CommissionRules/CommissionRuleResource.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Resources/CommissionRules/CommissionRuleResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Fulfillments/ServiceFulfillmentResource.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\OnlineOrderStatus\:\:New will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Filament/Resources/OnlineOrders/OnlineOrderResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Packages/Tables/PackagesTable.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$service\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Packages/Tables/PackagesTable.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Resources/Packages/Tables/PackagesTable.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Resources/Packages/Tables/PackagesTable.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Payments/PaymentResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Payments/PaymentResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Payments/PaymentResource.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isReconciled\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Payments/PaymentResource.php
+
+		-
+			message: '#^Cannot call method requiresFinanceConfirmation\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Resources/Payments/PaymentResource.php
+
+		-
+			message: '#^Parameter \#1 \$payment of method App\\Services\\PaymentManager\:\:reconcile\(\) expects App\\Models\\Payment, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Filament/Resources/Payments/PaymentResource.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\PaymentMethod\:\:Cash will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Payments/PaymentResource.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\PaymentStatus\:\:Paid will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Payments/PaymentResource.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\PaymentStatus\:\:Pending will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Payments/PaymentResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pmsService\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Services/Pages/EditService.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Resources/Services/RelationManagers/PricesRelationManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$allowed_in_certificate\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Services/Schemas/ServiceForm.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$external_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Services/Schemas/ServiceForm.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Services/Schemas/ServiceForm.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isMissing\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Services/Schemas/ServiceForm.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:effectiveOn\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/Services/Tables/ServicesTable.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$arrival_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$departure_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$notes\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$recipient\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$request_locale\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\FulfillmentStatus\:\:Requested, App\\Enums\\FulfillmentStatus\:\:Scheduled, App\\Enums\\FulfillmentStatus\:\:Confirmed\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\FulfillmentStatus\:\:Requested, App\\Enums\\FulfillmentStatus\:\:Scheduled\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Cannot call method isOpen\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Method App\\Filament\\Support\\FulfillmentActions\:\:providerContacts\(\) never returns null so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Parameter \#1 \$status of static method App\\Services\\FulfillmentManager\:\:revertLabel\(\) expects App\\Enums\\FulfillmentStatus, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\FulfillmentStatus\:\:Pending will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\FulfillmentStatus\:\:Confirmed will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\FulfillmentStatus\:\:Pending will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Filament/Support/FulfillmentActions.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\PaymentStatus\:\:Pending will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Filament/Support/PaymentCorrectionActions.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\RefundStatus\:\:Requested will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Filament/Support/RefundActions.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\RefundStatus\:\:Approved will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Support/RefundActions.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\RefundStatus\:\:Requested will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Filament/Support/RefundActions.php
+
+		-
+			message: '#^Call to an undefined method Filament\\Schemas\\Components\\Component\:\:icon\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Support/RoleQueueWidget.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Certificate\:\:\$paid_sum\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Widgets/DraftsWidget.php
+
+		-
+			message: '#^Call to an undefined method Filament\\Schemas\\Components\\Component\:\:headerActions\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Widgets/MyCommissionWidget.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/PublicShopController.php
+
+		-
+			message: '#^Cannot call method lt\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/VerifyCertificateController.php
+
+		-
+			message: '#^Match arm comparison between string\|null and App\\Enums\\CertificateStatus\:\:Active is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/VerifyCertificateController.php
+
+		-
+			message: '#^Match arm comparison between string\|null and App\\Enums\\CertificateStatus\:\:Cancelled is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/VerifyCertificateController.php
+
+		-
+			message: '#^Match arm comparison between string\|null and App\\Enums\\CertificateStatus\:\:Expired is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/VerifyCertificateController.php
+
+		-
+			message: '#^Match arm comparison between string\|null and App\\Enums\\CertificateStatus\:\:InUse is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/VerifyCertificateController.php
+
+		-
+			message: '#^Match arm comparison between string\|null and App\\Enums\\CertificateStatus\:\:Reserved is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/VerifyCertificateController.php
+
+		-
+			message: '#^Match arm comparison between string\|null and App\\Enums\\CertificateStatus\:\:Used is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/VerifyCertificateController.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 2
+			path: app/Http/Controllers/VerifyCertificateController.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Active will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/VerifyCertificateController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mail/CertificateIssuedMail.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Mail/CertificateIssuedMail.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\CertificateStatus\:\:Active, App\\Enums\\CertificateStatus\:\:Reserved, App\\Enums\\CertificateStatus\:\:InUse\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Models/Certificate.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Models/Certificate.php
+
+		-
+			message: '#^Method App\\Models\\Certificate\:\:pendingPayment\(\) should return App\\Models\\Payment\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/Certificate.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:filter\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|null, Closure\(App\\Models\\CertificateItem\)\: bool given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Models/Certificate.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateKind\:\:Complimentary will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/Certificate.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Draft will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/Certificate.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/CertificateBatch.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/CertificateBatch.php
+
+		-
+			message: '#^Cannot call method labelFor\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/CertificateBatch.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateKind\:\:Complimentary will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/CertificateBatch.php
+
+		-
+			message: '#^Method App\\Models\\CertificateCommission\:\:activePayment\(\) should return App\\Models\\CommissionPayment\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/CertificateCommission.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CommissionType\:\:Percent will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/CertificateCommission.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isDraft\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Models/CertificateItem.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CommissionType\:\:Fixed will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/CommissionRule.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CommissionType\:\:Percent will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/CommissionRule.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CustomerType\:\:Company will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/Customer.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/Package.php
+
+		-
+			message: '#^Cannot call method validUntil\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/Package.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Models/PmsSetting.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/Provider.php
+
+		-
+			message: '#^Cannot call method taxIdLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/Provider.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProviderType\:\:External will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/Provider.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/ServiceFulfillment.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$service_name_snapshot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/ServiceFulfillment.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/ServiceFulfillment.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Models/ShopSetting.php
+
+		-
+			message: '#^Cannot call method contains\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Cannot call method isNotEmpty\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:getAppAuthenticationRecoveryCodes\(\) should return array\<string\>\|null but returns string\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^PHPDoc type list\<string\> of property App\\Models\\User\:\:\$attributes is not covariant with PHPDoc type array\<string, mixed\> of overridden property Illuminate\\Database\\Eloquent\\Model\:\:\$attributes\.$#'
+			identifier: property.phpDocType
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Property App\\Models\\User\:\:\$app_authentication_recovery_codes \(string\|null\) does not accept array\<string\>\|null\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Property App\\Models\\User\:\:\$attributes \(list\<string\>\) does not accept default value of type array\{is_active\: true\}\.$#'
+			identifier: property.defaultValue
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Policies/CertificateBatchPolicy.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$seller_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Policies/CertificateCommissionPolicy.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Policies/CertificatePolicy.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\RefundStatus\:\:Approved, App\\Enums\\RefundStatus\:\:Completed\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 4
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Cannot call method toDateTimeString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Expression on left side of \?\? is always null\.$#'
+			identifier: nullCoalesce.expr
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Offset ''status'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Parameter \#1 \$certificate of method App\\Services\\AdminCorrections\:\:record\(\) expects App\\Models\\Certificate, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Parameter \#2 \$from of method App\\Services\\AdminCorrections\:\:syncCommission\(\) expects App\\Enums\\CertificateStatus, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Cancelled will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Draft will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Used will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\PaymentStatus\:\:Cancelled will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\PaymentStatus\:\:Pending will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\RefundStatus\:\:Requested will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/AdminCorrections.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/ArrivalSync.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/ArrivalSync.php
+
+		-
+			message: '#^Cannot call method isSameDay\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/ArrivalSync.php
+
+		-
+			message: '#^Cannot call method lt\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/ArrivalSync.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Services/ArrivalSync.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\CertificateStatus\:\:Reserved will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/ArrivalSync.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string\|null and App\\Enums\\NameMatch will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/ArrivalSync.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Services/ArrivalSync.php
+
+		-
+			message: '#^Anonymous function has an unused use \$callback\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$reason\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\BatchStatus\:\:Draft, App\\Enums\\BatchStatus\:\:Approved\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, list\<App\\Enums\\BatchStatus\> and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Method App\\Services\\CertificateBatchManager\:\:cancel\(\) should return App\\Models\\CertificateBatch but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Method App\\Services\\CertificateBatchManager\:\:openInvoiceLine\(\) should return App\\Models\\Payment but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Method App\\Services\\CertificateBatchManager\:\:transition\(\) should return App\\Models\\CertificateBatch but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Offset ''seller_reason'' on array\{customer_id\?\: int\|null, complimentary_reason\?\: string\|null, complimentary_purpose\?\: App\\Enums\\ComplimentaryPurpose\|string\|null, validity\?\: array\|null, extras\?\: list\<array\{service_id\: int\|string, quantity\: int\|string, paid\?\: bool\}\>, sold_at\?\: mixed, notes\?\: string\|null\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Offset ''sold_at_reason'' on array\{customer_id\?\: int\|null, complimentary_reason\?\: string\|null, complimentary_purpose\?\: App\\Enums\\ComplimentaryPurpose\|string\|null, validity\?\: array\|null, extras\?\: list\<array\{service_id\: int\|string, quantity\: int\|string, paid\?\: bool\}\>, sold_at\?\: mixed, notes\?\: string\|null\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Offset ''sold_by'' on array\{customer_id\?\: int\|null, complimentary_reason\?\: string\|null, complimentary_purpose\?\: App\\Enums\\ComplimentaryPurpose\|string\|null, validity\?\: array\|null, extras\?\: list\<array\{service_id\: int\|string, quantity\: int\|string, paid\?\: bool\}\>, sold_at\?\: mixed, notes\?\: string\|null\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Parameter \#1 \$certificate of method App\\Services\\CertificateManager\:\:approveComplimentary\(\) expects App\\Models\\Certificate, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Parameter \#1 \$certificate of method App\\Services\\CertificateManager\:\:issue\(\) expects App\\Models\\Certificate, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Parameter \#1 \$certificate of method App\\Services\\PaymentManager\:\:invoice\(\) expects App\\Models\\Certificate, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Result of static method Illuminate\\Database\\Connection\:\:transaction\(\) \(void\) is used\.$#'
+			identifier: staticMethod.void
+			count: 2
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\BatchStatus\:\:Draft will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 2
+			path: app/Services/CertificateBatchManager.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Support\\HigherOrderCollectionProxy\<string, Illuminate\\Database\\Eloquent\\Model, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\>\:\:isPrintable\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/CertificateDocument.php
+
+		-
+			message: '#^Method App\\Services\\CertificateHistoryRecorder\:\:record\(\) should return App\\Models\\CertificateHistory but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CertificateHistoryRecorder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/CertificateMailer.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Services/CertificateMailer.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 2
+			path: app/Services/CertificateMailer.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\SaleSource\:\:Website will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/CertificateMailer.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Services/CertificateMailer.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$full_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_complimentary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$service\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$validFrom\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$validUntil\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:validUntil\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Call to function array_key_exists\(\) with ''gift_message'' and array\{customer_id\?\: int\|null, recipient_id\?\: int\|null, package_id\?\: int, complimentary_reason\?\: string\|null, sold_at\?\: Illuminate\\Support\\Carbon\|string, notes\?\: string\|null\} will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\CertificateStatus\:\:Draft, App\\Enums\\CertificateStatus\:\:Active, App\\Enums\\CertificateStatus\:\:Reserved\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 4
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Cannot call method canTransitionTo\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 4
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Cannot call method gt\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Cannot call method isFinal\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Cannot call method lt\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Cannot call method toDateString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 4
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Left side of && is always false\.$#'
+			identifier: booleanAnd.leftAlwaysFalse
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Method App\\Services\\CertificateManager\:\:assertValidity\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Method App\\Services\\CertificateManager\:\:changeValidity\(\) should return App\\Models\\Certificate but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Method App\\Services\\CertificateManager\:\:createItem\(\) should return App\\Models\\CertificateItem but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Offset ''gift_message'' on array\{package_id\: int\<min, \-1\>\|int\<1, max\>, customer_id\?\: int\|null, recipient_id\?\: int\|null, complimentary_reason\?\: string\|null, complimentary_purpose\?\: App\\Enums\\ComplimentaryPurpose\|string\|null, sold_at\?\: Illuminate\\Support\\Carbon\|string\|null, notes\?\: string\|null, batch_id\?\: int\|null, \.\.\.\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Offset ''online_order_id'' on array\{package_id\: int\<min, \-1\>\|int\<1, max\>, customer_id\?\: int\|null, recipient_id\?\: int\|null, complimentary_reason\?\: string\|null, complimentary_purpose\?\: App\\Enums\\ComplimentaryPurpose\|string\|null, sold_at\?\: Illuminate\\Support\\Carbon\|string\|null, notes\?\: string\|null, batch_id\?\: int\|null, \.\.\.\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Offset ''seller_reason'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Offset ''sold_at_reason'' on array\{customer_id\?\: int\|null, recipient_id\?\: int\|null, package_id\?\: int, kind\?\: App\\Enums\\CertificateKind\|string, complimentary_reason\?\: string\|null, sold_at\?\: Illuminate\\Support\\Carbon\|string, notes\?\: string\|null\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Offset ''sold_at_reason'' on array\{package_id\: int\<min, \-1\>\|int\<1, max\>, customer_id\?\: int\|null, recipient_id\?\: int\|null, complimentary_reason\?\: string\|null, complimentary_purpose\?\: App\\Enums\\ComplimentaryPurpose\|string\|null, sold_at\?\: Illuminate\\Support\\Carbon\|string\|null, notes\?\: string\|null, batch_id\?\: int\|null, \.\.\.\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Offset ''sold_by'' on array\{package_id\: int\<min, \-1\>\|int\<1, max\>, customer_id\?\: int\|null, recipient_id\?\: int\|null, complimentary_reason\?\: string\|null, complimentary_purpose\?\: App\\Enums\\ComplimentaryPurpose\|string\|null, sold_at\?\: Illuminate\\Support\\Carbon\|string\|null, notes\?\: string\|null, batch_id\?\: int\|null, \.\.\.\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Offset ''source'' on array\{package_id\: int\<min, \-1\>\|int\<1, max\>, customer_id\?\: int\|null, recipient_id\?\: int\|null, complimentary_reason\?\: string\|null, complimentary_purpose\?\: App\\Enums\\ComplimentaryPurpose\|string\|null, sold_at\?\: Illuminate\\Support\\Carbon\|string\|null, notes\?\: string\|null, batch_id\?\: int\|null, \.\.\.\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array, Closure\(App\\Models\\CertificateItem\)\: array given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Parameter \#1 \$certificate of method App\\Services\\CertificateManager\:\:locked\(\) expects App\\Models\\Certificate, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Parameter \#1 \$kind of method App\\Services\\CertificateManager\:\:assertKind\(\) expects App\\Enums\\CertificateKind, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Parameter \#2 \$date of method App\\Services\\ServicePricing\:\:priceOn\(\) expects Illuminate\\Support\\Carbon, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Parameter \#2 \$package of method App\\Services\\CertificateManager\:\:addPackageItems\(\) expects App\\Models\\Package, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Parameter \#2 \$package of method App\\Services\\CertificateManager\:\:purpose\(\) expects App\\Models\\Package\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Property App\\Models\\Certificate\:\:\$complimentary_purpose \(string\|null\) does not accept App\\Enums\\ComplimentaryPurpose\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Property App\\Models\\Certificate\:\:\$kind \(string\) does not accept App\\Enums\\CertificateKind\:\:Complimentary\|App\\Enums\\CertificateKind\:\:Sale\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 3
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Result of method App\\Services\\CertificateManager\:\:locked\(\) \(void\) is used\.$#'
+			identifier: method.void
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Draft will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:InUse will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Reserved will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string\|null and App\\Enums\\ReservationReview\:\:Disputed will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$comment\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$paidAt\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$reason\.$#'
+			identifier: closure.unusedUse
+			count: 2
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$reference\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 4
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Cannot call method gte\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Cannot call method isEarned\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Cannot call method isPendingPayment\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Cannot call method lt\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Cannot call method lte\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Cannot call method toDateString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Method App\\Services\\CommissionManager\:\:approve\(\) should return App\\Models\\CertificateCommission but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Method App\\Services\\CommissionManager\:\:clean\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Method App\\Services\\CommissionManager\:\:earn\(\) should return App\\Models\\CertificateCommission\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Method App\\Services\\CommissionManager\:\:pay\(\) should return App\\Models\\CertificateCommission but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Method App\\Services\\CommissionManager\:\:reversePayment\(\) should return App\\Models\\CertificateCommission but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Method App\\Services\\CommissionManager\:\:snapshot\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Method App\\Services\\CommissionManager\:\:unapprove\(\) should return App\\Models\\CertificateCommission but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Parameter \#1 \$commission of method App\\Services\\CommissionManager\:\:move\(\) expects App\\Models\\CertificateCommission, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 4
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Result of static method Illuminate\\Database\\Connection\:\:transaction\(\) \(void\) is used\.$#'
+			identifier: staticMethod.void
+			count: 4
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\CertificateKind\:\:Sale will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\CommissionStatus\:\:Approved will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 2
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\CommissionStatus\:\:Earned will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\CommissionStatus\:\:Paid will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Active will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Expired will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Used will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CommissionStatus\:\:Approved will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CommissionStatus\:\:Earned will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CommissionStatus\:\:Paid will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 5
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>number" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$provider_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$requires_confirmation\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$requires_scheduling\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$valid_from\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$valid_until\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$changes\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$comment\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$requireActiveCertificate\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$target\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:serviceLabel\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\CertificateStatus\:\:Reserved, App\\Enums\\CertificateStatus\:\:InUse\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, list\<App\\Enums\\FulfillmentStatus\> and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\CertificateStatus\:\:Active is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\CertificateStatus\:\:Cancelled is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\CertificateStatus\:\:Expired is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\CertificateStatus\:\:Used is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\FulfillmentStatus\:\:Confirmed is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\FulfillmentStatus\:\:Requested is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\FulfillmentStatus\:\:Scheduled is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Method App\\Services\\FulfillmentManager\:\:change\(\) should return App\\Models\\ServiceFulfillment but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Result of static method Illuminate\\Database\\Connection\:\:transaction\(\) \(void\) is used\.$#'
+			identifier: staticMethod.void
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\FulfillmentStatus\:\:Confirmed will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between App\\Enums\\FulfillmentStatus\:\:Pending and App\\Enums\\FulfillmentStatus\:\:Pending will always evaluate to true\.$#'
+			identifier: identical.alwaysTrue
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Services/FulfillmentManager.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/OnlineOrderManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\OnlineOrderStatus\:\:New will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/OnlineOrderManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$amount\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$callback\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$comment\.$#'
+			identifier: closure.unusedUse
+			count: 2
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$invoiceNumber\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$method\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Cannot call method requiresFinanceConfirmation\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Cannot call method toDateTimeString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Method App\\Services\\PaymentManager\:\:invoice\(\) should return App\\Models\\Payment but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Method App\\Services\\PaymentManager\:\:lockedPending\(\) should return App\\Models\\Payment but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Method App\\Services\\PaymentManager\:\:reconcileLine\(\) should return App\\Models\\Payment but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Parameter \#1 \$certificate of method App\\Services\\CertificateHistoryRecorder\:\:record\(\) expects App\\Models\\Certificate, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Result of static method Illuminate\\Database\\Connection\:\:transaction\(\) \(void\) is used\.$#'
+			identifier: staticMethod.void
+			count: 3
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\CertificateStatus\:\:Draft will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\PaymentStatus\:\:Paid will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\PaymentStatus\:\:Pending will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 3
+			path: app/Services/PaymentManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Pms/PmsCatalogSync.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$callback\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$paidAt\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$reference\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Cannot call method canTransitionTo\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Method App\\Services\\RefundManager\:\:lockedRequested\(\) should return App\\Models\\Refund but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Method App\\Services\\RefundManager\:\:markPaid\(\) should return App\\Models\\Refund but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Method App\\Services\\RefundManager\:\:request\(\) should return App\\Models\\Refund but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Result of static method Illuminate\\Database\\Connection\:\:transaction\(\) \(void\) is used\.$#'
+			identifier: staticMethod.void
+			count: 2
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\RefundStatus\:\:Approved will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\RefundStatus\:\:Requested will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 2
+			path: app/Services/RefundManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Reminders.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Reminders.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/Reminders.php
+
+		-
+			message: '#^Anonymous function has an unused use \$comment\.$#'
+			identifier: closure.unusedUse
+			count: 2
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$data\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Method App\\Services\\ReservationExceptionManager\:\:approve\(\) should return App\\Models\\ReservationException but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Method App\\Services\\ReservationExceptionManager\:\:clean\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Method App\\Services\\ReservationExceptionManager\:\:reject\(\) should return App\\Models\\ReservationException but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Method App\\Services\\ReservationExceptionManager\:\:request\(\) should return App\\Models\\ReservationException but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Property App\\Services\\ReservationExceptionManager\:\:\$commissions is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Property App\\Services\\ReservationExceptionManager\:\:\$history is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Property App\\Services\\ReservationExceptionManager\:\:\$reservations is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Result of static method Illuminate\\Database\\Connection\:\:transaction\(\) \(void\) is used\.$#'
+			identifier: staticMethod.void
+			count: 3
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\CertificateStatus\:\:Expired will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\ExceptionStatus\:\:Pending will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 2
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 3
+			path: app/Services/ReservationExceptionManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$first_name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$last_name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$comment\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$data\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$reason\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\CertificateStatus\:\:Reserved, App\\Enums\\CertificateStatus\:\:InUse\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string\|null, array\{App\\Enums\\ReservationReview\:\:Pending, App\\Enums\\ReservationReview\:\:Approved\|App\\Enums\\ReservationReview\:\:Disputed\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 5
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Cannot call method toDateString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Method App\\Services\\ReservationManager\:\:assertDates\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Method App\\Services\\ReservationManager\:\:cleared\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Method App\\Services\\ReservationManager\:\:release\(\) should return App\\Models\\Certificate but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Method App\\Services\\ReservationManager\:\:review\(\) should return App\\Models\\Certificate but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Method App\\Services\\ReservationManager\:\:saveLocked\(\) should return App\\Models\\Certificate but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Method App\\Services\\ReservationManager\:\:snapshot\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Offset ''booking_number'' on array\{booking_number\: string, guest_name\: string, arrival\: mixed, departure\: mixed, note\?\: string\|null\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Property App\\Services\\ReservationManager\:\:\$fulfillments is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Property App\\Services\\ReservationManager\:\:\$history is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Result of && is always true\.$#'
+			identifier: booleanAnd.alwaysTrue
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Result of static method Illuminate\\Database\\Connection\:\:transaction\(\) \(void\) is used\.$#'
+			identifier: staticMethod.void
+			count: 3
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\CertificateStatus\:\:Reserved will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Active will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 3
+			path: app/Services/ReservationManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$earned_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$payments\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:displayName\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Method App\\Services\\SellerReport\:\:certificates\(\) should return Illuminate\\Support\\Collection\<int, App\\Models\\Certificate\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Method App\\Services\\SellerReport\:\:details\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, array\{seller_id\: int\|null, seller\: mixed, number\: string, sold_at\: string, package\: mixed, customer\: mixed, status\: mixed, status_enum\: string, \.\.\.\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Method App\\Services\\SellerReport\:\:summary\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, array\{seller\: mixed, seller_id\: mixed, count\: int, sales_minor\: mixed, used\: int, not_used\: int, expired\: int, no_reservation\: int, \.\.\.\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Models\\Certificate\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Used will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/SellerReport.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/ServicePricing.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:effectiveOn\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Services/ServicePricing.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:prices\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: app/Services/ServicePricing.php
+
+		-
+			message: '#^Cannot call method copy\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/ServicePricing.php
+
+		-
+			message: '#^Cannot call method toDateString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Services/ServicePricing.php
+
+		-
+			message: '#^Method App\\Services\\ServicePricing\:\:addPrice\(\) should return App\\Models\\ServicePrice but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ServicePricing.php
+
+		-
+			message: '#^Parameter \#1 \$service of method App\\Services\\ServicePricing\:\:overlapsOthers\(\) expects App\\Models\\Service, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ServicePricing.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\FulfillmentStatus\:\:Pending, App\\Enums\\FulfillmentStatus\:\:Requested\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Support/ArrivalReadiness.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Support/ArrivalReadiness.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Support/ArrivalReadiness.php
+
+		-
+			message: '#^Cannot call method gt\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Support/ArrivalReadiness.php
+
+		-
+			message: '#^Cannot call method isOpen\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Support/ArrivalReadiness.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: non\-falsy\-string, Closure\(App\\Models\\ServiceFulfillment\)\: non\-falsy\-string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Support/ArrivalReadiness.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:filter\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|null, Closure\(App\\Models\\ServiceFulfillment\)\: bool given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Support/ArrivalReadiness.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\FulfillmentStatus\:\:Confirmed will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Support/ArrivalReadiness.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string\|null and App\\Enums\\ReservationReview\:\:Disputed will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Support/ArrivalReadiness.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string\|null and App\\Enums\\ReservationReview\:\:Pending will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Support/ArrivalReadiness.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:awaitingApproval\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Support/DashboardQueries.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:readyToIssue\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Support/DashboardQueries.php
