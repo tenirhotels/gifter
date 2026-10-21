@@ -150,12 +150,15 @@ class SecurityTest extends TestCase
 
     public function test_security_check_finds_unsafe_settings(): void
     {
-        config(['app.debug' => true, 'database.default' => 'sqlite', 'app.url' => 'http://gifter.example.test']);
+        // Тесты идут и на SQLite, и на MySQL (CI): подсказку про SQLite проверяем, только когда база — SQLite.
+        $onSqlite = config('database.default') === 'sqlite';
+        config(['app.debug' => true, 'app.url' => 'http://gifter.example.test']);
 
-        $this->artisan('gifter:security-check')
-            ->expectsOutputToContain('APP_DEBUG=false')
-            ->expectsOutputToContain('DB_CONNECTION=mysql')
-            ->assertFailed();
+        $check = $this->artisan('gifter:security-check')->expectsOutputToContain('APP_DEBUG=false');
+        if ($onSqlite) {
+            $check->expectsOutputToContain('DB_CONNECTION=mysql');
+        }
+        $check->assertFailed()->run();
 
         $this->assertGreaterThan(0, Security::problems());
     }
@@ -178,8 +181,9 @@ class SecurityTest extends TestCase
         Cache::forever(BackupVerify::KEY, ['at' => now()->toIso8601String(), 'ok' => true, 'error' => null]);
         $results = app(SecurityAudit::class)->run();
 
-        // Тесты идут на SQLite — это единственное, что проверка должна отметить.
-        $this->assertSame(['База — MySQL, не файл SQLite'], collect($results)->where('status', '!=', SecurityAudit::OK)->pluck('check')->all());
+        // На SQLite проверка должна отметить только саму базу; на MySQL (CI) замечаний нет.
+        $expected = config('database.default') === 'sqlite' ? ['База — MySQL, не файл SQLite'] : [];
+        $this->assertSame($expected, collect($results)->where('status', '!=', SecurityAudit::OK)->pluck('check')->all());
     }
 
     public function test_env_reachable_over_http_is_an_error(): void

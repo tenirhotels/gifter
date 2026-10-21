@@ -34,7 +34,8 @@ class EditCertificate extends EditRecord
             return app(CertificateManager::class)->updateDraft($record, $data);
         } catch (DomainRuleViolation $e) {
             Notification::make()->danger()->title($e->getMessage())->send();
-            $this->halt();
+            $this->halt(); // бросает Halt; throw — страховка и подсказка для статического анализа
+            throw $e;
         }
     }
 
