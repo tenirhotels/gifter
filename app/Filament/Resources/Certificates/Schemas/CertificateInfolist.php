@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Certificates\Schemas;
 use App\Enums\CommissionStatus;
 use App\Enums\CommissionType;
 use App\Enums\Permission;
+use App\Filament\Resources\OnlineOrders\OnlineOrderResource;
 use App\Models\Certificate;
 use App\Models\CertificateCommission;
 use App\Services\CertificateDocument;
@@ -25,6 +26,9 @@ class CertificateInfolist
                 TextEntry::make('number')->label('Номер')->copyable()->weight('bold'),
                 TextEntry::make('status')->label('Статус')->badge(),
                 TextEntry::make('kind')->label('Вид выпуска')->badge(),
+                TextEntry::make('source')->label('Канал')->badge()
+                    ->helperText(fn (Certificate $record) => $record->online_order_id ? __('Заявка с сайта № :p1', ['p1' => $record->online_order_id]) : null)
+                    ->url(fn (Certificate $record) => $record->online_order_id && auth()->user()?->can(Permission::ProcessOnlineOrders) ? OnlineOrderResource::getUrl('index') : null),
                 TextEntry::make('complimentary_reason')->label('Основание')->visible(fn (Certificate $record) => $record->isComplimentary())
                     ->helperText(fn (Certificate $record) => collect([$record->complimentary_purpose?->getLabel(), $record->batch?->shortLabel()])->filter()->implode(' · ') ?: null),
                 TextEntry::make('complimentary_approval')->label('Согласование директора')

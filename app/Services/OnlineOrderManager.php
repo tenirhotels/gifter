@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\OnlineOrderStatus;
+use App\Enums\SaleSource;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\Certificate;
 use App\Models\Customer;
@@ -36,6 +37,8 @@ final class OnlineOrderManager
                 'customer_id' => $customer->id,
                 'recipient_id' => $recipient?->id,
                 'notes' => $this->notes($fresh),
+                'source' => SaleSource::Website,
+                'online_order_id' => $fresh->id,
             ]));
 
             $fresh->update(['status' => OnlineOrderStatus::Processed, 'certificate_id' => $certificate->id, 'handled_by' => $by->id, 'handled_at' => now()]);

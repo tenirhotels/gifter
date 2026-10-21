@@ -9,6 +9,7 @@ use App\Enums\HistoryEvent;
 use App\Enums\PaymentStatus;
 use App\Enums\Permission;
 use App\Enums\ReservationReview;
+use App\Enums\SaleSource;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\AuditLog;
 use App\Models\Certificate;
@@ -81,6 +82,8 @@ class CertificateManager
                 'custom_validity' => $validity->isCustom(),
                 'currency' => config('gifter.currency'),
                 'notes' => $data['notes'] ?? null,
+                'source' => $data['source'] ?? SaleSource::Staff,
+                'online_order_id' => $data['online_order_id'] ?? null,
                 'created_by' => auth()->id(),
                 // Продавец — автор оформления; менеджер продаж или администратор может назначить другого.
                 'sold_by' => $this->sellerId($data['sold_by'] ?? null),

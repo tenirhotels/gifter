@@ -4,6 +4,10 @@ use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('gifter:expire-certificates')->dailyAt('00:10');
 
+// Напоминания: заявки с сайта без ответа дольше 2 ч — сотрудникам; за 14 дней до конца срока — гостю.
+Schedule::command('gifter:remind-online-orders')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('gifter:remind-expiring')->dailyAt('10:00')->withoutOverlapping();
+
 // Резервные копии базы: зашифрованный архив каждую ночь, чистка старых, проверка свежести;
 // раз в неделю — копия на почту BACKUP_MAIL_TO (вне хостинга). См. docs/security.md.
 Schedule::command('backup:clean')->dailyAt('01:20');

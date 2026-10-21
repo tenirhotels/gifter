@@ -99,4 +99,9 @@
     .gf-report td { padding: .5rem .625rem; border-bottom: 1px solid color-mix(in oklab, var(--gray-950) 6%, transparent); vertical-align: top; }
     .gf-report .gf-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .gf-report-muted { font-size: .75rem; color: var(--gray-500); }
+    .gf-funnel { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: .75rem; }
+    .gf-funnel-label { font-size: .75rem; color: var(--gray-500); }
+    .gf-funnel-count { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .gf-funnel-bar { height: .375rem; border-radius: 9999px; background: color-mix(in oklab, var(--gray-950) 8%, transparent); overflow: hidden; margin: .25rem 0; }
+    .gf-funnel-bar span { display: block; height: 100%; background: var(--primary-500); }
 </style>

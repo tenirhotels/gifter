@@ -14,6 +14,7 @@ use App\Filament\Resources\OnlineOrders\OnlineOrderResource;
 use App\Filament\Resources\Refunds\RefundResource;
 use App\Filament\Support\RoleQueueWidget;
 use App\Models\OnlineOrder;
+use App\Services\Reminders;
 use App\Support\Money;
 
 class SalesQueueWidget extends RoleQueueWidget
@@ -51,8 +52,10 @@ class SalesQueueWidget extends RoleQueueWidget
         ];
 
         if (auth()->user()->can(Permission::ProcessOnlineOrders)) {
+            // Заявка без ответа дольше 2 ч — плитка красная (то же правило, что у напоминания сотрудникам).
+            $overdue = OnlineOrder::query()->where('status', OnlineOrderStatus::New)->where('created_at', '<=', now()->subHours(Reminders::ORDER_WAIT_HOURS))->exists();
             array_unshift($stats, $this->counter('Заявки с сайта', OnlineOrder::query()->where('status', OnlineOrderStatus::New),
-                OnlineOrderResource::getUrl('index'), 'warning', 'ждут оформления', 'heroicon-o-globe-alt'));
+                OnlineOrderResource::getUrl('index'), $overdue ? 'danger' : 'warning', $overdue ? 'ждут ответа больше 2 ч' : 'ждут оформления', 'heroicon-o-globe-alt'));
         }
 
         $batches = fn (string $filter) => CertificateBatchResource::getUrl('index', ['filters' => [$filter => ['isActive' => true]]]);

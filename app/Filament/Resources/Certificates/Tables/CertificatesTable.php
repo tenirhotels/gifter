@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Certificates\Tables;
 
 use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
+use App\Enums\SaleSource;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
 use App\Models\AuditLog;
 use App\Models\Certificate;
@@ -32,6 +33,7 @@ class CertificatesTable
                 TextColumn::make('number')->label('Номер')->searchable()->sortable()->copyable(),
                 TextColumn::make('status')->label('Статус')->badge()->sortable(),
                 TextColumn::make('kind')->label('Вид выпуска')->badge()->toggleable(),
+                TextColumn::make('source')->label('Канал')->badge()->toggleable(),
                 TextColumn::make('customer.full_name')->label('Заказчик')->placeholder('—')->searchable(),
                 TextColumn::make('recipient.full_name')->label('Получатель')->searchable(),
                 TextColumn::make('total_amount')->label('Сумма')->formatStateUsing(fn ($state) => Money::format($state))->sortable(),
@@ -46,6 +48,7 @@ class CertificatesTable
             ->filters([
                 SelectFilter::make('status')->label('Статус')->options(CertificateStatus::class)->multiple(),
                 SelectFilter::make('kind')->label('Вид выпуска')->options(CertificateKind::class),
+                SelectFilter::make('source')->label('Канал')->options(SaleSource::class),
                 Filter::make('mine')->label('Только мои')
                     ->query(fn (Builder $query) => $query->where('created_by', auth()->id())),
                 Filter::make('no_recipient')->label('Без получателя')

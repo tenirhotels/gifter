@@ -12,6 +12,10 @@ class LangMissing extends Command
 
     protected $description = 'Показать подписи интерфейса без перевода';
 
+    private const TILE_CALL = '/\$this->(?:counter|metric|commissionTile)(\((?:[^()\']++|\'(?:[^\'\\\\]|\\\\.)*\'|(?1))*\))/u';
+
+    private const CYRILLIC_LITERAL = '/\'((?:[^\'\\\\]|\\\\.)*[А-Яа-яЁё](?:[^\'\\\\]|\\\\.)*)\'/u';
+
     public function handle(): int
     {
         $lang = (string) $this->option('lang');
@@ -28,6 +32,15 @@ class LangMissing extends Command
             if (preg_match_all($pattern, File::get($file->getPathname()), $m)) {
                 foreach ($m[1] as $text) {
                     $found[stripcslashes($text)] = true;
+                }
+            }
+            // В плитках переводятся и подсказки (не только первый аргумент): все русские строки внутри вызова.
+            if (preg_match_all(self::TILE_CALL, File::get($file->getPathname()), $calls)) {
+                foreach ($calls[0] as $call) {
+                    preg_match_all(self::CYRILLIC_LITERAL, $call, $m);
+                    foreach ($m[1] as $text) {
+                        $found[stripcslashes($text)] = true;
+                    }
                 }
             }
         }
