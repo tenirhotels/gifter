@@ -1,0 +1,21 @@
+#!/bin/sh
+# Быстрые проверки перед коммитом: стиль (pint) и статический анализ (phpstan).
+# Полные тесты идут в CI (SQLite и MySQL); локально их по правилам проекта запускают вручную: php artisan test.
+# Включение на клоне: git config core.hooksPath .githooks
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+if [ ! -x vendor/bin/pint ]; then
+    echo "pre-commit: vendor/bin/pint не найден — выполните composer install. Проверка пропущена."
+    exit 0
+fi
+
+echo "pre-commit: pint --test"
+vendor/bin/pint --test || { echo "Стиль нарушен: выполните vendor/bin/pint и закоммитьте снова."; exit 1; }
+
+if [ -x vendor/bin/phpstan ]; then
+    echo "pre-commit: phpstan analyse"
+    vendor/bin/phpstan analyse --memory-limit=1G --no-progress || { echo "PHPStan нашёл новые ошибки (старые — в phpstan-baseline.neon)."; exit 1; }
+else
+    echo "pre-commit: phpstan не установлен (composer install) — анализ пропущен, его проверит CI."
+fi

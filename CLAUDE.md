@@ -11,3 +11,4 @@
 - PR, релизы и теги — только по явной команде владельца.
 - Решения владельца фиксировать в `docs/` (фазы и `changes-*.md`).
 - Перед коммитом: `php artisan test`, `vendor/bin/pint --test` и `vendor/bin/phpstan analyse` (Larastan, уровень 5, baseline в `phpstan-baseline.neon`).
+- После клонирования: `composer install` и `git config core.hooksPath .githooks` — хук `pre-commit` запускает `pint --test` и `phpstan analyse` (полные тесты — вручную и в CI).

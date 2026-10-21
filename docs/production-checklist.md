@@ -37,3 +37,4 @@
 - [ ] `QUEUE_CONNECTION=database` в `.env`: письма гостям и сотрудникам уходят через очередь, её разбирает планировщик каждую минуту (`queue:work --stop-when-empty`). Упавшие письма — `php artisan queue:failed`, повтор — `php artisan queue:retry all`.
 - [ ] После выката: `migrate --force`, в «Настройках сайта» задать GA4, Метрику, WhatsApp; проверить `/sitemap.xml` и `/robots.txt`; очистить кеш Cloudflare (robots.txt раньше был статическим файлом).
 - [ ] Деплой на shared-хостинг: `composer install --no-dev --optimize-autoloader` — Larastan и PHPStan только для CI и разработки, на сервере не нужны.
+- Для разработки (не для сервера): после клонирования `composer install` и `git config core.hooksPath .githooks` — быстрые проверки (pint, phpstan) перед каждым коммитом.
