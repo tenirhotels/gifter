@@ -63,7 +63,8 @@ return [
         ],
         'notifiable' => Notifiable::class,
         'mail' => [
-            'to' => env('BACKUP_MAIL_TO', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+            // Пустое значение в .env (BACKUP_MAIL_TO=) не должно становиться адресом: берём отправителя по умолчанию.
+            'to' => env('BACKUP_MAIL_TO') ?: env('MAIL_FROM_ADDRESS', 'hello@example.com'),
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
                 'name' => env('MAIL_FROM_NAME', 'Gifter'),
