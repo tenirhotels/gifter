@@ -10,4 +10,4 @@
 - Токены, ключи и пароли не показывать в чате и не писать в репозиторий; примеры — только вымышленные.
 - PR, релизы и теги — только по явной команде владельца.
 - Решения владельца фиксировать в `docs/` (фазы и `changes-*.md`).
-- Перед коммитом: `php artisan test` и `vendor/bin/pint --test`.
+- Перед коммитом: `php artisan test`, `vendor/bin/pint --test` и `vendor/bin/phpstan analyse` (Larastan, уровень 5, baseline в `phpstan-baseline.neon`).

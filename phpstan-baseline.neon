@@ -1,0 +1,4 @@
+# Старые замечания Larastan. Создаётся командой: vendor/bin/phpstan analyse --generate-baseline
+# CI ругается только на новые ошибки.
+parameters:
+    ignoreErrors: []
