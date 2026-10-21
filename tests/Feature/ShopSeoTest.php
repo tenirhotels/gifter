@@ -112,4 +112,18 @@ class ShopSeoTest extends TestCase
         $this->assertSame('+77011234567', $setting->whatsapp_phone);
         $this->assertStringContainsString('https://wa.me/77011234567', (new OnlineOrderReceivedMail('Пакет', 'ru'))->render());
     }
+
+    public function test_brand_font_is_linked_only_when_file_exists(): void
+    {
+        $file = public_path('fonts/montserrat-latin.woff2');
+        $this->assertFileDoesNotExist($file);
+        $this->get('/')->assertOk()->assertDontSee('@font-face', false);
+
+        file_put_contents($file, 'wOF2');
+        try {
+            $this->get('/')->assertOk()->assertSee("url('/fonts/montserrat-latin.woff2')", false);
+        } finally {
+            unlink($file);
+        }
+    }
 }

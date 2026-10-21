@@ -72,6 +72,14 @@ class LocaleTest extends TestCase
         }
     }
 
+    public function test_translation_files_have_same_keys_and_no_unused_keys(): void
+    {
+        $kk = json_decode(file_get_contents(lang_path('kk.json')), true);
+        $en = json_decode(file_get_contents(lang_path('en.json')), true);
+        $this->assertSame(array_keys($kk), array_keys($en));
+        $this->artisan('gifter:lang-missing', ['--unused' => true])->expectsOutputToContain('0 ключей без использования')->assertSuccessful();
+    }
+
     public function test_messages_with_values_are_translated_with_placeholders(): void
     {
         app()->setLocale('kk');
