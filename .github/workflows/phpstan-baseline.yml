@@ -1,0 +1,32 @@
+name: PHPStan baseline
+
+# Ручной запуск (Actions → PHPStan baseline → Run workflow): анализирует код, записывает старые замечания
+# в phpstan-baseline.neon и коммитит файл в ту же ветку. После этого обычный CI ругается только на новые ошибки.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, zip, pdo_sqlite, gd, bcmath
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - run: cp .env.example .env && php artisan key:generate
+      - run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress --generate-baseline || true
+      - name: Итог
+        run: |
+          echo "Замечаний в baseline: $(grep -c 'message:' phpstan-baseline.neon || true)"
+      - name: Закоммитить baseline
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add phpstan-baseline.neon
+          git diff --cached --quiet && echo "Изменений нет" || (git commit -m "PHPStan: baseline старых замечаний" && git push)
