@@ -13,6 +13,7 @@ use App\Enums\OnlineOrderStatus;
 use App\Enums\ProviderType;
 use App\Enums\Role;
 use App\Models\AuditLog;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 
 /**
@@ -90,11 +91,12 @@ final class AuditPresenter
         $type = self::subjectType((string) $log->auditable_type);
         $data = (array) ($log->after ?? $log->before ?? []);
         foreach (['name', 'hero_title'] as $key) {
-            if (filled($data[$key] ?? null) && ! str_contains((string) $data[$key], '[скрыто]')) {
-                return $type.' «'.$data[$key].'»';
+            $name = Arr::get($data, $key);
+            if (filled($name) && ! str_contains((string) $name, '[скрыто]')) {
+                return $type.' «'.$name.'»';
             }
         }
-        $number = $log->auditable?->number ?? null;
+        $number = data_get($log->auditable, 'number');
 
         return $type.' № '.($number ?: $log->auditable_id);
     }
