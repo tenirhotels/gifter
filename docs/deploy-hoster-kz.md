@@ -99,7 +99,7 @@ Plesk → Git (ветка `claude/charming-gauss-o7jrdg`) → «Получить
 - Двухфакторный вход в личный кабинет Hoster.kz и в Plesk; доступ к панели — 1–2 человека.
 - FTP выключить (файлы — через файловый менеджер Plesk).
 - phpMyAdmin — только при необходимости; контакты в базе всё равно зашифрованы.
-- PHP 8.3, `display_errors=Off` (Plesk → PHP → настройки).
+- PHP 8.4 (или 8.3; минимум 8.2), `display_errors=Off`, OPcache включён, расширения: `bcmath`, `dom`, `fileinfo`, `gd`, `intl`, `mbstring`, `mysqlnd` + `nd_pdo_mysql`, `xml`, `xmlreader`, `xmlwriter`, `zip`; в `disable_functions` не должно быть `proc_open`, `symlink`, `putenv` (Plesk → PHP → настройки).
 
 ## Проверка после установки
 
