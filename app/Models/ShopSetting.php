@@ -10,7 +10,9 @@ class ShopSetting extends Model
 {
     public const DEFAULT_ACCENT = '#5F7872';
 
-    protected $fillable = ['hero_image_path', 'hero_title', 'hero_subtitle', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'updated_by'];
+    public const DEFAULT_OPERATOR = 'ТОО «Alpine Hotel»';
+
+    protected $fillable = ['hero_image_path', 'hero_title', 'hero_subtitle', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'updated_by'];
 
     public static function current(): self
     {
@@ -34,6 +36,20 @@ class ShopSetting extends Model
         $phone = PhoneNumber::normalize($this->whatsapp_phone);
 
         return $phone !== null && PhoneNumber::isValid($phone) ? ltrim($phone, '+') : null;
+    }
+
+    /** Оператор персональных данных (в политике конфиденциальности). */
+    public function operator(): string
+    {
+        return filled($this->operator_name) ? trim((string) $this->operator_name) : self::DEFAULT_OPERATOR;
+    }
+
+    /** Адрес действующей публичной оферты; только https — чужую схему (javascript:, http:) на страницу не пускаем. */
+    public function offerUrl(): ?string
+    {
+        $url = trim((string) $this->offer_url);
+
+        return preg_match('#^https://[^\s"\'<>]+$#i', $url) && filter_var($url, FILTER_VALIDATE_URL) ? $url : null;
     }
 
     public function hasAnalytics(): bool

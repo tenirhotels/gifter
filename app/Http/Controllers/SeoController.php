@@ -16,7 +16,7 @@ class SeoController extends Controller
 
     public function sitemap(): Response
     {
-        $paths = ['/', '/faq', '/terms'];
+        $paths = ['/', '/faq', '/terms', '/privacy'];
         foreach (app(PublicShopController::class)->offers() as $offer) {
             $paths[] = '/order/'.$offer['package']->id;
         }

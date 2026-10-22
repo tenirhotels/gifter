@@ -112,6 +112,11 @@ class PublicShopController extends Controller
         return view('shop.terms', ['shop' => ShopSetting::current()]);
     }
 
+    public function privacy(Request $request): View
+    {
+        return view('shop.privacy', ['shop' => ShopSetting::current()]);
+    }
+
     public function faq(Request $request): View
     {
         return view('shop.faq', ['shop' => ShopSetting::current()]);

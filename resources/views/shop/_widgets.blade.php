@@ -8,7 +8,7 @@
 @endif
 @if ($shop->hasAnalytics())
     <div class="cookie" id="cookie-note" hidden>
-        <span>{{ __('Сайт использует cookie: запоминает язык и помогает нам понять, какие страницы полезны.') }}</span>
+        <span>{{ __('Сайт использует cookie: запоминает язык и помогает нам понять, какие страницы полезны.') }} <a href="{{ \App\Support\ShopUrl::route('shop.privacy') }}" style="color:#fff;text-decoration:underline">{{ __('Подробнее') }}</a></span>
         <button type="button" class="btn light" id="cookie-ok">{{ __('Понятно') }}</button>
     </div>
     <script>

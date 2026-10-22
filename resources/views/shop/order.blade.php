@@ -66,7 +66,7 @@
                 </fieldset>
 
                 <div class="hp" aria-hidden="true"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
-                <label class="check"><input type="checkbox" name="consent" value="1" @checked(old('consent')) required><span>{{ __('Согласен на обработку персональных данных для оформления заявки.') }}</span></label>
+                <label class="check"><input type="checkbox" name="consent" value="1" @checked(old('consent')) required><span>{{ __('Согласен на обработку персональных данных для оформления заявки.') }} <a href="{{ \App\Support\ShopUrl::route('shop.privacy') }}" target="_blank">{{ __('Политика конфиденциальности') }}</a>@if ($shop->offerUrl()) · <a href="{{ $shop->offerUrl() }}" target="_blank" rel="noopener">{{ __('Публичная оферта') }}</a>@endif</span></label>
                 @error('consent')<span class="err">{{ $message }}</span>@enderror
                 <button class="btn" type="submit" style="margin-top:20px;width:100%">{{ __('Отправить заявку') }}</button>
                 <p class="hint" style="margin-top:12px;text-align:center">{{ __('Менеджер свяжется с вами для завершения заказа и оплаты.') }}</p>

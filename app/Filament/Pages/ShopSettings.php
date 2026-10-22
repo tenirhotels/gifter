@@ -41,7 +41,7 @@ class ShopSettings extends Page
 
     protected static ?string $slug = 'shop-settings';
 
-    private const TRACKED = ['hero_image_path', 'hero_title', 'hero_subtitle', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone'];
+    private const TRACKED = ['hero_image_path', 'hero_title', 'hero_subtitle', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url'];
 
     /** @var array<string, mixed> */
     public array $data = [];
@@ -58,6 +58,7 @@ class ShopSettings extends Page
             'hero_image_path' => $setting->hero_image_path ? ['shop/'.$setting->hero_image_path] : [],
             'hero_title' => $setting->hero_title, 'hero_subtitle' => $setting->hero_subtitle, 'accent_color' => $setting->accent(),
             'ga4_id' => $setting->ga4_id, 'metrika_id' => $setting->metrika_id, 'whatsapp_phone' => $setting->whatsapp_phone,
+            'operator_name' => $setting->operator_name, 'offer_url' => $setting->offer_url,
         ]);
     }
 
@@ -71,6 +72,13 @@ class ShopSettings extends Page
                 TextInput::make('hero_title')->label('Заголовок')->maxLength(120)->placeholder(__('Подарок, который хочется открыть')),
                 TextInput::make('hero_subtitle')->label('Подзаголовок')->maxLength(300),
                 ColorPicker::make('accent_color')->label('Акцентный цвет')->helperText(__('Один цвет бренда для кнопок и линий; по умолчанию тёмно-зелёный из брендбука.')),
+            ])->columns(1),
+            Section::make('Документы')->description(__('Политика конфиденциальности на сайте ссылается на эти данные.'))->schema([
+                TextInput::make('operator_name')->label('Оператор персональных данных')->maxLength(150)->placeholder(ShopSetting::DEFAULT_OPERATOR)
+                    ->helperText(__('Пусто — :p1.', ['p1' => ShopSetting::DEFAULT_OPERATOR])),
+                TextInput::make('offer_url')->label('Адрес публичной оферты')->url()->maxLength(255)->placeholder('https://…')
+                    ->rule(fn () => fn (string $attribute, $value, \Closure $fail) => blank($value) || str_starts_with((string) $value, 'https://') ? null : $fail(__('Адрес должен начинаться с https://')))
+                    ->helperText(__('Ссылка на уже действующий документ. Пусто — ссылка в политике не показывается.')),
             ])->columns(1),
             Section::make('Аналитика и связь')->description(__('Пусто — ничего не подключается. Скрипты аналитики грузятся только на публичной витрине.'))->schema([
                 TextInput::make('ga4_id')->label('Google Analytics 4')->placeholder('G-XXXXXXXXXX')->maxLength(20)
@@ -103,6 +111,8 @@ class ShopSettings extends Page
             'ga4_id' => filled($state['ga4_id'] ?? null) ? trim((string) $state['ga4_id']) : null,
             'metrika_id' => filled($state['metrika_id'] ?? null) ? trim((string) $state['metrika_id']) : null,
             'whatsapp_phone' => filled($state['whatsapp_phone'] ?? null) ? PhoneNumber::normalize($state['whatsapp_phone']) : null,
+            'operator_name' => filled($state['operator_name'] ?? null) ? trim((string) $state['operator_name']) : null,
+            'offer_url' => filled($state['offer_url'] ?? null) ? trim((string) $state['offer_url']) : null,
             'updated_by' => auth()->id(),
         ])->save();
         AuditLog::record('shop_settings_changed', $setting, $before, $setting->only(self::TRACKED));

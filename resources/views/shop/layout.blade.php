@@ -210,6 +210,8 @@
                 <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'how') }}">{{ __('Как это работает') }}</a>
                 <a href="{{ \App\Support\ShopUrl::route('shop.faq') }}">{{ __('Вопросы и ответы') }}</a>
                 <a href="{{ \App\Support\ShopUrl::route('shop.terms') }}">{{ __('Условия сертификата') }}</a>
+                <a href="{{ \App\Support\ShopUrl::route('shop.privacy') }}">{{ __('Политика конфиденциальности') }}</a>
+                @if ($shop->offerUrl())<a href="{{ $shop->offerUrl() }}" target="_blank" rel="noopener">{{ __('Публичная оферта') }}</a>@endif
                 <a href="#contacts">{{ __('Контакты') }}</a>
             </div>
             <div id="contacts">
