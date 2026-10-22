@@ -2,8 +2,11 @@
 
 namespace App\Filament\Resources\AuditLogs\Schemas;
 
+use App\Models\AuditLog;
+use App\Support\AuditPresenter;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 class AuditLogInfolist
 {
@@ -12,15 +15,29 @@ class AuditLogInfolist
         return $schema->components([
             TextEntry::make('created_at')->label('Когда')->dateTime('d.m.Y H:i:s'),
             TextEntry::make('user.name')->label('Кто')->placeholder(__('система')),
-            TextEntry::make('event')->label('Событие'),
-            TextEntry::make('auditable_type')->label('Объект')->formatStateUsing(fn ($state, $record) => class_basename($state).' #'.$record->auditable_id),
+            TextEntry::make('event')->label('Событие')->badge()->formatStateUsing(fn (string $state) => AuditPresenter::event($state))
+                ->color(fn (string $state) => AuditPresenter::eventColor($state)),
+            TextEntry::make('auditable_type')->label('Объект')->state(fn (AuditLog $record) => AuditPresenter::subject($record)),
             TextEntry::make('ip_address')->label('IP')->placeholder('—'),
-            TextEntry::make('before_json')->label('До')->columnSpanFull()->placeholder('—')
-                ->state(fn ($record) => $record->before ? json_encode($record->before, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : null)
-                ->fontFamily('mono'),
-            TextEntry::make('after_json')->label('После')->columnSpanFull()->placeholder('—')
-                ->state(fn ($record) => $record->after ? json_encode($record->after, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : null)
-                ->fontFamily('mono'),
+            TextEntry::make('changes')->label('Что изменилось')->columnSpanFull()->html()->placeholder('—')
+                ->state(fn (AuditLog $record) => self::table($record)),
         ]);
+    }
+
+    /** Таблица «поле — было — стало»; все значения экранируются. */
+    private static function table(AuditLog $record): ?HtmlString
+    {
+        $rows = AuditPresenter::rows($record);
+        if ($rows === []) {
+            return null;
+        }
+        $created = $record->event === 'created';
+        $html = '<table class="gf-report"><thead><tr><th>'.e(__('Поле')).'</th>'
+            .($created ? '' : '<th>'.e(__('Было')).'</th>').'<th>'.e($created ? __('Значение') : __('Стало')).'</th></tr></thead><tbody>';
+        foreach ($rows as $row) {
+            $html .= '<tr><td>'.e($row['label']).'</td>'.($created ? '' : '<td>'.e($row['before'] ?? '—').'</td>').'<td>'.e($row['after'] ?? '—').'</td></tr>';
+        }
+
+        return new HtmlString($html.'</tbody></table>');
     }
 }

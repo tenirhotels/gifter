@@ -3,10 +3,12 @@
 namespace App\Filament\Resources\AuditLogs\Tables;
 
 use App\Models\AuditLog;
+use App\Support\AuditPresenter;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class AuditLogsTable
 {
@@ -16,17 +18,17 @@ class AuditLogsTable
             ->columns([
                 TextColumn::make('created_at')->label('Когда')->dateTime('d.m.Y H:i:s')->sortable(),
                 TextColumn::make('user.name')->label('Кто')->placeholder(__('система')),
-                TextColumn::make('event')->label('Событие')->badge()->formatStateUsing(fn (string $state) => match ($state) {
-                    'created' => __('создание'), 'updated' => __('изменение'), 'deleted' => __('удаление'), default => $state,
-                }),
-                TextColumn::make('auditable_type')->label('Объект')->formatStateUsing(fn (string $state, AuditLog $record) => class_basename($state).' #'.$record->auditable_id),
-                TextColumn::make('after')->label('Изменения')->state(fn (AuditLog $record) => collect($record->after ?? $record->before ?? [])
-                    ->except(['created_at', 'updated_at', 'id'])->map(fn ($v, $k) => $k.': '.(is_scalar($v) || $v === null ? var_export($v, true) : json_encode($v, JSON_UNESCAPED_UNICODE)))
-                    ->implode('; '))->limit(120)->wrap(),
+                TextColumn::make('event')->label('Событие')->badge()->formatStateUsing(fn (string $state) => AuditPresenter::event($state))
+                    ->color(fn (string $state) => AuditPresenter::eventColor($state)),
+                TextColumn::make('auditable_type')->label('Объект')->state(fn (AuditLog $record) => AuditPresenter::subject($record))->wrap(),
+                TextColumn::make('after')->label('Что изменилось')->state(fn (AuditLog $record) => AuditPresenter::summary($record) ?: '—')->limit(180)->wrap(),
             ])
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['user', 'auditable']))
             ->filters([
+                SelectFilter::make('event')->label('Событие')->options(fn () => AuditLog::query()->distinct()->pluck('event')
+                    ->mapWithKeys(fn ($event) => [$event => AuditPresenter::event($event)])->sort()->all()),
                 SelectFilter::make('auditable_type')->label('Объект')->options(fn () => AuditLog::query()->distinct()->pluck('auditable_type')
-                    ->mapWithKeys(fn ($type) => [$type => class_basename($type)])->all()),
+                    ->mapWithKeys(fn ($type) => [$type => AuditPresenter::subjectType($type)])->sort()->all()),
             ])
             ->recordActions([ViewAction::make()])
             ->defaultSort('id', 'desc');
