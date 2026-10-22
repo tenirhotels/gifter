@@ -265,24 +265,6 @@ parameters:
 			path: app/Filament/Pages/UpcomingArrivals.php
 
 		-
-			message: '#^Call to function is_scalar\(\) with string will always evaluate to true\.$#'
-			identifier: function.alreadyNarrowedType
-			count: 1
-			path: app/Filament/Resources/AuditLogs/Tables/AuditLogsTable.php
-
-		-
-			message: '#^Parameter \#1 \$keys of method Illuminate\\Support\\Collection\<int,string\>\:\:except\(\) expects array\<0\>\|Illuminate\\Support\\Enumerable\<\(int\|string\), 0\>\|string, array\{''created_at'', ''updated_at'', ''id''\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Filament/Resources/AuditLogs/Tables/AuditLogsTable.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between \*NEVER\* and null will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Filament/Resources/AuditLogs/Tables/AuditLogsTable.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$invoice_number\.$#'
 			identifier: property.notFound
 			count: 1
