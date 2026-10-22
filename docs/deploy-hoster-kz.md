@@ -1,6 +1,16 @@
 # Развёртывание на Hoster.kz (Plesk, MySQL, без SSH)
 
-Сайт: `https://gifter.tenirmoments.com`. Хостинг — Plesk; доступ через Cloudflare.
+Сайт: `https://gift.tenirhotels.com` (раньше — `gift.tenirhotels.com`). Хостинг — Plesk; доступ через Cloudflare.
+
+## 0. Первая установка на новый домен (Git, deploy key)
+
+1. Plesk → «Сайты и домены» → добавить домен/поддомен, включить SSL (Let's Encrypt); PHP **8.3**, OPcache включён. Корневая папка сайта должна быть пустой (удалить `index.html`, `cgi-bin`).
+2. Плитка «Git» → «Добавить репозиторий» → «Удалённый репозиторий»: `git@github.com:tenirhotels/gifter.git`. Plesk покажет **публичный ключ**: GitHub → репозиторий → Settings → Deploy keys → Add deploy key (без «Allow write access»). Ветка `claude/charming-gauss-o7jrdg`, режим «Вручную», папка на сайте — корень сайта. Кнопка «Развернуть сейчас».
+3. **Корневая папка сайта должна быть `public`** — иначе сайт отвечает 403. Три способа, в порядке удобства:
+   - Plesk → Laravel (Laravel Toolkit): «Добавить/найти приложение» — он сам указывает `public`;
+   - Plesk → «Настройки хостинга» → «Корневая папка документов» = `public` (папка внутри проекта);
+   - если поля нет, в корне проекта лежит запасной `.htaccess`: он отправляет все запросы в `public/` и запрещает `.env`, `.git` и листинг папок (нужен Apache; проверка — `/.env` должен давать 403/404, а `/admin` открываться).
+4. Дальше — по порядку разделы 1–6 (`.env`, база, команды Artisan, планировщик, Cloudflare). Установка зависимостей — Laravel Toolkit или «PHP Composer»: `composer install --no-dev --optimize-autoloader`.
 
 ## 1. Файл `.env`
 
@@ -11,7 +21,7 @@ APP_NAME=Gifter
 APP_ENV=production
 APP_KEY=
 APP_DEBUG=false
-APP_URL=https://gifter.tenirmoments.com
+APP_URL=https://gift.tenirhotels.com
 APP_LOCALE=ru
 APP_TIMEZONE=Asia/Almaty
 LOG_LEVEL=warning
@@ -51,9 +61,9 @@ DB_PASSWORD=пароль-из-plesk
 
 ## 3. Корневая папка сайта — `public`
 
-Plesk → сайт → «Настройки хостинга» → «Корневая папка документов»: `gifter.tenirmoments.com/public`.
+Plesk → сайт → «Настройки хостинга» → «Корневая папка документов»: `gift.tenirhotels.com/public`.
 
-Проверка: `https://gifter.tenirmoments.com/.env` должен отвечать 403 или 404, а не показывать файл.
+Проверка: `https://gift.tenirhotels.com/.env` должен отвечать 403 или 404, а не показывать файл.
 
 ## 4. Команды без SSH — Plesk → Laravel (Laravel Toolkit) → Artisan
 
@@ -93,7 +103,7 @@ Plesk → Git (ветка `claude/charming-gauss-o7jrdg`) → «Получить
 
 ## Проверка после установки
 
-- `https://gifter.tenirmoments.com/admin` открывает вход;
+- `https://gift.tenirhotels.com/admin` открывает вход;
 - ошибка (например, несуществующая страница) показывает короткое сообщение без путей и SQL;
 - `/.env` — 403/404;
 - вход требует код из приложения;

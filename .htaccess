@@ -1,0 +1,16 @@
+# Запасной вариант для хостинга, где нельзя выбрать корневую папку сайта «public» (Plesk без Laravel Toolkit):
+# если сайт смотрит на корень проекта, все запросы уходят во внутреннюю папку public/.
+# Лучше настроить корневую папку на public (docs/deploy-hoster-kz.md) — тогда этот файл не нужен, но он не мешает.
+# Код, .env, vendor, storage и .git из корня не отдаются: любой путь переписывается внутрь public/.
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Служебные файлы и папки (.env, .git, .githooks…) — запрещены сразу.
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+    # Всё остальное — в public/ (там своя .htaccess с front controller).
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
