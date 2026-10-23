@@ -16,6 +16,7 @@ use App\Models\Service;
 use App\Models\User;
 use App\Services\CertificateBatchManager;
 use App\Services\CertificateManager;
+use App\Services\EpayPayments;
 use App\Services\PaymentManager;
 use App\Support\Money;
 use Filament\Forms\Components\Placeholder;
@@ -121,8 +122,15 @@ class CreateCertificate extends CreateRecord
                     Toggle::make('create_invoice')->live()->default(true)
                         ->label(fn (Get $get) => self::count($get) > 1 ? __('Сразу выставить один счёт на всю группу') : __('Сразу выставить счёт на всю сумму')),
                     Grid::make(2)->visible(fn (Get $get) => (bool) $get('create_invoice'))->schema([
-                        Select::make('payment_method')->label('Способ')->options(PaymentMethod::manualOptions())->default(PaymentMethod::KaspiInvoice->value)->required(),
-                        TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255),
+                        Select::make('payment_method')->label('Способ')->live()->default(PaymentMethod::KaspiInvoice->value)->required()
+                            ->options(fn (Get $get) => self::paymentOptions($get)),
+                        TextInput::make('invoice_number')->label('Номер счёта в банке')->maxLength(255)
+                            ->visible(fn (Get $get) => $get('payment_method') !== PaymentMethod::HalykEpay->value),
+                    ]),
+                    Grid::make(2)->visible(fn (Get $get) => (bool) $get('create_invoice') && $get('payment_method') === PaymentMethod::HalykEpay->value)->schema([
+                        TextInput::make('epay_email')->label('Email клиента')->email()->maxLength(255)
+                            ->helperText(__('Пусто — письмо уйдёт на адрес заказчика из его карточки (он здесь не показывается).')),
+                        Select::make('epay_lang')->label('Язык письма')->options(config('gifter.locales'))->default(fn () => app()->getLocale())->required(),
                     ]),
                     Placeholder::make('invoice_hint')->hiddenLabel()
                         ->content(__('Оплату отметите на странице сертификата (или группы), когда деньги поступят; перечисление на р/с и наличные подтверждают Финансы. После оплаты — «Выпустить».')),
@@ -199,6 +207,17 @@ class CreateCertificate extends CreateRecord
             .'<dl class="gf-summary-list">'.$rows.'</dl>'.$missing);
     }
 
+    /** Способы счёта; оплата картой по ссылке — только для одного сертификата и когда ключи банка заданы. @return array<string, string> */
+    private static function paymentOptions(Get $get): array
+    {
+        $options = PaymentMethod::manualOptions();
+        if (self::count($get) === 1 && app(EpayPayments::class)->enabled() && auth()->user()?->can(Permission::ManagePayments)) {
+            $options[PaymentMethod::HalykEpay->value] = __('Ссылка на оплату картой');
+        }
+
+        return $options;
+    }
+
     private static function count(Get $get): int
     {
         return max(1, (int) $get('certificate_count'));
@@ -219,7 +238,11 @@ class CreateCertificate extends CreateRecord
                 $certificate->refresh();
                 if ($certificate->hasPayablePart() && ($data['create_invoice'] ?? false)) {
                     $method = $data['payment_method'] instanceof PaymentMethod ? $data['payment_method'] : PaymentMethod::from($data['payment_method']);
-                    app(PaymentManager::class)->invoice($certificate, $method, invoiceNumber: $data['invoice_number'] ?? null);
+                    if ($method->isGateway()) {
+                        $this->epayLink = ['email' => $data['epay_email'] ?? null, 'lang' => $data['epay_lang'] ?? null];
+                    } else {
+                        app(PaymentManager::class)->invoice($certificate, $method, invoiceNumber: $data['invoice_number'] ?? null);
+                    }
                 }
 
                 return $certificate->refresh();
@@ -246,6 +269,23 @@ class CreateCertificate extends CreateRecord
     }
 
     public ?CertificateBatch $purchase = null;
+
+    /** Нужно отправить ссылку на оплату картой после создания (вне транзакции: обращение к банку и письмо). @var array{email: ?string, lang: ?string}|null */
+    public ?array $epayLink = null;
+
+    /** Ссылку на оплату создаём, когда сертификат уже сохранён: если банк не ответил, сертификат остаётся, ссылку можно создать из его карточки. */
+    protected function afterCreate(): void
+    {
+        if ($this->epayLink === null || ! auth()->user()?->can(Permission::ManagePayments)) {
+            return;
+        }
+        try {
+            app(EpayPayments::class)->createLink($this->getRecord(), $this->epayLink['email'], $this->epayLink['lang']);
+            Notification::make()->success()->title(__('Ссылка на оплату отправлена клиенту'))->send();
+        } catch (DomainRuleViolation $e) {
+            Notification::make()->warning()->title(__('Сертификат создан, но ссылка на оплату не отправлена'))->body($e->getMessage())->persistent()->send();
+        }
+    }
 
     protected function getCreatedNotificationTitle(): ?string
     {

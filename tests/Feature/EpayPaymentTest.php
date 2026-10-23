@@ -8,6 +8,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\Role;
 use App\Exceptions\DomainRuleViolation;
+use App\Filament\Resources\Certificates\Pages\CreateCertificate;
 use App\Filament\Resources\Certificates\Pages\ViewCertificate;
 use App\Mail\EpayPaymentLinkMail;
 use App\Models\Certificate;
@@ -349,5 +350,47 @@ class EpayPaymentTest extends TestCase
         $this->app['env'] = 'production';
         $failed = collect(app(SecurityAudit::class)->run(checkHttp: false))->where('status', '!=', SecurityAudit::OK)->pluck('check');
         $this->assertTrue($failed->contains('Оплата картой: боевой терминал'));
+    }
+
+    public function test_wizard_offers_card_link_and_sends_it_right_after_creation(): void
+    {
+        Mail::fake();
+        $state = [];
+        $this->fakeBank($state);
+        $customer = Customer::factory()->create(['email' => 'buyer@example.com', 'phone' => '+77011234567']);
+
+        $page = Livewire::test(CreateCertificate::class);
+        $page->fillForm(['package_id' => $this->package->id, 'customer_id' => $customer->id, 'create_invoice' => true, 'payment_method' => PaymentMethod::HalykEpay->value,
+            'epay_email' => 'client@example.com', 'epay_lang' => 'ru'])->call('create')->assertHasNoFormErrors();
+
+        $certificate = Certificate::firstOrFail();
+        $payment = $certificate->payments()->sole();
+        $this->assertSame(PaymentMethod::HalykEpay, $payment->method);
+        $this->assertSame(PaymentStatus::Pending, $payment->status);
+        $this->assertSame('https://pay.bank.example/i/abc', $payment->pay_url);
+        Mail::assertQueued(EpayPaymentLinkMail::class, fn ($mail) => $mail->hasTo('client@example.com'));
+    }
+
+    public function test_wizard_keeps_certificate_when_bank_refuses_the_link(): void
+    {
+        Http::fake(fn () => Http::response([], 401));
+        $customer = Customer::factory()->create(['email' => 'buyer@example.com', 'phone' => '+77011234567']);
+
+        Livewire::test(CreateCertificate::class)
+            ->fillForm(['package_id' => $this->package->id, 'customer_id' => $customer->id, 'create_invoice' => true, 'payment_method' => PaymentMethod::HalykEpay->value, 'epay_lang' => 'ru'])
+            ->call('create')->assertHasNoFormErrors();
+
+        $certificate = Certificate::firstOrFail();
+        $this->assertSame(CertificateStatus::Draft, $certificate->status);
+        $this->assertNull($certificate->pendingPayment(), 'Платёж без ссылки отменён, сертификат остался черновиком');
+    }
+
+    public function test_wizard_does_not_offer_card_link_without_bank_keys(): void
+    {
+        config(['gifter.epay.client_id' => '']);
+
+        Livewire::test(CreateCertificate::class)
+            ->fillForm(['package_id' => $this->package->id, 'create_invoice' => true])
+            ->assertFormFieldExists('payment_method', fn ($field) => ! array_key_exists(PaymentMethod::HalykEpay->value, $field->getOptions()));
     }
 }
