@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\ComplimentaryPurpose;
+use App\Enums\PackageValidityType;
 use App\Enums\ValidityUnit;
+use App\Exceptions\DomainRuleViolation;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\PreventsDeletion;
 use App\Support\LocalizedName;
@@ -25,7 +27,7 @@ class Package extends Model
 
     protected $attributes = ['is_active' => true, 'validity_value' => 2, 'validity_unit' => 'months', 'is_complimentary' => false];
 
-    protected $fillable = ['name', 'name_translations', 'description', 'description_translations', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active', 'sold_online', 'image_path'];
+    protected $fillable = ['name', 'name_translations', 'description', 'description_translations', 'validity_type', 'period_from', 'period_until', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active', 'sold_online', 'image_path'];
 
     protected function casts(): array
     {
@@ -34,6 +36,9 @@ class Package extends Model
             'description_translations' => 'array',
             'is_active' => 'boolean',
             'sold_online' => 'boolean',
+            'validity_type' => PackageValidityType::class,
+            'period_from' => 'date',
+            'period_until' => 'date',
             'validity_value' => 'integer',
             'validity_unit' => ValidityUnit::class,
             'is_complimentary' => 'boolean',
@@ -46,6 +51,13 @@ class Package extends Model
         static::saving(function (self $package) {
             $package->name_translations = LocalizedName::clean($package->name_translations);
             $package->description_translations = LocalizedName::clean($package->description_translations);
+            if ($package->validity_type === PackageValidityType::Period) {
+                if ($package->period_from === null || $package->period_until === null || $package->period_until->lt($package->period_from)) {
+                    throw new DomainRuleViolation(__('Укажите период пакета: дата «по» не раньше даты «с».'));
+                }
+            } else {
+                $package->period_from = $package->period_until = null;
+            }
         });
     }
 
@@ -59,15 +71,47 @@ class Package extends Model
         return LocalizedName::pick($this->description_translations, (string) $this->description, $lang);
     }
 
-    /** Срок действия сертификата этого пакета, считая с даты продажи. */
+    public function isFixedPeriod(): bool
+    {
+        return $this->validity_type === PackageValidityType::Period && $this->period_from !== null && $this->period_until !== null;
+    }
+
+    /** Период закончился: такой пакет уже не продаётся. */
+    public function periodEnded(?Carbon $on = null): bool
+    {
+        return $this->isFixedPeriod() && $this->period_until->lt(($on ?? today())->copy()->startOfDay());
+    }
+
+    /** Срок действия сертификата этого пакета: конкретный период или срок, считая с даты продажи. @return array{0: Carbon, 1: Carbon} */
+    public function validityRange(Carbon $soldAt): array
+    {
+        if ($this->isFixedPeriod()) {
+            return [$this->period_from->copy(), $this->period_until->copy()];
+        }
+
+        return [$soldAt->copy(), $this->validity_unit->validUntil($soldAt, $this->validity_value)];
+    }
+
     public function validUntil(Carbon $soldAt): Carbon
     {
-        return $this->validity_unit->validUntil($soldAt, $this->validity_value);
+        return $this->validityRange($soldAt)[1];
     }
 
     public function validityLabel(): string
     {
-        return $this->validity_unit->format($this->validity_value).' с даты продажи';
+        return $this->validityText('ru');
+    }
+
+    /** «2 месяца с даты продажи» или «с 01.12.2026 по 01.02.2027» — на языке посетителя. */
+    public function validityText(?string $lang = null): string
+    {
+        $lang ??= app()->getLocale();
+        if ($this->isFixedPeriod()) {
+            return __('с :p1 по :p2', ['p1' => $this->period_from->format('d.m.Y'), 'p2' => $this->period_until->format('d.m.Y')], $lang);
+        }
+
+        return ($lang === 'ru' ? $this->validity_unit->format($this->validity_value) : $this->validity_value.' '.$this->validity_unit->getLabel())
+            .' '.__('с даты продажи', [], $lang);
     }
 
     /** Адрес фото на публичной странице (или null, если фото не загружено). */

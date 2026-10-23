@@ -42,6 +42,7 @@ class PublicShopController extends Controller
     {
         return Package::query()->where('is_active', true)->where('is_complimentary', false)->where('sold_online', true)
             ->with('items.service')->orderBy('name')->get()
+            ->reject(fn (Package $package) => $package->periodEnded())
             ->map(fn (Package $package) => $this->offer($package))->filter()->values();
     }
 
@@ -125,8 +126,8 @@ class PublicShopController extends Controller
     /** «Срок действия — 60 дней»: только если у всех показанных сертификатов срок одинаков. */
     private function termNote(Collection $offers): ?string
     {
-        $terms = $offers->map(fn (array $o) => $o['package']->validity_value.'|'.$o['package']->validity_unit->value)->unique();
-        if ($terms->count() !== 1) {
+        $terms = $offers->map(fn (array $o) => $o['package']->isFixedPeriod() ? 'period' : $o['package']->validity_value.'|'.$o['package']->validity_unit->value)->unique();
+        if ($terms->count() !== 1 || $terms->first() === 'period') {
             return null;
         }
         $package = $offers->first()['package'];
@@ -159,7 +160,7 @@ class PublicShopController extends Controller
 
     private function sellable(Package $package): ?Package
     {
-        return $package->is_active && ! $package->is_complimentary && $package->sold_online ? $package : null;
+        return $package->is_active && ! $package->is_complimentary && $package->sold_online && ! $package->periodEnded() ? $package : null;
     }
 
     /** @return array{package: Package, price: string, lines: list<array<string, mixed>>, validity: string}|null  Пакет без цены на сегодня не продаётся. */
@@ -174,9 +175,7 @@ class PublicShopController extends Controller
             return null;
         }
 
-        $validity = app()->getLocale() === 'ru'
-            ? $package->validityLabel()
-            : $package->validity_value.' '.$package->validity_unit->getLabel().' '.__('с даты продажи');
+        $validity = $package->validityText();
 
         return ['package' => $package, 'price' => $quote['total'], 'lines' => $quote['lines'], 'validity' => $validity];
     }

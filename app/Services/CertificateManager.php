@@ -58,6 +58,7 @@ class CertificateManager
                 throw new DomainRuleViolation(__('Пакет «:p1» не активен.', ['p1' => $package->name]));
             }
             $soldAt = Carbon::parse($data['sold_at'] ?? today())->startOfDay();
+            $this->assertPeriodNotEnded($package, $soldAt);
             $soldAtReason = $soldAt->isSameDay(today()) ? null : $this->overrideReason('Дата продажи отличается от сегодняшней', $data['sold_at_reason'] ?? null);
             $sellerReason = ($data['sold_by'] ?? null) && (int) $data['sold_by'] !== auth()->id()
                 ? $this->overrideReason('Продавец назначен не автором оформления', $data['seller_reason'] ?? null) : null;
@@ -195,8 +196,8 @@ class CertificateManager
                 $certificate->custom_validity = false;
             }
             if (($soldAtChanged || $packageChanged) && $package && ! $certificate->custom_validity) {
-                $certificate->valid_from = $certificate->sold_at;
-                $certificate->valid_until = $package->validUntil($certificate->sold_at);
+                $this->assertPeriodNotEnded($package, $certificate->sold_at);
+                [$certificate->valid_from, $certificate->valid_until] = $package->validityRange($certificate->sold_at);
             }
             if ($certificate->custom_validity && $certificate->valid_from->lt($certificate->sold_at)) {
                 throw new DomainRuleViolation(__('Дата продажи позже начала срока, заданного вручную: сначала измените срок.'));
@@ -600,6 +601,14 @@ class CertificateManager
         if ($before !== []) {
             $this->history->record($certificate, HistoryEvent::Repriced, 'Цены на дату продажи '.$certificate->sold_at->format('d.m.Y'),
                 ['items' => $before], ['items' => $certificate->items()->get()->map($this->itemSnapshot(...))->all()]);
+        }
+    }
+
+    /** Пакет на конкретный период после его окончания не продаётся. */
+    private function assertPeriodNotEnded(Package $package, Carbon $soldAt): void
+    {
+        if ($package->periodEnded($soldAt)) {
+            throw new DomainRuleViolation(__('Период пакета «:p1» закончился :p2 — продавать его уже нельзя.', ['p1' => $package->name, 'p2' => $package->period_until->format('d.m.Y')]));
         }
     }
 

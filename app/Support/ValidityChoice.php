@@ -50,7 +50,7 @@ final class ValidityChoice
     {
         $soldAt = $soldAt->copy()->startOfDay();
         if (! $this->isCustom()) {
-            return [$soldAt, $package->validUntil($soldAt)];
+            return $package->validityRange($soldAt);
         }
         if (! $package->is_complimentary) {
             throw new DomainRuleViolation(__('Срок платного сертификата задаёт пакет — менять его при продаже нельзя.'));

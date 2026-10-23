@@ -95,6 +95,7 @@
     .card .body { padding: 26px 28px 30px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
     .card h3 { font-size: 1.6rem; }
     .card .desc { color: var(--muted); font-size: .9375rem; }
+    .period { color: var(--accent); font-size: .875rem; letter-spacing: .04em; margin: 0 0 6px; }
     .card .row { margin-top: auto; padding-top: 14px; display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--line); }
     .price { font-family: var(--serif); font-weight: 300; font-size: 1.75rem; color: var(--graphite); }
     .more { font: 500 .6875rem var(--label); letter-spacing: .18em; text-transform: uppercase; color: var(--accent); }

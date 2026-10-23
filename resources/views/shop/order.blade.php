@@ -25,11 +25,11 @@
         <div class="reveal">
             <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'gifts') }}" class="muted" style="text-decoration:none">← {{ __('Все сертификаты') }}</a>
             <h1 style="font-size:clamp(2.2rem,4.6vw,3.4rem);margin:14px 0 10px">{{ $offer['package']->localizedName() }}</h1>
+            <p class="period">{{ __('Действует :p1', ['p1' => $offer['validity']]) }}</p>
             @if ($offer['package']->localizedDescription())<p class="muted">{{ $offer['package']->localizedDescription() }}</p>@endif
             <ul class="includes" style="margin:20px 0">
                 @foreach ($offer['lines'] as $line)<li>{{ $line['name'] }} × {{ $line['quantity'] }}</li>@endforeach
             </ul>
-            <p class="muted">{{ __('Действует :p1', ['p1' => $offer['validity']]) }}</p>
             <div class="total"><span class="muted">{{ __('Стоимость') }}</span><span class="price">{{ \App\Support\Money::format($offer['price']) }}</span></div>
 
             <form method="post" action="{{ \App\Support\ShopUrl::route('shop.store', $offer['package']) }}" style="margin-top:36px">

@@ -60,6 +60,7 @@
                             </div>
                             <div class="body">
                                 <h3>{{ $offer['package']->localizedName() }}</h3>
+                                <p class="period">{{ __('Действует :p1', ['p1' => $offer['validity']]) }}</p>
                                 @if ($offer['package']->localizedDescription())<p class="desc">{{ \Illuminate\Support\Str::limit($offer['package']->localizedDescription(), 120) }}</p>@endif
                                 <div class="row"><span class="price">{{ \App\Support\Money::format($offer['price']) }}</span><span class="more">{{ __('Подробнее') }} →</span></div>
                             </div>

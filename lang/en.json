@@ -1490,5 +1490,14 @@
  "шт": "pcs",
  "қаз": "kaz",
  "•••••••• сохранён — оставьте пустым, чтобы не менять": "•••••••• saved — leave empty to keep it",
- "№ счёта": "invoice No."
+ "№ счёта": "invoice No.",
+ "«На срок» — отсчёт от даты продажи; «На конкретный период» — сертификат действует в заданные даты (например, зимние каникулы), после окончания пакет не продаётся.": "“For a term” counts from the sale date; “For a specific period” makes the certificate valid on fixed dates (e.g. winter holidays); after it ends the package is no longer sold.",
+ "Как задан срок": "How validity is set",
+ "На конкретный период": "For a specific period",
+ "На срок с даты продажи": "For a term from the sale date",
+ "Период пакета «:p1» закончился :p2 — продавать его уже нельзя.": "The period of package “:p1” ended on :p2 — it can no longer be sold.",
+ "Период по": "Period to",
+ "Период с": "Period from",
+ "с :p1 по :p2": "from :p1 to :p2",
+ "Укажите период пакета: дата «по» не раньше даты «с».": "Set the package period: the “to” date must not be before the “from” date."
 }

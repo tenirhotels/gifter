@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\Packages\Schemas;
 
 use App\Enums\ComplimentaryPurpose;
+use App\Enums\PackageValidityType;
 use App\Enums\ValidityUnit;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
@@ -32,12 +34,18 @@ class PackageForm
                 Select::make('complimentary_purpose')->label('Цель по умолчанию')->options(ComplimentaryPurpose::class)
                     ->visible(fn (Get $get) => (bool) $get('is_complimentary'))->required(fn (Get $get) => (bool) $get('is_complimentary')),
             ]),
+            Select::make('validity_type')->label('Как задан срок')->options(PackageValidityType::class)->default(PackageValidityType::Term)->required()->live()
+                ->helperText(__('«На срок» — отсчёт от даты продажи; «На конкретный период» — сертификат действует в заданные даты (например, зимние каникулы), после окончания пакет не продаётся.')),
             Grid::make(2)->schema([
                 TextInput::make('validity_value')->label('Срок действия')->integer()->minValue(1)->maxValue(1000)->default(2)->required(),
                 Select::make('validity_unit')->label('Единица')->options(ValidityUnit::class)->default(ValidityUnit::Months)->required(),
-            ])->columnSpan(1),
-            Placeholder::make('validity_hint')->label(' ')
+            ])->columnSpan(1)->visible(fn (Get $get) => $get('validity_type') !== PackageValidityType::Period->value),
+            Placeholder::make('validity_hint')->label(' ')->visible(fn (Get $get) => $get('validity_type') !== PackageValidityType::Period->value)
                 ->content(__('Считается от даты продажи. Продавец срок не меняет; исключения — менеджер продаж с указанием причины. Новый срок действует только для новых сертификатов.')),
+            Grid::make(2)->schema([
+                DatePicker::make('period_from')->label('Период с')->required(),
+                DatePicker::make('period_until')->label('Период по')->required()->afterOrEqual('period_from'),
+            ])->columnSpanFull()->visible(fn (Get $get) => $get('validity_type') === PackageValidityType::Period->value),
             Textarea::make('description')->label('Описание')->columnSpanFull()
                 ->helperText(__('Основное (русское) описание. Переводы — в разделе «Каталог → Переводы».')),
             FileUpload::make('image_path')->label('Фото для сайта')->image()->disk('public')->directory('shop')->visibility('public')
