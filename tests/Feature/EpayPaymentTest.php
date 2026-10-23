@@ -404,7 +404,10 @@ class EpayPaymentTest extends TestCase
         $this->fakeBank($state);
         app(EpayPayments::class)->createLink($this->draft(), null, 'ru');
         $this->assertSame('shop-fictional-0002', $state['invoice_request']['shop_id']);
+    }
 
+    public function test_bank_reason_is_shown_in_refusal_message(): void
+    {
         Http::fake(fn (Request $r) => str_ends_with($r->url(), '/oauth2/token')
             ? Http::response(['access_token' => 'tok', 'expires_in' => 7200])
             : Http::response(['code' => 400, 'message' => 'shop not found'], 400));
