@@ -26,6 +26,12 @@ class EpayClient
             && isset(config('gifter.epay.hosts')[config('gifter.epay.env')]);
     }
 
+    /** ID магазина в счёте: отдельное значение, если банк выдал его отдельно от терминала. */
+    public function shopId(): string
+    {
+        return (string) (config('gifter.epay.shop_id') ?: config('gifter.epay.terminal'));
+    }
+
     public function terminal(): string
     {
         return (string) config('gifter.epay.terminal');
@@ -35,7 +41,7 @@ class EpayClient
     public function createInvoiceLink(Payment $payment, string $description, string $email, string $phone, string $accountId, string $language): array
     {
         $response = $this->send(fn (PendingRequest $http) => $http->withToken($this->token('payment'))->acceptJson()->asJson()->post($this->api('/invoice'), [
-            'shop_id' => $this->terminal(),
+            'shop_id' => $this->shopId(),
             'account_id' => $accountId,
             'invoice_id' => $payment->epay_invoice_id,
             'amount' => Money::toMinor($payment->amount) / 100,
@@ -133,10 +139,25 @@ class EpayClient
         }
         if ($response->failed() && ! ($allowClientError && $response->clientError())) {
             Log::warning('Банк (оплата): отказ', ['операция' => $what, 'http' => $response->status(), 'ответ' => mb_substr((string) $response->body(), 0, 300)]);
-            throw new EpayException(__('Банк отклонил запрос (:p1). Подробности — в журнале сервера.', ['p1' => $response->status()]));
+            $reason = self::bankReason($response);
+
+            throw new EpayException(__('Банк отклонил запрос (:p1). Подробности — в журнале сервера.', ['p1' => $response->status()]).($reason !== '' ? ' '.$reason : ''));
         }
 
         return $response;
+    }
+
+    /** Короткое пояснение банка из ответа (без ключей): поле message / error_description / reason. */
+    private static function bankReason(Response $response): string
+    {
+        foreach (['message', 'error_description', 'reason', 'error', 'resultMessage'] as $key) {
+            $value = $response->json($key);
+            if (is_string($value) && trim($value) !== '') {
+                return '«'.mb_substr(preg_replace('/\s+/u', ' ', trim($value)), 0, 160).'»';
+            }
+        }
+
+        return '';
     }
 
     private function host(string $kind): string

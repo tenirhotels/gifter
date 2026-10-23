@@ -396,4 +396,24 @@ class EpayPaymentTest extends TestCase
             ->fillForm(['package_id' => $this->package->id, 'create_invoice' => true])
             ->assertFormFieldExists('payment_method', fn ($field) => ! array_key_exists(PaymentMethod::HalykEpay->value, $field->getOptions()));
     }
+
+    public function test_separate_shop_id_is_used_and_bank_reason_is_shown(): void
+    {
+        config(['gifter.epay.shop_id' => 'shop-fictional-0002']);
+        $state = [];
+        $this->fakeBank($state);
+        app(EpayPayments::class)->createLink($this->draft(), null, 'ru');
+        $this->assertSame('shop-fictional-0002', $state['invoice_request']['shop_id']);
+
+        Http::fake(fn (Request $r) => str_ends_with($r->url(), '/oauth2/token')
+            ? Http::response(['access_token' => 'tok', 'expires_in' => 7200])
+            : Http::response(['code' => 400, 'message' => 'shop not found'], 400));
+        try {
+            app(EpayPayments::class)->createLink($this->draft(), null, 'ru');
+            $this->fail('Ожидался отказ банка');
+        } catch (DomainRuleViolation $e) {
+            $this->assertStringContainsString('(400)', $e->getMessage());
+            $this->assertStringContainsString('«shop not found»', $e->getMessage());
+        }
+    }
 }

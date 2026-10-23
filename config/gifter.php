@@ -39,6 +39,7 @@ return [
         'client_id' => env('EPAY_CLIENT_ID'),
         'client_secret' => env('EPAY_CLIENT_SECRET'),
         'terminal' => env('EPAY_TERMINAL'),
+        'shop_id' => env('EPAY_SHOP_ID'), // ID магазина для счетов; пусто — берётся EPAY_TERMINAL
         'expire_period' => env('EPAY_EXPIRE_DAYS', 3),
         'hosts' => [
             'test' => ['oauth' => 'https://test-epay-oauth.epayment.kz', 'api' => 'https://test-epay-api.epayment.kz'],
