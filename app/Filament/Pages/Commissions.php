@@ -37,7 +37,7 @@ class Commissions extends Page
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptPercent;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Деньги';
+    protected static string|UnitEnum|null $navigationGroup = 'Продажи';
 
     protected static ?int $navigationSort = 4;
 

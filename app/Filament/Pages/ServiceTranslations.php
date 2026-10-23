@@ -36,9 +36,9 @@ class ServiceTranslations extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedLanguage;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Продажи';
+    protected static string|UnitEnum|null $navigationGroup = 'Каталог';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 6;
 
     protected static ?string $navigationLabel = 'Переводы';
 

@@ -50,7 +50,7 @@ class ServiceForm
                 ]),
             Section::make('Услуга')->columns(2)->columnSpanFull()->schema([
                 TextInput::make('name')->label('Название')->required()->maxLength(255)
-                    ->helperText(__('Основное (русское) название. Переводы на казахский и английский — в разделе «Продажи → Переводы».')),
+                    ->helperText(__('Основное (русское) название. Переводы на казахский и английский — в разделе «Каталог → Переводы».')),
                 TextInput::make('unit')->label('Единица измерения')->placeholder(__('ночь, персона, сеанс, билет'))->required()->maxLength(50)
                     ->helperText(__('В чём учитывается услуга: шт., ночь, человек, час и т. д.')),
                 Select::make('category_id')->label('Категория')->relationship('category', 'name', fn ($query) => $query->where('is_active', true)->orderBy('position'))
@@ -60,7 +60,7 @@ class ServiceForm
                     ->searchable()->preload()->required()->createOptionForm(ProviderForm::fields())
                     ->helperText(__('Кто оказывает услугу: отель, ресторан, отдел или сторонняя компания.')),
                 Textarea::make('description')->label('Описание')->columnSpanFull()
-                    ->helperText(__('Кратко опишите услугу и условия её предоставления (по-русски; переводы — в «Продажи → Переводы»).')),
+                    ->helperText(__('Кратко опишите услугу и условия её предоставления (по-русски; переводы — в «Каталог → Переводы»).')),
                 Toggle::make('is_active')->label('Можно включать в сертификат')->default(true)
                     ->helperText(__('Включено — услугу можно добавлять в новые сертификаты (при утверждённой цене на сегодня). Уже выпущенные сертификаты не изменятся.')),
             ]),
