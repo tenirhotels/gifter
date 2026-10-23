@@ -1467,5 +1467,14 @@
  "Название (қаз)": "Name (kaz)",
  "Показывается, когда интерфейс или письмо на английском. Если пусто — берётся русское.": "Shown when the interface or email is in English. If empty, the Russian name is used.",
  "Показывается, когда интерфейс или письмо на казахском. Если пусто — берётся русское.": "Shown when the interface or email is in Kazakh. If empty, the Russian name is used.",
- "названия на kk/ru/en: :p1": "names in kk/ru/en: :p1"
+ "названия на kk/ru/en: :p1": "names in kk/ru/en: :p1",
+ "В PMS: :p1": "In PMS: :p1",
+ "Заполнено": "Filled",
+ "Изменить": "Edit",
+ "Нет перевода": "No translation",
+ "Отличается от PMS": "Differs from PMS",
+ "Переводы сохранены": "Translations saved",
+ "Услуг пока нет": "No services yet",
+ "Переводы услуг": "Service translations",
+ "Переводы названий услуг": "Service name translations"
 }

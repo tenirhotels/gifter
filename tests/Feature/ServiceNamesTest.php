@@ -2,16 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Role;
+use App\Filament\Pages\ServiceTranslations;
 use App\Models\CertificateItem;
 use App\Models\PmsService;
 use App\Models\PmsSetting;
 use App\Models\Service;
+use App\Models\User;
 use App\Services\Pms\PmsCatalogSync;
 use App\Services\Pms\PmsException;
 use App\Support\LocalizedName;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class ServiceNamesTest extends TestCase
@@ -146,5 +150,19 @@ class ServiceNamesTest extends TestCase
         $service = Service::create(['name' => 'Ужин', 'unit' => 'шт', 'name_translations' => ['kk' => ' ', 'en' => null]]);
 
         $this->assertNull($service->refresh()->name_translations);
+    }
+
+    public function test_translations_page_shows_status_and_saves(): void
+    {
+        $user = User::factory()->create(['roles' => [Role::SalesDirector]]);
+        $service = Service::create(['name' => 'Ужин', 'unit' => 'шт']);
+        $this->actingAs($user);
+
+        Livewire::test(ServiceTranslations::class)
+            ->assertCanSeeTableRecords([$service])
+            ->assertSee('Нет перевода')
+            ->callTableAction('edit', $service, ['kk' => 'Кешкі ас', 'en' => 'Dinner']);
+
+        $this->assertEqualsCanonicalizing(['kk' => 'Кешкі ас', 'en' => 'Dinner'], $service->refresh()->name_translations);
     }
 }
