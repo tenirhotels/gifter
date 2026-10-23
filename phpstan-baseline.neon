@@ -1135,12 +1135,6 @@ parameters:
 			path: app/Filament/Widgets/MyCommissionWidget.php
 
 		-
-			message: '#^Cannot call method getLabel\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/PublicShopController.php
-
-		-
 			message: '#^Cannot call method lt\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -1309,9 +1303,27 @@ parameters:
 			path: app/Models/Customer.php
 
 		-
+			message: '#^Cannot call method copy\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Models/Package.php
+
+		-
 			message: '#^Cannot call method format\(\) on string\.$#'
 			identifier: method.nonObject
+			count: 3
+			path: app/Models/Package.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
 			count: 1
+			path: app/Models/Package.php
+
+		-
+			message: '#^Cannot call method lt\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
 			path: app/Models/Package.php
 
 		-
@@ -1342,6 +1354,18 @@ parameters:
 			message: '#^Property App\\Models\\Package\:\:\$name_translations \(string\|null\) does not accept array\|null\.$#'
 			identifier: assign.propertyType
 			count: 1
+			path: app/Models/Package.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 2
+			path: app/Models/Package.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\PackageValidityType\:\:Period will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
 			path: app/Models/Package.php
 
 		-
@@ -1807,7 +1831,7 @@ parameters:
 			path: app/Services/CertificateManager.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:validUntil\(\)\.$#'
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:validityRange\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Services/CertificateManager.php
@@ -1839,7 +1863,7 @@ parameters:
 		-
 			message: '#^Cannot call method format\(\) on string\.$#'
 			identifier: method.nonObject
-			count: 2
+			count: 3
 			path: app/Services/CertificateManager.php
 
 		-
@@ -1963,6 +1987,12 @@ parameters:
 			path: app/Services/CertificateManager.php
 
 		-
+			message: '#^Parameter \#1 \$package of method App\\Services\\CertificateManager\:\:assertPeriodNotEnded\(\) expects App\\Models\\Package, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
 			message: '#^Parameter \#2 \$date of method App\\Services\\ServicePricing\:\:priceOn\(\) expects Illuminate\\Support\\Carbon, string given\.$#'
 			identifier: argument.type
 			count: 2
@@ -1976,6 +2006,12 @@ parameters:
 
 		-
 			message: '#^Parameter \#2 \$package of method App\\Services\\CertificateManager\:\:purpose\(\) expects App\\Models\\Package\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
+			message: '#^Parameter \#2 \$soldAt of method App\\Services\\CertificateManager\:\:assertPeriodNotEnded\(\) expects Illuminate\\Support\\Carbon, string given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Services/CertificateManager.php
