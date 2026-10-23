@@ -33,7 +33,7 @@ class ServicesTable
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with(['category', 'provider', 'pmsService']))
             ->columns([
-                TextColumn::make('name')->label('Название')->searchable()->sortable()
+                TextColumn::make('name')->label('Название')->searchable()->sortable()->state(fn (Service $record) => $record->localizedName())
                     ->description(fn (Service $record) => $record->unit),
                 TextColumn::make('category.name')->label('Категория')->sortable()->placeholder('—'),
                 TextColumn::make('provider.name')->label('Поставщик')->placeholder('—'),

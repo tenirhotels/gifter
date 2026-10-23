@@ -3,6 +3,7 @@
 namespace App\Services\Pms;
 
 use App\Models\PmsSetting;
+use App\Support\LocalizedName;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
@@ -141,9 +142,11 @@ class PmsClient
      * Список услуг отеля из справочника Exely (Content API: `GET /api/content/v1/properties/{propertyId}`, поле `services`).
      * Берутся только услуги (ID, название, вид, статус); тарифы и цены не читаются. Только прямой Exely — хаб пока не подключён.
      *
-     * @return list<array{id: string, name: string, kind: ?string, status: ?string}>
+     * Язык запрашивается заголовком Accept-Language (kk|ru|en); если Exely отдаёт названия словарём по языкам — они попадут в `names`.
+     *
+     * @return list<array{id: string, name: string, names: array<string, string>, kind: ?string, status: ?string}>
      */
-    public function catalogServices(): array
+    public function catalogServices(?string $lang = null): array
     {
         if (! $this->isActive()) {
             throw new PmsException(__('Интеграция с PMS не настроена.'));
@@ -154,10 +157,10 @@ class PmsClient
         $code = rawurlencode((string) $this->settings->property_code);
         $url = $this->settings->baseUrl()."/api/content/v1/properties/{$code}";
         try {
-            $response = $this->request(20)->get($url);
+            $response = $this->request(20, $lang)->get($url);
             if ($response->status() === 401) {
                 Cache::forget($this->tokenKey());
-                $response = $this->request(20)->get($url);
+                $response = $this->request(20, $lang)->get($url);
             }
         } catch (ConnectionException $e) {
             throw new PmsException(__('Exely не отвечает (:p1) — список услуг не обновлён. Попробуйте позже.', ['p1' => $this->connectionReason($e, $url)]));
@@ -174,7 +177,7 @@ class PmsClient
 
         return collect((array) $response->json('services', []))
             ->filter(fn ($s) => is_array($s) && filled($s['id'] ?? null) && filled($s['name'] ?? null))
-            ->map(fn (array $s) => ['id' => (string) $s['id'], 'name' => trim((string) $s['name']), 'kind' => isset($s['kind']) ? (string) $s['kind'] : null, 'status' => isset($s['status']) ? (string) $s['status'] : null])
+            ->map(fn (array $s) => $this->serviceNames($s['name'], $lang) + ['id' => (string) $s['id'], 'kind' => isset($s['kind']) ? (string) $s['kind'] : null, 'status' => isset($s['status']) ? (string) $s['status'] : null])
             ->unique('id')->values()->all();
     }
 
@@ -226,11 +229,37 @@ class PmsClient
         }
     }
 
-    private function request(int $timeout = 8): PendingRequest
+    /**
+     * `name` услуги — обычно строка; если Exely отдаст словарь по языкам (`{"ru": "...", "en": "..."}`), берём все языки.
+     *
+     * @return array{name: string, names: array<string, string>}
+     */
+    private function serviceNames(mixed $name, ?string $lang): array
+    {
+        if (! is_array($name)) {
+            return ['name' => trim((string) $name), 'names' => []];
+        }
+        $names = [];
+        foreach ($name as $code => $value) {
+            $code = strtolower(substr((string) $code, 0, 2));
+            if (in_array($code, LocalizedName::LANGS, true) && is_string($value) && trim($value) !== '') {
+                $names[$code] = trim($value);
+            }
+        }
+        $main = $names[$lang ?? 'ru'] ?? $names['ru'] ?? $names['en'] ?? $names['kk'] ?? '';
+
+        return ['name' => $main, 'names' => $names];
+    }
+
+    private function request(int $timeout = 8, ?string $lang = null): PendingRequest
     {
         $token = $this->settings->isExely() ? $this->exelyToken() : (string) $this->settings->token;
+        $request = Http::withToken($token)->acceptJson();
+        if ($lang) {
+            $request = $request->withHeaders(['Accept-Language' => $lang]);
+        }
 
-        return Http::withToken($token)->acceptJson()->timeout($timeout)->connectTimeout(10)->retry(2, 400, fn (\Throwable $e) => $e instanceof ConnectionException, false);
+        return $request->timeout($timeout)->connectTimeout(10)->retry(2, 400, fn (\Throwable $e) => $e instanceof ConnectionException, false);
     }
 
     private function tokenKey(): string

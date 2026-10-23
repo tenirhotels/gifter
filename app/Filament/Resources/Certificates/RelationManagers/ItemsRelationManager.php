@@ -33,7 +33,7 @@ class ItemsRelationManager extends RelationManager
         return $table
             ->description(__('Состав пакета не меняется. Допуслуги можно добавлять и убирать, пока сертификат — черновик; в бесплатном их может оплатить заказчик.'))
             ->columns([
-                TextColumn::make('service_name_snapshot')->label('Услуга')
+                TextColumn::make('service_name_snapshot')->label('Услуга')->state(fn (CertificateItem $record) => $record->localizedName())
                     ->description(fn (CertificateItem $record) => $record->from_package ? __('из пакета') : __('допуслуга')),
                 TextColumn::make('paid_by_customer')->label('Оплата')->badge()
                     ->state(fn (CertificateItem $record) => $record->paid_by_customer ? __('Платно') : __('Бесплатно'))

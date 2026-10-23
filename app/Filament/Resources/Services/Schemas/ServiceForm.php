@@ -38,6 +38,8 @@ class ServiceForm
                         $pms = $state ? PmsService::where('external_id', $state)->first() : null;
                         if ($pms) {
                             $set('name', $pms->name);
+                            $set('name_translations.kk', $pms->names['kk'] ?? null);
+                            $set('name_translations.en', $pms->names['en'] ?? null);
                             $set('unit', 'шт');
                         }
                     })
@@ -54,8 +56,12 @@ class ServiceForm
                             ? __('Включено — услуга предлагается при составлении сертификата.') : __('Включить можно после того, как цена на сегодня утверждена администратором.')),
                 ]),
             Section::make('Услуга')->columns(2)->columnSpanFull()->schema([
-                TextInput::make('name')->label('Название')->required()->maxLength(255)
+                TextInput::make('name')->label('Название (рус)')->required()->maxLength(255)
                     ->helperText(__('Название услуги, которое увидят сотрудники и гости в Gifter.')),
+                TextInput::make('name_translations.kk')->label('Название (қаз)')->maxLength(255)
+                    ->helperText(__('Показывается, когда интерфейс или письмо на казахском. Если пусто — берётся русское.')),
+                TextInput::make('name_translations.en')->label('Название (eng)')->maxLength(255)
+                    ->helperText(__('Показывается, когда интерфейс или письмо на английском. Если пусто — берётся русское.')),
                 TextInput::make('unit')->label('Единица измерения')->placeholder(__('ночь, персона, сеанс, билет'))->required()->maxLength(50)
                     ->helperText(__('В чём учитывается услуга: шт., ночь, человек, час и т. д.')),
                 Select::make('category_id')->label('Категория')->relationship('category', 'name', fn ($query) => $query->where('is_active', true)->orderBy('position'))

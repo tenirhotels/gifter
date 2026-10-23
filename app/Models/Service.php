@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\PreventsDeletion;
+use App\Support\LocalizedName;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,13 +27,14 @@ class Service extends Model
     ];
 
     protected $fillable = [
-        'name', 'description', 'category_id', 'provider_id', 'unit', 'is_active',
+        'name', 'name_translations', 'description', 'category_id', 'provider_id', 'unit', 'is_active',
         'requires_fulfillment', 'requires_scheduling', 'requires_confirmation',
     ];
 
     protected function casts(): array
     {
         return [
+            'name_translations' => 'array',
             'is_active' => 'boolean',
             'requires_fulfillment' => 'boolean',
             'requires_scheduling' => 'boolean',
@@ -44,10 +46,16 @@ class Service extends Model
     {
         // Время и подтверждение имеют смысл только для услуги, которую нужно готовить.
         static::saving(function (self $service) {
+            $service->name_translations = array_filter(array_map('trim', array_filter((array) $service->name_translations, 'is_string'))) ?: null;
             if ($service->requires_scheduling || $service->requires_confirmation) {
                 $service->requires_fulfillment = true;
             }
         });
+    }
+
+    public function localizedName(?string $lang = null): string
+    {
+        return LocalizedName::pick($this->name_translations, $this->name, $lang);
     }
 
     public function category(): BelongsTo

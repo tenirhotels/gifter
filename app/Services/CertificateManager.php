@@ -138,7 +138,7 @@ class CertificateManager
             $lineTotal = Money::multiply($price, $quantity);
             $total += Money::toMinor($lineTotal);
             $payable += $paid ? Money::toMinor($lineTotal) : 0;
-            $lines[] = ['name' => $service->name, 'quantity' => $quantity, 'unit_price' => (string) $price, 'line_total' => $lineTotal, 'from_package' => $fromPackage, 'paid' => $paid];
+            $lines[] = ['name' => $service->localizedName(), 'quantity' => $quantity, 'unit_price' => (string) $price, 'line_total' => $lineTotal, 'from_package' => $fromPackage, 'paid' => $paid];
         }
 
         return ['lines' => $lines, 'total' => Money::fromMinor($total), 'payable' => Money::fromMinor($payable),
@@ -618,6 +618,7 @@ class CertificateManager
             'provider_id' => $service->provider_id,
             'price_version_id' => $price->id,
             'service_name_snapshot' => $service->name,
+            'service_name_translations' => $service->name_translations,
             'unit_snapshot' => $service->unit,
             'quantity' => $quantity,
             'unit_price' => $price->price,

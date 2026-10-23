@@ -24,7 +24,7 @@ class SyncPmsCatalog extends Command
 
             return self::FAILURE;
         }
-        $this->info("Услуг в PMS: {$stats['total']}, новых: {$stats['new']}, изменено: {$stats['updated']}, пропало: {$stats['missing']}.");
+        $this->info("Услуг в PMS: {$stats['total']}, новых: {$stats['new']}, изменено: {$stats['updated']}, пропало: {$stats['missing']}; ".PmsCatalogSync::languagesNote($stats).'.');
 
         return self::SUCCESS;
     }

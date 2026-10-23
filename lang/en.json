@@ -1460,5 +1460,12 @@
  "цена": "price",
  "шт": "pcs",
  "•••••••• сохранён — оставьте пустым, чтобы не менять": "•••••••• saved — leave empty to keep it",
- "№ счёта": "invoice No."
+ "№ счёта": "invoice No.",
+ "Exely не отдаёт переводы названий — введите их вручную в услуге": "Exely does not provide name translations — enter them manually in the service",
+ "Название (eng)": "Name (eng)",
+ "Название (рус)": "Name (rus)",
+ "Название (қаз)": "Name (kaz)",
+ "Показывается, когда интерфейс или письмо на английском. Если пусто — берётся русское.": "Shown when the interface or email is in English. If empty, the Russian name is used.",
+ "Показывается, когда интерфейс или письмо на казахском. Если пусто — берётся русское.": "Shown when the interface or email is in Kazakh. If empty, the Russian name is used.",
+ "названия на kk/ru/en: :p1": "names in kk/ru/en: :p1"
 }

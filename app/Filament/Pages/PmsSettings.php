@@ -105,7 +105,7 @@ class PmsSettings extends Page
             Action::make('syncServices')->label('Обновить услуги из PMS')->icon('heroicon-o-arrow-path')->color('gray')->action(function () {
                 try {
                     $stats = app(PmsCatalogSync::class)->run();
-                    Notification::make()->success()->title(__('Услуг в PMS: :p1, новых: :p2, изменено: :p3, пропало: :p4', ['p1' => $stats['total'], 'p2' => $stats['new'], 'p3' => $stats['updated'], 'p4' => $stats['missing']]))->send();
+                    Notification::make()->success()->title(__('Услуг в PMS: :p1, новых: :p2, изменено: :p3, пропало: :p4', ['p1' => $stats['total'], 'p2' => $stats['new'], 'p3' => $stats['updated'], 'p4' => $stats['missing']]).'. '.PmsCatalogSync::languagesNote($stats))->send();
                 } catch (PmsException $e) {
                     Notification::make()->danger()->title($e->getMessage())->send();
                 }

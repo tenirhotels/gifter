@@ -53,7 +53,7 @@ class PmsCatalogTest extends TestCase
     {
         $stats = app(PmsCatalogSync::class)->run();
 
-        $this->assertSame(['new' => 2, 'updated' => 0, 'missing' => 0, 'total' => 2], $stats);
+        $this->assertSame(['new' => 2, 'updated' => 0, 'missing' => 0, 'total' => 2, 'translated' => 0], $stats);
         $this->assertSame(['30', '31'], PmsService::orderBy('external_id')->pluck('external_id')->all());
         $this->assertSame(0, Service::count(), 'Услуги Gifter создаёт только тумблер');
         Http::assertSent(fn ($r) => str_contains($r->url(), '/api/content/v1/properties/9305') && $r->hasHeader('Authorization', 'Bearer fictional-token'));

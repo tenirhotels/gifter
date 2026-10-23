@@ -59,7 +59,7 @@
     <div class="package">{{ $certificate->package?->name }}</div>
     <table class="items{{ $certificate->items->count() > 5 ? ' compact' : '' }}">
         @foreach ($certificate->items as $item)
-            <tr><td>{{ $item->service_name_snapshot }}</td><td class="q">{{ $item->quantity }} {{ $item->unit_snapshot }}</td></tr>
+            <tr><td>{{ $item->localizedName() }}</td><td class="q">{{ $item->quantity }} {{ $item->unit_snapshot }}</td></tr>
         @endforeach
     </table>
 

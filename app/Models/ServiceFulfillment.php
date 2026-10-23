@@ -58,7 +58,7 @@ class ServiceFulfillment extends Model
     /** «Ужин × 2» — по снимку строки сертификата. */
     public function serviceLabel(): string
     {
-        return "{$this->item?->service_name_snapshot} × {$this->item?->quantity}";
+        return "{$this->item?->localizedName()} × {$this->item?->quantity}";
     }
 
     /** «20.10.2026 19:00» или null. */

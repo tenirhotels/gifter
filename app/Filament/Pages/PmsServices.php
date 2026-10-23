@@ -61,7 +61,7 @@ class PmsServices extends Page implements HasTable
         }
         $when = now()->parse($last['at'])->format('d.m.Y H:i');
 
-        return $last['ok'] ? __('Обновлено').": {$when} · ".__('новых').": {$last['stats']['new']}, ".__('изменено').": {$last['stats']['updated']}, ".__('пропало').": {$last['stats']['missing']}"
+        return $last['ok'] ? __('Обновлено').": {$when} · ".__('новых').": {$last['stats']['new']}, ".__('изменено').": {$last['stats']['updated']}, ".__('пропало').": {$last['stats']['missing']} · ".PmsCatalogSync::languagesNote($last['stats'])
             : __('Последняя попытка').": {$when} — {$last['message']}";
     }
 
@@ -73,7 +73,7 @@ class PmsServices extends Page implements HasTable
                 ->action(function () {
                     try {
                         $stats = app(PmsCatalogSync::class)->run();
-                        Notification::make()->success()->title(__('Услуг в PMS: :p1, новых: :p2, изменено: :p3, пропало: :p4', ['p1' => $stats['total'], 'p2' => $stats['new'], 'p3' => $stats['updated'], 'p4' => $stats['missing']]))->send();
+                        Notification::make()->success()->title(__('Услуг в PMS: :p1, новых: :p2, изменено: :p3, пропало: :p4', ['p1' => $stats['total'], 'p2' => $stats['new'], 'p3' => $stats['updated'], 'p4' => $stats['missing']]).'. '.PmsCatalogSync::languagesNote($stats))->send();
                     } catch (PmsException $e) {
                         Notification::make()->danger()->title($e->getMessage())->send();
                     }
@@ -87,9 +87,11 @@ class PmsServices extends Page implements HasTable
             ->query(fn () => PmsService::query()->with('service'))
             ->columns([
                 TextColumn::make('name')->label('Название в PMS')->searchable()->sortable()
+                    ->state(fn (PmsService $record) => $record->localizedName())
+                    ->tooltip(fn (PmsService $record) => collect((array) $record->names)->map(fn ($n, $l) => strtoupper($l).': '.$n)->implode("\n") ?: null)
                     ->description(fn (PmsService $record) => 'ID '.$record->external_id.($record->kind ? ' · '.$record->kind : '')),
                 IconColumn::make('allowed_in_certificate')->label('В сертификат')->boolean(),
-                TextColumn::make('service.name')->label('Услуга в Gifter')->placeholder(__('не заведена'))
+                TextColumn::make('service.name')->label('Услуга в Gifter')->state(fn (PmsService $record) => $record->service?->localizedName())->placeholder(__('не заведена'))
                     ->url(fn (PmsService $record) => $record->service_id ? ServiceResource::getUrl('edit', ['record' => $record->service_id]) : null),
                 TextColumn::make('missing_since')->label('Статус в PMS')->badge()
                     ->state(fn (PmsService $record) => $record->isMissing() ? __('Пропала в PMS') : ($record->status ?: __('Есть')))
