@@ -188,8 +188,12 @@
         <a class="brand" href="{{ \App\Support\ShopUrl::route('shop.index') }}" aria-label="{{ config('gifter.certificate.hotel_name') }}">@include('shop._svg', ['name' => 'tenir-logo-horizontal'])</a>
         <nav class="nav">
             <span class="links">
-                <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'gifts') }}">{{ __('Сертификаты') }}</a>
-                <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'how') }}">{{ __('Как это работает') }}</a>
+                @if ($visitka ?? false)
+                    <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'contact') }}">{{ __('Контакты') }}</a>
+                @else
+                    <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'gifts') }}">{{ __('Сертификаты') }}</a>
+                    <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'how') }}">{{ __('Как это работает') }}</a>
+                @endif
                 <a href="{{ \App\Support\ShopUrl::route('shop.faq') }}">FAQ</a>
             </span>
             <span class="lang">@foreach (array_keys(config('gifter.locales')) as $code)<a href="?lang={{ $code }}" @class(['on' => app()->getLocale() === $code])>{{ strtoupper($code) }}</a>@endforeach</span>
@@ -206,8 +210,10 @@
                 <div class="brand">@include('shop._svg', ['name' => 'tenir-logo'])</div>
             </div>
             <div>
-                <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'gifts') }}">{{ __('Сертификаты') }}</a>
-                <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'how') }}">{{ __('Как это работает') }}</a>
+                @unless ($visitka ?? false)
+                    <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'gifts') }}">{{ __('Сертификаты') }}</a>
+                    <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'how') }}">{{ __('Как это работает') }}</a>
+                @endunless
                 <a href="{{ \App\Support\ShopUrl::route('shop.faq') }}">{{ __('Вопросы и ответы') }}</a>
                 <a href="{{ \App\Support\ShopUrl::route('shop.terms') }}">{{ __('Условия сертификата') }}</a>
                 <a href="{{ \App\Support\ShopUrl::route('shop.privacy') }}">{{ __('Политика конфиденциальности') }}</a>

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\DeliveryMethod;
 use App\Enums\Permission;
 use App\Filament\Support\TranslatesPageLabels;
 use App\Models\AuditLog;
@@ -9,11 +10,14 @@ use App\Models\ShopSetting;
 use App\Support\PhoneNumber;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -41,7 +45,7 @@ class ShopSettings extends Page
 
     protected static ?string $slug = 'shop-settings';
 
-    private const TRACKED = ['hero_image_path', 'hero_title', 'hero_subtitle', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url'];
+    private const TRACKED = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url'];
 
     /** @var array<string, mixed> */
     public array $data = [];
@@ -56,10 +60,37 @@ class ShopSettings extends Page
         $setting = ShopSetting::current();
         $this->form->fill([
             'hero_image_path' => $setting->hero_image_path ? ['shop/'.$setting->hero_image_path] : [],
-            'hero_title' => $setting->hero_title, 'hero_subtitle' => $setting->hero_subtitle, 'accent_color' => $setting->accent(),
+            'accent_color' => $setting->accent(), 'delivery_methods' => array_map(fn (DeliveryMethod $m) => $m->value, $setting->deliveryMethods()),
+            ...$this->textState($setting),
             'ga4_id' => $setting->ga4_id, 'metrika_id' => $setting->metrika_id, 'whatsapp_phone' => $setting->whatsapp_phone,
             'operator_name' => $setting->operator_name, 'offer_url' => $setting->offer_url,
         ]);
+    }
+
+    /** Тексты на трёх языках: `hero_title` (рус), `hero_title_kk`, `hero_title_en` и т. д. @return array<string, ?string> */
+    private function textState(ShopSetting $setting): array
+    {
+        $state = [];
+        foreach (ShopSetting::TEXTS as $key) {
+            $state[$key] = $setting->{$key};
+            $state[$key.'_kk'] = $setting->text_translations[$key]['kk'] ?? null;
+            $state[$key.'_en'] = $setting->text_translations[$key]['en'] ?? null;
+        }
+
+        return $state;
+    }
+
+    /** Три поля одного текста: рус · қаз · eng. @return array<int, mixed> */
+    private static function trilingual(string $key, string $label, string $placeholder, bool $long = false, int $max = 120): array
+    {
+        $make = fn (string $name, string $suffix) => ($long ? Textarea::make($name)->rows(3) : TextInput::make($name))
+            ->label($label.' ('.$suffix.')')->maxLength($max);
+
+        return [Grid::make(3)->schema([
+            $make($key, 'рус')->placeholder($placeholder),
+            $make($key.'_kk', 'қаз'),
+            $make($key.'_en', 'eng'),
+        ])];
     }
 
     public function form(Schema $schema): Schema
@@ -69,9 +100,19 @@ class ShopSettings extends Page
                 FileUpload::make('hero_image_path')->label('Главное фото')->image()->disk('public')->directory('shop')->visibility('public')
                     ->maxSize(4096)->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])->maxFiles(1)
                     ->helperText(__('Фото отеля, лучше горизонтальное, не меньше 1600 px; до 4 МБ.')),
-                TextInput::make('hero_title')->label('Заголовок')->maxLength(120)->placeholder(__('Подарок, который хочется открыть')),
-                TextInput::make('hero_subtitle')->label('Подзаголовок')->maxLength(300),
+                ...self::trilingual('hero_title', __('Заголовок'), __('Подарите время, которое запомнится')),
+                ...self::trilingual('hero_subtitle', __('Подзаголовок'), __('Подарочные сертификаты на отдых в горах'), max: 300),
+                ...self::trilingual('hero_intro', __('Вступление'), __('Проживание в Tenir Eco Hotel, завтраки и особенные моменты среди гор. Выберите готовый сертификат — мы красиво оформим его и подготовим к вручению.'), long: true, max: 600),
                 ColorPicker::make('accent_color')->label('Акцентный цвет')->helperText(__('Один цвет бренда для кнопок и линий; по умолчанию тёмно-зелёный из брендбука.')),
+            ])->columns(1),
+            Section::make('Получение сертификата')->description(__('Какие способы получения клиент видит в форме заявки. Названия способов переводятся автоматически.'))->schema([
+                CheckboxList::make('delivery_methods')->label('Активные способы получения')->options(
+                    collect(DeliveryMethod::cases())->mapWithKeys(fn (DeliveryMethod $m) => [$m->value => $m->getLabel()])->all()
+                )->required()->minItems(1)->columns(1)
+                    ->validationMessages(['required' => __('Выберите хотя бы один способ получения.'), 'min' => __('Выберите хотя бы один способ получения.')]),
+            ])->columns(1),
+            Section::make('Сайт-визитка')->description(__('Если нет ни одного пакета на продажу, сайт показывает приглашение связаться вместо выбора сертификата.'))->schema([
+                ...self::trilingual('contact_invite', __('Приглашение связаться'), __('Подарочные сертификаты TENIR — свяжитесь с нами, и мы подберём и оформим подарок.'), long: true, max: 600),
             ])->columns(1),
             Section::make('Документы')->description(__('Политика конфиденциальности на сайте ссылается на эти данные.'))->schema([
                 TextInput::make('operator_name')->label('Оператор персональных данных')->maxLength(150)->placeholder(ShopSetting::DEFAULT_OPERATOR)
@@ -97,6 +138,23 @@ class ShopSettings extends Page
         return [Action::make('save')->label('Сохранить')->icon('heroicon-o-check')->action(fn () => $this->save())];
     }
 
+    /** Русский текст — в колонку, переводы kk/en — в `text_translations`. @return array<string, mixed> */
+    private function textColumns(array $state): array
+    {
+        $columns = [];
+        $translations = [];
+        foreach (ShopSetting::TEXTS as $key) {
+            $columns[$key] = filled($state[$key] ?? null) ? trim((string) $state[$key]) : null;
+            $pair = array_filter(['kk' => trim((string) ($state[$key.'_kk'] ?? '')), 'en' => trim((string) ($state[$key.'_en'] ?? ''))], fn ($v) => $v !== '');
+            if ($pair) {
+                $translations[$key] = $pair;
+            }
+        }
+        $columns['text_translations'] = $translations ?: null;
+
+        return $columns;
+    }
+
     public function save(): void
     {
         $state = $this->form->getState();
@@ -105,8 +163,8 @@ class ShopSettings extends Page
         $before = $setting->only(self::TRACKED);
         $setting->fill([
             'hero_image_path' => $image ? basename((string) $image) : null,
-            'hero_title' => filled($state['hero_title'] ?? null) ? trim((string) $state['hero_title']) : null,
-            'hero_subtitle' => filled($state['hero_subtitle'] ?? null) ? trim((string) $state['hero_subtitle']) : null,
+            ...$this->textColumns($state),
+            'delivery_methods' => array_values(array_intersect(array_map(fn (DeliveryMethod $m) => $m->value, DeliveryMethod::cases()), (array) ($state['delivery_methods'] ?? []))) ?: null,
             'accent_color' => filled($state['accent_color'] ?? null) ? $state['accent_color'] : null,
             'ga4_id' => filled($state['ga4_id'] ?? null) ? trim((string) $state['ga4_id']) : null,
             'metrika_id' => filled($state['metrika_id'] ?? null) ? trim((string) $state['metrika_id']) : null,

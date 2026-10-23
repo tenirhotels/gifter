@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Enums\Permission;
+use App\Http\Controllers\PublicShopController;
 use App\Models\User;
 use App\Support\TrustedProxies;
 use Filament\Actions\Action as BaseAction;
@@ -15,6 +16,7 @@ use Filament\Tables\Table;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -56,6 +58,13 @@ class AppServiceProvider extends ServiceProvider
         BaseFilter::configureUsing(fn (BaseFilter $filter) => $filter->translateLabel());
         SchemaComponent::configureUsing(fn (SchemaComponent $component) => method_exists($component, 'translateLabel') ? $component->translateLabel() : $component);
         BaseAction::configureUsing(fn (BaseAction $action) => $action->translateLabel());
+
+        // Сайт-визитка: нет пакетов на продажу — публичные страницы без выбора сертификата (считается один раз на запрос).
+        View::composer('shop.*', function ($view) {
+            static $visitka = null;
+            $visitka ??= app(PublicShopController::class)->offers()->isEmpty();
+            $view->with('visitka', $visitka);
+        });
 
         foreach (Permission::cases() as $permission) {
             Gate::define($permission->value, fn (User $user): bool => $user->hasPermission($permission));

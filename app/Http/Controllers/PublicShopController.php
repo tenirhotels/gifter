@@ -71,7 +71,7 @@ class PublicShopController extends Controller
             'email' => ['nullable', 'required_if:delivery_method,pdf', 'email', 'max:255'],
             'recipient_name' => ['nullable', 'string', 'max:255'],
             'gift_message' => ['nullable', 'string', 'max:500'],
-            'delivery_method' => ['required', Rule::enum(DeliveryMethod::class)],
+            'delivery_method' => ['required', Rule::in(array_map(fn (DeliveryMethod $m) => $m->value, ShopSetting::current()->deliveryMethods()))],
             'delivery_address' => ['nullable', 'required_if:delivery_method,courier', 'string', 'max:500'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'consent' => ['accepted'],

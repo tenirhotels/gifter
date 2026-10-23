@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\DeliveryMethod;
+use App\Support\LocalizedName;
 use App\Support\PhoneNumber;
 use Illuminate\Database\Eloquent\Model;
 
@@ -12,7 +14,15 @@ class ShopSetting extends Model
 
     public const DEFAULT_OPERATOR = 'ТОО «Alpine Hotel»';
 
-    protected $fillable = ['hero_image_path', 'hero_title', 'hero_subtitle', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'updated_by'];
+    /** Тексты главной, которые правятся в настройках на трёх языках (русский — в колонке, kk/en — в `text_translations`). */
+    public const TEXTS = ['hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite'];
+
+    protected $fillable = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'updated_by'];
+
+    protected function casts(): array
+    {
+        return ['text_translations' => 'array', 'delivery_methods' => 'array'];
+    }
 
     public static function current(): self
     {
@@ -50,6 +60,22 @@ class ShopSetting extends Model
         $url = trim((string) $this->offer_url);
 
         return preg_match('#^https://[^\s"\'<>]+$#i', $url) && filter_var($url, FILTER_VALIDATE_URL) ? $url : null;
+    }
+
+    /** Текст на языке посетителя: перевод → русский → запасной текст по умолчанию (`$default` — уже переведённый `__()`). */
+    public function text(string $key, string $default, ?string $lang = null): string
+    {
+        $text = LocalizedName::pick($this->text_translations[$key] ?? null, trim((string) $this->{$key}), $lang);
+
+        return $text !== '' ? $text : $default;
+    }
+
+    /** Способы получения, доступные клиенту на сайте; пусто или мусор в настройках — все. @return list<DeliveryMethod> */
+    public function deliveryMethods(): array
+    {
+        $active = array_values(array_filter(DeliveryMethod::cases(), fn (DeliveryMethod $m) => in_array($m->value, (array) $this->delivery_methods, true)));
+
+        return $active ?: DeliveryMethod::cases();
     }
 
     public function hasAnalytics(): bool

@@ -1,15 +1,20 @@
 @extends('shop.layout')
 @php($route = fn (string $name, $params = [], ?string $fragment = null) => \App\Support\ShopUrl::route($name, $params, $fragment))
+@php($visitka = $offers->isEmpty())
 @section('content')
     <section class="hero {{ $shop->hero_image_path ? 'has-photo' : '' }}" style="padding:0">
         @if ($shop->hero_image_path)<div class="bg" style="background-image:url('{{ url('/media/'.basename($shop->hero_image_path)) }}')"></div>@else<div class="bg"></div><div class="mark">@include('shop._svg', ['name' => 'tenir-symbol'])</div>@endif
         <div class="inner">
             <div class="eyebrow" style="color:#fff;opacity:.85">TENIR</div>
-            <h1 class="reveal" style="margin-top:14px">{{ $shop->hero_title ?: __('Подарите время, которое запомнится') }}</h1>
-            <p class="reveal" style="margin-bottom:14px;font-size:1.3rem">{{ $shop->hero_subtitle ?: __('Подарочные сертификаты на отдых в горах') }}</p>
-            <p class="reveal" style="margin-top:0">{{ __('Проживание в Tenir Eco Hotel, завтраки и особенные моменты среди гор. Выберите готовый сертификат — мы красиво оформим его и подготовим к вручению.') }}</p>
-            <a class="btn light reveal" href="#gifts">{{ __('Выбрать сертификат') }}</a>
-            <div class="reveal"><span class="chip">{{ __('Физический сертификат с доставкой') }}@if ($termNote) · {{ $termNote }}@endif</span></div>
+            <h1 class="reveal" style="margin-top:14px">{{ $shop->text('hero_title', __('Подарите время, которое запомнится')) }}</h1>
+            <p class="reveal" style="margin-bottom:14px;font-size:1.3rem">{{ $shop->text('hero_subtitle', __('Подарочные сертификаты на отдых в горах')) }}</p>
+            <p class="reveal" style="margin-top:0">{{ $shop->text('hero_intro', __('Проживание в Tenir Eco Hotel, завтраки и особенные моменты среди гор. Выберите готовый сертификат — мы красиво оформим его и подготовим к вручению.')) }}</p>
+            @if ($visitka)
+                <a class="btn light reveal" href="#contact">{{ __('Связаться с нами') }}</a>
+            @else
+                <a class="btn light reveal" href="#gifts">{{ __('Выбрать сертификат') }}</a>
+                <div class="reveal"><span class="chip">{{ __('Физический сертификат с доставкой') }}@if ($termNote) · {{ $termNote }}@endif</span></div>
+            @endif
         </div>
     </section>
 
@@ -25,19 +30,28 @@
                     <div><b>{{ __('Впечатления') }}</b><span class="muted">{{ __('Время вдали от города, которое хочется запомнить.') }}</span></div>
                 </div>
             </div>
-            <div class="reveal">@include('shop._certificate', ['name' => $offers->first()['package']->name ?? __('Подарочный сертификат')])</div>
+            @unless ($visitka)<div class="reveal">@include('shop._certificate', ['name' => $offers->first()['package']->localizedName()])</div>@endunless
         </div>
     </section>
 
+    @if ($visitka)
+    <section id="contact">
+        <div class="wrap" style="text-align:center">
+            <div class="section-head reveal" style="margin:0 auto 28px">
+                <h2>{{ __('Свяжитесь с нами') }}</h2>
+                <p class="muted">{{ $shop->text('contact_invite', __('Подарочные сертификаты TENIR — свяжитесь с нами, и мы подберём и оформим подарок.')) }}</p>
+            </div>
+            @if (config('gifter.certificate.hotel_contacts'))<p class="reveal">{{ config('gifter.certificate.hotel_contacts') }}</p>@endif
+            @if ($shop->whatsapp())<p class="reveal"><a class="btn" href="https://wa.me/{{ $shop->whatsapp() }}?text={{ rawurlencode(__('Здравствуйте! Хочу заказать подарочный сертификат.')) }}" target="_blank" rel="noopener">WhatsApp</a></p>@endif
+        </div>
+    </section>
+    @else
     <section id="gifts">
         <div class="wrap">
             <div class="section-head reveal">
                 <h2>{{ __('Выберите свой подарок') }}</h2>
                 <p class="muted">{{ __('Сертификаты TENIR созданы для разных поводов — от романтического сюрприза до подарка родителям, друзьям или деловым партнёрам.') }}</p>
             </div>
-            @if ($offers->isEmpty())
-                <p class="muted">{{ __('Сейчас онлайн-заявки недоступны. Свяжитесь с отелем.') }}</p>
-            @else
                 <div class="grid" id="cards">
                     @foreach ($offers as $offer)
                         <a class="card reveal" href="{{ $route('shop.order', $offer['package']) }}">
@@ -53,9 +67,10 @@
                     @endforeach
                 </div>
                 <p style="margin-top:40px;text-align:center" class="reveal"><a class="btn ghost" href="#cards">{{ __('Посмотреть сертификаты') }}</a></p>
-            @endif
         </div>
     </section>
+
+    @endif
 
     <section class="cream">
         <div class="wrap">
@@ -69,6 +84,7 @@
         </div>
     </section>
 
+    @unless ($visitka)
     <section id="how">
         <div class="wrap">
             <div class="section-head reveal"><h2>{{ __('Подарок готов за несколько минут') }}</h2></div>
@@ -81,6 +97,7 @@
             <p style="margin-top:44px" class="reveal"><a class="btn" href="#gifts">{{ __('Выбрать сертификат') }}</a></p>
         </div>
     </section>
+    @endunless
 
     <section class="cream">
         <div class="wrap" style="text-align:center">

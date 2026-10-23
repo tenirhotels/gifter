@@ -51,8 +51,9 @@
                 <fieldset>
                     <legend><i>3</i>{{ __('Получение') }}</legend>
                     <div class="opts" id="delivery">
-                        @foreach (\App\Enums\DeliveryMethod::cases() as $method)
-                            <label class="opt"><input type="radio" name="delivery_method" value="{{ $method->value }}" @checked(old('delivery_method', 'pickup') === $method->value)>
+                        @php($methods = $shop->deliveryMethods())
+                        @foreach ($methods as $method)
+                            <label class="opt"><input type="radio" name="delivery_method" value="{{ $method->value }}" @checked(old('delivery_method', $methods[0]->value) === $method->value)>
                                 <span><b>{{ $method->getLabel() }}</b>
                                     <span class="hint">@switch($method->value)
                                         @case('pickup'){{ __('Менеджер согласует время, когда сертификат будет готов.') }}@break
