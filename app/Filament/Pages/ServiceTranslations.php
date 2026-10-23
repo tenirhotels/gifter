@@ -36,9 +36,9 @@ class ServiceTranslations extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedLanguage;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Каталог';
+    protected static string|UnitEnum|null $navigationGroup = 'Продажи';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $navigationLabel = 'Переводы';
 
@@ -124,15 +124,18 @@ class ServiceTranslations extends Page implements HasTable
             ->recordActions([
                 Action::make('edit')->label('Изменить')->icon('heroicon-o-pencil-square')
                     ->authorize(Permission::ManageCatalog)
+                    ->modalHeading(fn (Model $record) => __('Переводы').': '.$record->name)
                     ->fillForm(fn (Model $record) => [
+                        'src_name' => $record->name, 'src_desc' => $record->description,
                         'name_kk' => $record->name_translations['kk'] ?? null, 'name_en' => $record->name_translations['en'] ?? null,
                         'desc_kk' => $record->description_translations['kk'] ?? null, 'desc_en' => $record->description_translations['en'] ?? null,
                     ])
                     ->schema(fn (Model $record) => [
+                        TextInput::make('src_name')->label('Название (рус)')->disabled()->dehydrated(false),
+                        Textarea::make('src_desc')->label('Описание (рус)')->rows(3)->disabled()->dehydrated(false)->visible(filled($record->description)),
                         TextInput::make('name_kk')->label('Название (қаз)')->maxLength(255)->helperText(self::pmsHint($record, 'kk')),
                         TextInput::make('name_en')->label('Название (eng)')->maxLength(255)->helperText(self::pmsHint($record, 'en')),
-                        Textarea::make('desc_kk')->label('Описание (қаз)')->rows(3)->visible(filled($record->description))
-                            ->helperText(Str::limit((string) $record->description, 160)),
+                        Textarea::make('desc_kk')->label('Описание (қаз)')->rows(3)->visible(filled($record->description)),
                         Textarea::make('desc_en')->label('Описание (eng)')->rows(3)->visible(filled($record->description)),
                     ])
                     ->action(function (Model $record, array $data) {

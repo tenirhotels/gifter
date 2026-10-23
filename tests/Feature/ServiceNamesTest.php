@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\Role;
 use App\Filament\Pages\ServiceTranslations;
+use App\Filament\Pages\UpcomingArrivals;
+use App\Filament\Resources\Packages\PackageResource;
 use App\Filament\Resources\Services\Pages\EditService;
 use App\Models\CertificateItem;
 use App\Models\Package;
@@ -167,6 +169,7 @@ class ServiceNamesTest extends TestCase
 
         $this->assertEqualsCanonicalizing(['kk' => 'Кешкі ас', 'en' => 'Dinner'], $service->refresh()->name_translations);
         $this->assertSame('Сипаттама', $service->localizedDescription('kk'));
+        $this->assertSame('Ужин', $service->name, 'Основной текст не меняется');
         $this->assertSame('Описание', $service->localizedDescription('ru'));
     }
 
@@ -196,5 +199,21 @@ class ServiceNamesTest extends TestCase
 
         Livewire::test(EditService::class, ['record' => $service->id])
             ->assertFormFieldDoesNotExist('name_translations.kk')->assertFormFieldDoesNotExist('name_translations.en');
+    }
+
+    public function test_edit_window_shows_russian_source_above_translations_and_menu_sits_under_packages(): void
+    {
+        $user = User::factory()->create(['roles' => [Role::SalesDirector]]);
+        $service = Service::create(['name' => 'Ужин', 'unit' => 'шт', 'description' => 'Описание ужина']);
+        $this->actingAs($user);
+
+        Livewire::test(ServiceTranslations::class)
+            ->mountTableAction('edit', $service)
+            ->assertTableActionDataSet(['src_name' => 'Ужин', 'src_desc' => 'Описание ужина']);
+
+        $this->assertSame('Продажи', (new \ReflectionProperty(ServiceTranslations::class, 'navigationGroup'))->getValue());
+        $sort = fn (string $c) => (int) (new \ReflectionProperty($c, 'navigationSort'))->getValue();
+        $this->assertSame($sort(PackageResource::class) + 1, $sort(ServiceTranslations::class));
+        $this->assertGreaterThan($sort(ServiceTranslations::class), $sort(UpcomingArrivals::class));
     }
 }

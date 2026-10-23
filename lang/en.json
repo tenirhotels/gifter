@@ -1470,14 +1470,15 @@
  "№ счёта": "invoice No.",
  "Включено — услугу можно добавлять в новые сертификаты (при утверждённой цене на сегодня). Уже выпущенные сертификаты не изменятся.": "On — the service can be added to new certificates (with a price approved for today). Issued certificates do not change.",
  "Записей пока нет": "No records yet",
- "Кратко опишите услугу и условия её предоставления (по-русски; переводы — в «Каталог → Переводы»).": "Briefly describe the service and its terms (in Russian; translations are in “Catalog → Translations”).",
+ "Кратко опишите услугу и условия её предоставления (по-русски; переводы — в «Продажи → Переводы»).": "Briefly describe the service and its terms (in Russian; translations are in “Sales → Translations”).",
  "Описание (eng)": "Description (eng)",
  "Описание (қаз)": "Description (kaz)",
- "Основное (русское) название. Переводы на казахский и английский — в разделе «Каталог → Переводы».": "Main (Russian) name. Kazakh and English translations are in “Catalog → Translations”.",
+ "Основное (русское) название. Переводы на казахский и английский — в разделе «Продажи → Переводы».": "Main (Russian) name. Kazakh and English translations are in “Sales → Translations”.",
  "Пакеты": "Packages",
  "қаз": "kaz",
  "eng": "eng",
  "Переводы": "Translations",
  "Переводы услуг и пакетов": "Service and package translations",
- "Основное (русское) описание. Переводы — в разделе «Каталог → Переводы».": "Main (Russian) description. Translations are in “Catalog → Translations”."
+ "Основное (русское) описание. Переводы — в разделе «Продажи → Переводы».": "Main (Russian) description. Translations are in “Sales → Translations”.",
+ "Описание (рус)": "Description (rus)"
 }

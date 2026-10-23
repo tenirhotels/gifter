@@ -41,7 +41,7 @@ class UpcomingArrivals extends Page implements HasTable
 
     protected static string|UnitEnum|null $navigationGroup = 'Продажи';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 5;
 
     protected static ?string $navigationLabel = 'Ближайшие заезды';
 

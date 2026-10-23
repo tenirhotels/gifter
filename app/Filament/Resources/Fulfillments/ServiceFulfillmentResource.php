@@ -32,7 +32,7 @@ class ServiceFulfillmentResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Продажи';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 6;
 
     protected static ?string $modelLabel = 'заявка на исполнение';
 

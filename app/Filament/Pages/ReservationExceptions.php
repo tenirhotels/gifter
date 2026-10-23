@@ -36,7 +36,7 @@ class ReservationExceptions extends Page implements HasTable
 
     protected static string|UnitEnum|null $navigationGroup = 'Продажи';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 9;
 
     protected static ?string $navigationLabel = 'Брони по исключению';
 
