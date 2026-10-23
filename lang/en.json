@@ -1504,5 +1504,13 @@
  "Передайте её клиенту любым способом, если письмо не дошло. Ссылка действует до :p1.": "Pass it to the customer any way you like if the email did not arrive. The link is valid until :p1.",
  "Показать ссылку": "Show link",
  "Ссылка": "Link",
- "Ссылка скопирована": "Link copied"
+ "Ссылка скопирована": "Link copied",
+ "В файле нет листа «:p1» со строками данных.": "The file has no sheet “:p1” with data rows.",
+ "Перенос из таблицы": "Import from spreadsheet",
+ "Пос-терминал (архив)": "POS terminal (archive)",
+ "не указан способ оплаты": "payment method not specified",
+ "нет даты начала или окончания срока": "no start or end date",
+ "нет покупателя (ни имени, ни телефона)": "no buyer (neither name nor phone)",
+ "нет суммы платного сертификата (пусто, «#VALUE!» или 0)": "no amount for a paid certificate (empty, “#VALUE!” or 0)",
+ "срок окончания раньше срока начала": "end date is before start date"
 }

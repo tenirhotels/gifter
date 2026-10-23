@@ -39,6 +39,7 @@ enum HistoryEvent: string implements HasLabel
     case Emailed = 'emailed';
     case PaymentLinkSent = 'payment_link_sent';
     case GatewayNote = 'gateway_note';
+    case Imported = 'imported';
 
     public function getLabel(): string
     {
@@ -76,6 +77,7 @@ enum HistoryEvent: string implements HasLabel
             self::Emailed => __('Сертификат отправлен на email'),
             self::PaymentLinkSent => __('Ссылка на оплату отправлена клиенту'),
             self::GatewayNote => __('Событие банка по оплате'),
+            self::Imported => __('Перенос из таблицы'),
         };
     }
 }

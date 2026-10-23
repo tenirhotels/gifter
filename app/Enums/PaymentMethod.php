@@ -16,6 +16,9 @@ enum PaymentMethod: string implements HasLabel
     /** Наличные в кассе. Поступление подтверждают Финансы. */
     case Cash = 'cash';
 
+    /** Только для перенесённых из таблицы платежей (архив); новые платежи этим способом не создаются. */
+    case PosTerminal = 'pos_terminal';
+
     public function getLabel(): string
     {
         return match ($this) {
@@ -24,6 +27,7 @@ enum PaymentMethod: string implements HasLabel
             self::HalykEpay => __('Оплата картой по ссылке'),
             self::BankTransfer => __('Перечисление на р/с'),
             self::Cash => __('Наличные'),
+            self::PosTerminal => __('Пос-терминал (архив)'),
         };
     }
 
@@ -36,7 +40,7 @@ enum PaymentMethod: string implements HasLabel
     /** Способы, которые выбирает сотрудник при выставлении счёта вручную (без оплаты картой по ссылке). */
     public static function manualOptions(): array
     {
-        return collect(self::cases())->reject(fn (self $method) => $method->isGateway())->mapWithKeys(fn (self $method) => [$method->value => $method->getLabel()])->all();
+        return collect(self::cases())->reject(fn (self $method) => $method->isGateway() || $method === self::PosTerminal)->mapWithKeys(fn (self $method) => [$method->value => $method->getLabel()])->all();
     }
 
     /** Поступление по этому способу отмечают только Финансы по выписке. */
