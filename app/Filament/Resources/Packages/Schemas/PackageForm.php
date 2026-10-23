@@ -13,6 +13,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -20,6 +21,12 @@ use Illuminate\Support\Arr;
 
 class PackageForm
 {
+    /** Состояние переключателя — строка или enum (при открытии существующего пакета). */
+    private static function isPeriod(mixed $state): bool
+    {
+        return ($state instanceof PackageValidityType ? $state : PackageValidityType::tryFrom((string) $state)) === PackageValidityType::Period;
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
@@ -34,18 +41,18 @@ class PackageForm
                 Select::make('complimentary_purpose')->label('Цель по умолчанию')->options(ComplimentaryPurpose::class)
                     ->visible(fn (Get $get) => (bool) $get('is_complimentary'))->required(fn (Get $get) => (bool) $get('is_complimentary')),
             ]),
-            Select::make('validity_type')->label('Как задан срок')->options(PackageValidityType::class)->default(PackageValidityType::Term)->required()->live()
-                ->helperText(__('«На срок» — отсчёт от даты продажи; «На конкретный период» — сертификат действует в заданные даты (например, зимние каникулы), после окончания пакет не продаётся.')),
+            ToggleButtons::make('validity_type')->label('Как задан срок')->options(PackageValidityType::class)->default(PackageValidityType::Term->value)->required()->live()->inline()->grouped()
+                ->helperText(__('«Фиксированный срок» — отсчёт от даты продажи (месяцы или дни); «Фиксированный период» — сертификат действует в заданные даты (например, зимние каникулы), после окончания пакет не продаётся.')),
             Grid::make(2)->schema([
-                TextInput::make('validity_value')->label('Срок действия')->integer()->minValue(1)->maxValue(1000)->default(2)->required(),
-                Select::make('validity_unit')->label('Единица')->options(ValidityUnit::class)->default(ValidityUnit::Months)->required(),
-            ])->columnSpan(1)->visible(fn (Get $get) => $get('validity_type') !== PackageValidityType::Period->value),
-            Placeholder::make('validity_hint')->label(' ')->visible(fn (Get $get) => $get('validity_type') !== PackageValidityType::Period->value)
+                TextInput::make('validity_value')->label('Срок действия')->integer()->minValue(1)->maxValue(1000)->default(2)->required(fn (Get $get) => ! self::isPeriod($get('validity_type'))),
+                Select::make('validity_unit')->label('Единица')->options(ValidityUnit::class)->default(ValidityUnit::Months)->required(fn (Get $get) => ! self::isPeriod($get('validity_type'))),
+            ])->columnSpan(1)->visible(fn (Get $get) => self::isPeriod($get('validity_type')) === false),
+            Placeholder::make('validity_hint')->label(' ')->visible(fn (Get $get) => self::isPeriod($get('validity_type')) === false)
                 ->content(__('Считается от даты продажи. Продавец срок не меняет; исключения — менеджер продаж с указанием причины. Новый срок действует только для новых сертификатов.')),
             Grid::make(2)->schema([
-                DatePicker::make('period_from')->label('Период с')->required(),
-                DatePicker::make('period_until')->label('Период по')->required()->afterOrEqual('period_from'),
-            ])->columnSpanFull()->visible(fn (Get $get) => $get('validity_type') === PackageValidityType::Period->value),
+                DatePicker::make('period_from')->label('Период с')->required(fn (Get $get) => self::isPeriod($get('validity_type'))),
+                DatePicker::make('period_until')->label('Период по')->required(fn (Get $get) => self::isPeriod($get('validity_type')))->afterOrEqual('period_from'),
+            ])->columnSpanFull()->visible(fn (Get $get) => self::isPeriod($get('validity_type'))),
             Textarea::make('description')->label('Описание')->columnSpanFull()
                 ->helperText(__('Основное (русское) описание. Переводы — в разделе «Каталог → Переводы».')),
             FileUpload::make('image_path')->label('Фото для сайта')->image()->disk('public')->directory('shop')->visibility('public')

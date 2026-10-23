@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\PackageValidityType;
 use App\Enums\Role;
 use App\Exceptions\DomainRuleViolation;
+use App\Filament\Resources\Packages\Pages\CreatePackage;
+use App\Filament\Resources\Packages\Pages\EditPackage;
 use App\Models\Customer;
 use App\Models\Package;
 use App\Models\Service;
@@ -13,6 +15,7 @@ use App\Services\CertificateManager;
 use App\Services\ServicePricing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 /** Пакет задаёт срок двумя способами: на срок с даты продажи или на конкретный период (зимние каникулы). */
@@ -93,5 +96,27 @@ class PackagePeriodTest extends TestCase
         } finally {
             $this->assertSame(1, Package::count());
         }
+    }
+
+    public function test_package_form_switches_between_fixed_term_and_fixed_period_with_buttons(): void
+    {
+        $service = Service::factory()->create();
+        $form = Livewire::test(CreatePackage::class);
+
+        $form->assertFormFieldExists('validity_type')->assertFormFieldVisible('validity_value')->assertFormFieldHidden('period_from')
+            ->fillForm(['validity_type' => 'period'])
+            ->assertFormFieldVisible('period_from')->assertFormFieldVisible('period_until')->assertFormFieldHidden('validity_value')
+            ->fillForm(['name' => 'Зимние каникулы', 'period_from' => '2026-12-01', 'period_until' => '2027-02-01', 'items' => [['service_id' => $service->id, 'quantity' => 1]]])
+            ->call('create')->assertHasNoFormErrors();
+
+        $package = Package::where('name', 'Зимние каникулы')->firstOrFail();
+        $this->assertSame(PackageValidityType::Period, $package->validity_type);
+        $this->assertSame('2026-12-01', $package->period_from->toDateString());
+
+        Livewire::test(EditPackage::class, ['record' => $package->id])
+            ->assertFormFieldVisible('period_from')->assertFormFieldHidden('validity_value')
+            ->fillForm(['validity_type' => 'term', 'validity_value' => 3, 'validity_unit' => 'months'])->call('save')->assertHasNoFormErrors();
+        $this->assertNull($package->refresh()->period_from);
+        $this->assertSame(3, $package->validity_value);
     }
 }

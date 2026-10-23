@@ -13,8 +13,8 @@ enum PackageValidityType: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Term => __('На срок с даты продажи'),
-            self::Period => __('На конкретный период'),
+            self::Term => __('Фиксированный срок'),
+            self::Period => __('Фиксированный период'),
         };
     }
 }
