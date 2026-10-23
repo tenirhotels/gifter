@@ -253,6 +253,12 @@ parameters:
 			path: app/Filament/Pages/ShopSettings.php
 
 		-
+			message: '#^Offset ''contact_invite''\|''hero_intro''\|''hero_subtitle''\|''hero_title'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Filament/Pages/ShopSettings.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
 			count: 1
@@ -1397,6 +1403,12 @@ parameters:
 			identifier: method.nonObject
 			count: 1
 			path: app/Models/ServiceFulfillment.php
+
+		-
+			message: '#^Offset string on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Models/ShopSetting.php
 
 		-
 			message: '#^Unsafe usage of new static\(\)\.$#'
