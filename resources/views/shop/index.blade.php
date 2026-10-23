@@ -66,7 +66,6 @@
                         </a>
                     @endforeach
                 </div>
-                <p style="margin-top:40px;text-align:center" class="reveal"><a class="btn ghost" href="#cards">{{ __('Посмотреть сертификаты') }}</a></p>
         </div>
     </section>
 

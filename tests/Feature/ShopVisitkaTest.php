@@ -38,7 +38,7 @@ class ShopVisitkaTest extends TestCase
         $this->get('/')->assertOk()
             ->assertSee('Напишите нам — подберём подарок')->assertSee('info@example.test')->assertSee('wa.me/77011234567', false)
             ->assertSee('id="contact"', false)
-            ->assertDontSee('Выбрать сертификат')->assertDontSee('Посмотреть сертификаты')->assertDontSee('id="gifts"', false)->assertDontSee('Оформите покупку');
+            ->assertDontSee('Выбрать сертификат')->assertDontSee('id="gifts"', false)->assertDontSee('Оформите покупку');
         $this->get('/faq')->assertOk()->assertDontSee('#gifts', false);
     }
 
@@ -46,7 +46,7 @@ class ShopVisitkaTest extends TestCase
     {
         $this->onlinePackage();
 
-        $this->get('/')->assertOk()->assertSee('Выбрать сертификат')->assertSee('id="gifts"', false)->assertDontSee('id="contact"', false);
+        $this->get('/')->assertOk()->assertSee('Выбрать сертификат')->assertDontSee('Посмотреть сертификаты')->assertSee('id="gifts"', false)->assertDontSee('id="contact"', false);
     }
 
     public function test_texts_follow_visitor_language_with_russian_fallback(): void

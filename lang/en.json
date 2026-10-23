@@ -780,6 +780,7 @@
  "Партнёры": "Partners",
  "Переводы": "Translations",
  "Переводы сохранены": "Translations saved",
+ "Переводы текстов": "Text translations",
  "Переводы услуг": "Service translations",
  "Переводы услуг и пакетов": "Service and package translations",
  "Перенести": "Reschedule",
@@ -873,7 +874,6 @@
  "Последний день действия раньше даты начала.": "The last day of validity is earlier than the start date.",
  "Последний день действия уже прошёл.": "The last day of validity has passed.",
  "Последняя попытка": "Last attempt",
- "Посмотреть сертификаты": "View certificates",
  "Поставщик": "Provider",
  "Поставщик у услуги не указан.": "The service has no provider.",
  "Поставщики": "Providers",
@@ -1099,6 +1099,7 @@
  "Список услуг: :p1": "Service list: :p1",
  "Способ": "Method",
  "Способ оплаты": "Payment method",
+ "Способы получения": "Delivery methods",
  "Сразу выставить один счёт на всю группу": "Issue one invoice for the whole group right away",
  "Сразу выставить счёт на всю сумму": "Issue an invoice for the full amount right away",
  "Срез": "View",
@@ -1489,7 +1490,5 @@
  "шт": "pcs",
  "қаз": "kaz",
  "•••••••• сохранён — оставьте пустым, чтобы не менять": "•••••••• saved — leave empty to keep it",
- "№ счёта": "invoice No.",
- "Переводы текстов": "Text translations",
- "Способы получения": "Delivery methods"
+ "№ счёта": "invoice No."
 }
