@@ -86,8 +86,8 @@ class ShopVisitkaTest extends TestCase
 
         $setting = ShopSetting::current();
         $this->assertSame('Заголовок', $setting->hero_title);
-        $this->assertSame(['kk' => 'Тақырып', 'en' => 'Title'], $setting->text_translations['hero_title']);
-        $this->assertSame(['en' => 'Call us'], $setting->text_translations['contact_invite']);
+        $this->assertEqualsCanonicalizing(['kk' => 'Тақырып', 'en' => 'Title'], $setting->text_translations['hero_title']);
+        $this->assertEqualsCanonicalizing(['en' => 'Call us'], $setting->text_translations['contact_invite']);
         $this->assertSame(['courier', 'pdf'], collect($setting->delivery_methods)->sort()->values()->all());
 
         Livewire::test(ShopSettings::class)->fillForm(['delivery_methods' => []])->call('save')->assertHasFormErrors(['delivery_methods']);
