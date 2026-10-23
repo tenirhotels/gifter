@@ -217,7 +217,19 @@ parameters:
 			path: app/Filament/Pages/SellerCommissions.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Service\:\:\$name_translations\.$#'
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 5
+			path: app/Filament/Pages/ServiceTranslations.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description_translations\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/ServiceTranslations.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name_translations\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Filament/Pages/ServiceTranslations.php
@@ -937,6 +949,12 @@ parameters:
 			path: app/Filament/Resources/Payments/PaymentResource.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/Services/Pages/EditService.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pmsService\.$#'
 			identifier: property.notFound
 			count: 1
@@ -949,12 +967,6 @@ parameters:
 			path: app/Filament/Resources/Services/RelationManagers/PricesRelationManager.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$allowed_in_certificate\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Filament/Resources/Services/Schemas/ServiceForm.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$external_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -963,12 +975,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Filament/Resources/Services/Schemas/ServiceForm.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isMissing\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: app/Filament/Resources/Services/Schemas/ServiceForm.php
 
@@ -1303,6 +1309,30 @@ parameters:
 			path: app/Models/Package.php
 
 		-
+			message: '#^Parameter \#1 \$translations of static method App\\Support\\LocalizedName\:\:clean\(\) expects array\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Models/Package.php
+
+		-
+			message: '#^Parameter \#1 \$translations of static method App\\Support\\LocalizedName\:\:pick\(\) expects array\<string, mixed\>\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Models/Package.php
+
+		-
+			message: '#^Property App\\Models\\Package\:\:\$description_translations \(string\|null\) does not accept array\|null\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Models/Package.php
+
+		-
+			message: '#^Property App\\Models\\Package\:\:\$name_translations \(string\|null\) does not accept array\|null\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Models/Package.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\PmsService\:\:\$names\.$#'
 			identifier: property.notFound
 			count: 1
@@ -1331,6 +1361,12 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Models/Provider.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Service\:\:\$description_translations\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Models/Service.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Service\:\:\$name_translations\.$#'
