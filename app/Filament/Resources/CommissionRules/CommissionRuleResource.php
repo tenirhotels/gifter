@@ -34,9 +34,9 @@ class CommissionRuleResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptPercent;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Администрирование';
+    protected static string|UnitEnum|null $navigationGroup = 'Продажи';
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $navigationLabel = 'Комиссии за продажи';
 

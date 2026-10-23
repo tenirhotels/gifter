@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Enums\Role;
 use App\Filament\Pages\Commissions;
 use App\Filament\Pages\ServiceTranslations;
+use App\Filament\Resources\CommissionRules\CommissionRuleResource;
 use App\Filament\Resources\Packages\PackageResource;
+use App\Filament\Resources\Refunds\RefundResource;
 use App\Filament\Resources\Services\Pages\EditService;
 use App\Models\CertificateItem;
 use App\Models\Package;
@@ -201,7 +203,7 @@ class ServiceNamesTest extends TestCase
             ->assertFormFieldDoesNotExist('name_translations.kk')->assertFormFieldDoesNotExist('name_translations.en');
     }
 
-    public function test_edit_window_shows_russian_source_above_translations_and_commissions_sit_under_packages(): void
+    public function test_edit_window_shows_russian_source_above_translations_and_menu_order_is_as_owner_wants(): void
     {
         $user = User::factory()->create(['roles' => [Role::SalesDirector]]);
         $service = Service::create(['name' => 'Ужин', 'unit' => 'шт', 'description' => 'Описание ужина']);
@@ -214,7 +216,9 @@ class ServiceNamesTest extends TestCase
         $group = fn (string $c) => (new \ReflectionProperty($c, 'navigationGroup'))->getValue();
         $sort = fn (string $c) => (int) (new \ReflectionProperty($c, 'navigationSort'))->getValue();
         $this->assertSame('Каталог', $group(ServiceTranslations::class));
-        $this->assertSame('Продажи', $group(Commissions::class));
-        $this->assertSame($sort(PackageResource::class) + 1, $sort(Commissions::class), 'Комиссии — сразу под пакетами');
+        $this->assertSame('Деньги', $group(Commissions::class));
+        $this->assertSame('Продажи', $group(CommissionRuleResource::class));
+        $this->assertSame($sort(RefundResource::class) + 1, $sort(Commissions::class), 'Комиссии — сразу под возвратами');
+        $this->assertSame($sort(PackageResource::class) + 1, $sort(CommissionRuleResource::class), 'Комиссии за продажи — сразу под пакетами');
     }
 }

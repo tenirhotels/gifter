@@ -37,7 +37,7 @@ class ReservationReviews extends Page implements HasTable
 
     protected static string|UnitEnum|null $navigationGroup = 'Деньги';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $navigationLabel = 'Проверка броней';
 
