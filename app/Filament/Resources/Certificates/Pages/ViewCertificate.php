@@ -189,6 +189,16 @@ class ViewCertificate extends ViewRecord
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                     fn () => app(EpayPayments::class)->resend($record->pendingPayment(), $data['email'] ?? null, $data['lang']), __('Ссылка отправлена клиенту ещё раз'))),
 
+            // Ссылку можно передать клиенту самому (мессенджер, звонок), если письмо не дошло.
+            Action::make('epayShowLink')->label('Показать ссылку')->icon('heroicon-o-link')->color('gray')
+                ->authorize(Permission::ManagePayments)
+                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment()?->method->isGateway() && filled($record->pendingPayment()?->pay_url))
+                ->modalHeading(__('Ссылка на оплату картой'))
+                ->modalDescription(fn (Certificate $record) => __('Передайте её клиенту любым способом, если письмо не дошло. Ссылка действует до :p1.', ['p1' => $record->pendingPayment()?->pay_expires_at?->format('d.m.Y H:i') ?? '—']))
+                ->fillForm(fn (Certificate $record) => ['pay_url' => $record->pendingPayment()?->pay_url])
+                ->schema([TextInput::make('pay_url')->label('Ссылка')->readOnly()->copyable(copyMessage: __('Ссылка скопирована'))->dehydrated(false)])
+                ->modalSubmitAction(false)->modalCancelActionLabel(__('Закрыть')),
+
             Action::make('epayCheck')->label('Проверить оплату в банке')->icon('heroicon-o-arrow-path')->color('gray')
                 ->authorize(Permission::ManagePayments)
                 ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment()?->method->isGateway())

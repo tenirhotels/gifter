@@ -322,13 +322,16 @@ class EpayPaymentTest extends TestCase
         $certificate = $this->draft();
 
         Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
-            ->assertActionVisible('epayLink')->assertActionHidden('epayResend')
+            ->assertActionVisible('epayLink')->assertActionHidden('epayResend')->assertActionHidden('epayShowLink')
             ->callAction('epayLink', ['email' => '', 'lang' => 'ru'])->assertHasNoActionErrors();
         $payment = Payment::firstOrFail();
         Mail::assertQueuedCount(1);
 
         $component = Livewire::test(ViewCertificate::class, ['record' => $certificate->id])
-            ->assertActionHidden('epayLink')->assertActionHidden('markPaid')->assertActionVisible('epayResend')->assertActionVisible('epayCheck');
+            ->assertActionHidden('epayLink')->assertActionHidden('markPaid')->assertActionVisible('epayResend')->assertActionVisible('epayCheck')->assertActionVisible('epayShowLink')
+            ->mountAction('epayShowLink')->assertActionDataSet(['pay_url' => $payment->refresh()->pay_url])
+            ->unmountAction();
+        $this->assertStringStartsWith('https://', (string) $payment->pay_url);
         $component->callAction('epayResend', ['email' => 'other@example.com', 'lang' => 'en']);
         Mail::assertQueuedCount(2);
 

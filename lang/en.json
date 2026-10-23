@@ -1500,5 +1500,9 @@
  "«Фиксированный срок» — отсчёт от даты продажи (месяцы или дни); «Фиксированный период» — сертификат действует в заданные даты (например, зимние каникулы), после окончания пакет не продаётся.": "“Fixed term” counts from the sale date (months or days); “Fixed period” makes the certificate valid on set dates (e.g. winter holidays); after it ends the package is no longer sold.",
  "Фиксированный период": "Fixed period",
  "Фиксированный срок": "Fixed term",
- "Сертификат создан, но ссылка на оплату не отправлена": "Certificate created, but the payment link was not sent"
+ "Сертификат создан, но ссылка на оплату не отправлена": "Certificate created, but the payment link was not sent",
+ "Передайте её клиенту любым способом, если письмо не дошло. Ссылка действует до :p1.": "Pass it to the customer any way you like if the email did not arrive. The link is valid until :p1.",
+ "Показать ссылку": "Show link",
+ "Ссылка": "Link",
+ "Ссылка скопирована": "Link copied"
 }
