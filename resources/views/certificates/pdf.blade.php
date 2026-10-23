@@ -56,7 +56,7 @@
         <div class="message">«{{ $certificate->gift_message }}»</div>
     @endif
 
-    <div class="package">{{ $certificate->package?->name }}</div>
+    <div class="package">{{ $certificate->package?->localizedName() }}</div>
     <table class="items{{ $certificate->items->count() > 5 ? ' compact' : '' }}">
         @foreach ($certificate->items as $item)
             <tr><td>{{ $item->localizedName() }}</td><td class="q">{{ $item->quantity }} {{ $item->unit_snapshot }}</td></tr>

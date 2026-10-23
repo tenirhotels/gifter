@@ -25,6 +25,14 @@ class LocalizedName
         return $base;
     }
 
+    /** Убирает пустые переводы; пусто совсем — null. @param  array<string, mixed>|null  $translations @return array<string, string>|null */
+    public static function clean(?array $translations): ?array
+    {
+        $clean = array_filter(array_map(fn ($v) => trim($v), array_filter((array) $translations, 'is_string')), fn ($v) => $v !== '');
+
+        return $clean ?: null;
+    }
+
     /**
      * Переводы из ответов PMS по языкам: оставляем непустые; если на всех языках одно и то же, переводов нет.
      *

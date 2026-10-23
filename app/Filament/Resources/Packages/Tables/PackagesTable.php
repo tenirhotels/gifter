@@ -14,7 +14,7 @@ class PackagesTable
     {
         return $table
             ->columns([
-                TextColumn::make('name')->label('Название пакета')->searchable()->sortable(),
+                TextColumn::make('name')->label('Название пакета')->searchable()->sortable()->state(fn ($record) => $record->localizedName()),
                 TextColumn::make('kind')->label('Тип')->badge()
                     ->state(fn (Package $record) => $record->is_complimentary ? __('Бесплатный') : __('Продажа'))
                     ->description(fn (Package $record) => $record->is_complimentary ? $record->complimentary_purpose?->getLabel() : null)

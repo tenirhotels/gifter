@@ -21,7 +21,8 @@ class PackageForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('name')->label('Название пакета')->required()->maxLength(255),
+            TextInput::make('name')->label('Название пакета')->required()->maxLength(255)
+                ->helperText(__('Основное (русское) название. Переводы на казахский и английский — в разделе «Каталог → Переводы».')),
             Toggle::make('is_active')->label('Активен')->default(true),
             Toggle::make('sold_online')->label('Продаётся онлайн')->visible(fn (Get $get) => ! $get('is_complimentary'))
                 ->helperText(__('Показывается на публичной странице: клиент оставляет заявку.')),
@@ -37,7 +38,8 @@ class PackageForm
             ])->columnSpan(1),
             Placeholder::make('validity_hint')->label(' ')
                 ->content(__('Считается от даты продажи. Продавец срок не меняет; исключения — менеджер продаж с указанием причины. Новый срок действует только для новых сертификатов.')),
-            Textarea::make('description')->label('Описание')->columnSpanFull(),
+            Textarea::make('description')->label('Описание')->columnSpanFull()
+                ->helperText(__('Основное (русское) описание. Переводы — в разделе «Каталог → Переводы».')),
             FileUpload::make('image_path')->label('Фото для сайта')->image()->disk('public')->directory('shop')->visibility('public')
                 ->maxSize(4096)->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])->columnSpanFull()
                 ->helperText(__('Показывается на публичной странице; лучше горизонтальное, до 4 МБ.'))

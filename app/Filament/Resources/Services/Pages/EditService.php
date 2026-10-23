@@ -22,21 +22,22 @@ class EditService extends EditRecord
         ];
     }
 
-    /** Тумблер «Можно включать в сертификат» (у услуги из PMS) — через сервис синхронизации, вместе с признаком «Активна». */
+    /** Тумблер «Можно включать в сертификат» (= «Активна») у услуги из PMS синхронизируется с её флагом в списке PMS. */
     protected function afterSave(): void
     {
-        $pms = $this->getRecord()->pmsService;
-        $state = $this->form->getRawState();
-        if (! $pms || ! auth()->user()?->can(Permission::ManageCatalog) || ! array_key_exists('pms_allowed', $state)) {
+        $service = $this->getRecord();
+        $pms = $service->pmsService;
+        if (! $pms || ! auth()->user()?->can(Permission::ManageCatalog)) {
             return;
         }
-        $wanted = (bool) $state['pms_allowed'] && (bool) ($state['is_active'] ?? true);
+        $wanted = (bool) $service->is_active;
         if ($wanted === $pms->allowed_in_certificate) {
             return;
         }
         try {
             app(PmsCatalogSync::class)->setAllowed($pms, $wanted);
         } catch (DomainRuleViolation $e) {
+            $service->update(['is_active' => false]);
             Notification::make()->danger()->title($e->getMessage())->send();
         }
     }

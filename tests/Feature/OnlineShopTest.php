@@ -59,6 +59,17 @@ class OnlineShopTest extends TestCase
             'recipient_name' => 'Петрова Анна', 'gift_message' => 'С днём рождения!', 'delivery_method' => 'pickup', 'notes' => 'К 8 марта', 'consent' => '1'], $override);
     }
 
+    public function test_shop_shows_package_and_service_names_in_visitor_language(): void
+    {
+        $this->online->update(['name_translations' => ['kk' => 'Романтикалық кеш', 'en' => 'Romantic evening'], 'description_translations' => ['en' => 'Description en']]);
+        Service::where('name', 'Ужин на двоих')->first()->update(['name_translations' => ['kk' => 'Екі адамға кешкі ас', 'en' => 'Dinner for two']]);
+
+        $this->get('/?lang=kk')->assertOk()->assertSee('Романтикалық кеш');
+        $this->get('/order/'.$this->online->id.'?lang=kk')->assertOk()->assertSee('Екі адамға кешкі ас')->assertSee('Описание Романтический вечер');
+        $this->get('/order/'.$this->online->id.'?lang=en')->assertOk()->assertSee('Romantic evening')->assertSee('Dinner for two')->assertSee('Description en');
+        $this->get('/order/'.$this->online->id.'?lang=ru')->assertOk()->assertSee('Романтический вечер')->assertSee('Ужин на двоих');
+    }
+
     public function test_root_is_public_shop_and_shows_only_paid_online_packages_with_price(): void
     {
         $service = Service::factory()->create(['name' => 'Без цены']);

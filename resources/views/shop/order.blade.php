@@ -1,13 +1,13 @@
 @extends('shop.layout')
-@section('title', $offer['package']->name.' — '.config('gifter.certificate.hotel_name'))
-@section('description', \Illuminate\Support\Str::limit(strip_tags($offer['package']->description ?: __('Подарочный сертификат: :p1.', ['p1' => collect($offer['lines'])->pluck('name')->implode(', ')])), 200))
+@section('title', $offer['package']->localizedName().' — '.config('gifter.certificate.hotel_name'))
+@section('description', \Illuminate\Support\Str::limit(strip_tags($offer['package']->localizedDescription() ?: __('Подарочный сертификат: :p1.', ['p1' => collect($offer['lines'])->pluck('name')->implode(', ')])), 200))
 @section('image', $offer['package']->imageUrl() ?? '')
-@section('wa_text', __('Здравствуйте! Хочу заказать сертификат «:p1».', ['p1' => $offer['package']->name]))
+@section('wa_text', __('Здравствуйте! Хочу заказать сертификат «:p1».', ['p1' => $offer['package']->localizedName()]))
 @section('jsonld')
 {!! json_encode(array_filter([
     '@context' => 'https://schema.org', '@type' => 'Product',
-    'name' => $offer['package']->name,
-    'description' => strip_tags((string) $offer['package']->description) ?: null,
+    'name' => $offer['package']->localizedName(),
+    'description' => strip_tags((string) $offer['package']->localizedDescription()) ?: null,
     'image' => $offer['package']->imageUrl(),
     'brand' => ['@type' => 'Brand', 'name' => config('gifter.certificate.hotel_name')],
     'offers' => ['@type' => 'Offer', 'priceCurrency' => config('gifter.currency'), 'price' => (string) $offer['price'],
@@ -18,14 +18,14 @@
 <div class="wrap">
     <div class="product">
         <div class="sticky reveal">
-            <div class="photo">@if ($offer['package']->imageUrl())<img src="{{ $offer['package']->imageUrl() }}" alt="{{ $offer['package']->name }}">@endif</div>
-            @include('shop._certificate', ['name' => $offer['package']->name])
+            <div class="photo">@if ($offer['package']->imageUrl())<img src="{{ $offer['package']->imageUrl() }}" alt="{{ $offer['package']->localizedName() }}">@endif</div>
+            @include('shop._certificate', ['name' => $offer['package']->localizedName()])
         </div>
 
         <div class="reveal">
             <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'gifts') }}" class="muted" style="text-decoration:none">← {{ __('Все сертификаты') }}</a>
-            <h1 style="font-size:clamp(2.2rem,4.6vw,3.4rem);margin:14px 0 10px">{{ $offer['package']->name }}</h1>
-            @if ($offer['package']->description)<p class="muted">{{ $offer['package']->description }}</p>@endif
+            <h1 style="font-size:clamp(2.2rem,4.6vw,3.4rem);margin:14px 0 10px">{{ $offer['package']->localizedName() }}</h1>
+            @if ($offer['package']->localizedDescription())<p class="muted">{{ $offer['package']->localizedDescription() }}</p>@endif
             <ul class="includes" style="margin:20px 0">
                 @foreach ($offer['lines'] as $line)<li>{{ $line['name'] }} × {{ $line['quantity'] }}</li>@endforeach
             </ul>

@@ -169,7 +169,7 @@ class PublicShopController extends Controller
             return null;
         }
         // Расчёт цены — несколько запросов на пакет: на минуту кешируем, цена всё равно пересчитывается при оформлении.
-        $quote = Cache::remember('shop.quote.'.$package->id.'.'.today()->toDateString().'.'.$package->updated_at?->timestamp, 60, fn () => $this->certificates->quote($package, [], today()));
+        $quote = Cache::remember('shop.quote.'.app()->getLocale().'.'.$package->id.'.'.today()->toDateString().'.'.$package->updated_at?->timestamp, 60, fn () => $this->certificates->quote($package, [], today()));
         if ($quote['missing'] !== [] || $quote['lines'] === [] || (float) $quote['total'] <= 0) {
             return null;
         }
@@ -189,7 +189,7 @@ class PublicShopController extends Controller
                 Mail::to($to)->send(new OnlineOrderMail($order->id, $package->name));
             }
             if (filled($order->email) && RateLimiter::attempt('shop-mail:'.sha1(Str::lower($order->email)), 1, fn () => true, 3600)) {
-                Mail::to($order->email)->send(new OnlineOrderReceivedMail($package->name, $order->locale));
+                Mail::to($order->email)->send(new OnlineOrderReceivedMail($package->localizedName($order->locale), $order->locale));
             }
         } catch (\Throwable $e) {
             Log::warning('Онлайн-заявка: письмо не отправлено', ['order' => $order->id, 'error' => $e::class]);

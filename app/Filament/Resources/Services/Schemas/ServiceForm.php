@@ -38,8 +38,6 @@ class ServiceForm
                         $pms = $state ? PmsService::where('external_id', $state)->first() : null;
                         if ($pms) {
                             $set('name', $pms->name);
-                            $set('name_translations.kk', $pms->names['kk'] ?? null);
-                            $set('name_translations.en', $pms->names['en'] ?? null);
                             $set('unit', 'шт');
                         }
                     })
@@ -49,19 +47,10 @@ class ServiceForm
                 ->visible(fn (string $operation, ?Service $record) => $operation === 'edit' && $record?->pmsService !== null)->schema([
                     Placeholder::make('pms_name')->label('Название в PMS')->content(fn (?Service $record) => $record?->pmsService?->name),
                     Placeholder::make('pms_id')->label('ID в PMS')->content(fn (?Service $record) => $record?->pmsService?->external_id),
-                    Toggle::make('pms_allowed')->label('Можно включать в сертификат')->dehydrated(false)
-                        ->formatStateUsing(fn (?Service $record) => (bool) $record?->pmsService?->allowed_in_certificate)
-                        ->disabled(fn (?Service $record) => ! $record || ! app(ServicePricing::class)->hasApprovedPrice($record) || $record->pmsService?->isMissing())
-                        ->helperText(fn (?Service $record) => $record && app(ServicePricing::class)->hasApprovedPrice($record)
-                            ? __('Включено — услуга предлагается при составлении сертификата.') : __('Включить можно после того, как цена на сегодня утверждена администратором.')),
                 ]),
             Section::make('Услуга')->columns(2)->columnSpanFull()->schema([
-                TextInput::make('name')->label('Название (рус)')->required()->maxLength(255)
-                    ->helperText(__('Название услуги, которое увидят сотрудники и гости в Gifter.')),
-                TextInput::make('name_translations.kk')->label('Название (қаз)')->maxLength(255)
-                    ->helperText(__('Показывается, когда интерфейс или письмо на казахском. Если пусто — берётся русское.')),
-                TextInput::make('name_translations.en')->label('Название (eng)')->maxLength(255)
-                    ->helperText(__('Показывается, когда интерфейс или письмо на английском. Если пусто — берётся русское.')),
+                TextInput::make('name')->label('Название')->required()->maxLength(255)
+                    ->helperText(__('Основное (русское) название. Переводы на казахский и английский — в разделе «Каталог → Переводы».')),
                 TextInput::make('unit')->label('Единица измерения')->placeholder(__('ночь, персона, сеанс, билет'))->required()->maxLength(50)
                     ->helperText(__('В чём учитывается услуга: шт., ночь, человек, час и т. д.')),
                 Select::make('category_id')->label('Категория')->relationship('category', 'name', fn ($query) => $query->where('is_active', true)->orderBy('position'))
@@ -71,9 +60,9 @@ class ServiceForm
                     ->searchable()->preload()->required()->createOptionForm(ProviderForm::fields())
                     ->helperText(__('Кто оказывает услугу: отель, ресторан, отдел или сторонняя компания.')),
                 Textarea::make('description')->label('Описание')->columnSpanFull()
-                    ->helperText(__('Кратко опишите услугу и условия её предоставления.')),
-                Toggle::make('is_active')->label('Активна')->default(true)
-                    ->helperText(__('Если выключить, услугу нельзя будет добавить в новые сертификаты. Уже выпущенные сертификаты не изменятся.')),
+                    ->helperText(__('Кратко опишите услугу и условия её предоставления (по-русски; переводы — в «Каталог → Переводы»).')),
+                Toggle::make('is_active')->label('Можно включать в сертификат')->default(true)
+                    ->helperText(__('Включено — услугу можно добавлять в новые сертификаты (при утверждённой цене на сегодня). Уже выпущенные сертификаты не изменятся.')),
             ]),
             Section::make('Цена')->columns(3)->columnSpanFull()->visible(fn (string $operation) => $operation === 'create')
                 ->description(fn () => app(ServicePricing::class)->needsApproval() ? __('Цену, введённую директором, подтверждает администратор: до подтверждения услуга не продаётся.') : null)

@@ -44,13 +44,13 @@ class ServicesTable
                 IconColumn::make('requires_scheduling')->label('Запись')->boolean()->toggleable(),
                 IconColumn::make('requires_confirmation')->label('Подтверждение')->boolean()->toggleable(),
                 IconColumn::make('from_pms')->label('Из PMS')->boolean()->state(fn (Service $record) => $record->pmsService !== null)->toggleable(),
-                IconColumn::make('is_active')->label('Активна')->boolean(),
+                IconColumn::make('is_active')->label('В сертификат')->boolean(),
             ])
             ->filters([
                 SelectFilter::make('category_id')->label('Категория')->relationship('category', 'name'),
                 SelectFilter::make('provider_id')->label('Поставщик')->relationship('provider', 'name'),
                 TernaryFilter::make('requires_fulfillment')->label('Предварительная подготовка'),
-                TernaryFilter::make('is_active')->label('Активна'),
+                TernaryFilter::make('is_active')->label('В сертификат'),
                 Filter::make('incomplete')->label('Не заполнены данные услуги')
                     ->query(fn (Builder $query) => $query->where(fn (Builder $q) => $q->whereNull('category_id')->orWhereNull('provider_id')
                         ->orWhereDoesntHave('prices', fn (Builder $p) => $p->effectiveOn(today())))),

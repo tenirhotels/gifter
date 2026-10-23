@@ -42,11 +42,11 @@
                     @foreach ($offers as $offer)
                         <a class="card reveal" href="{{ $route('shop.order', $offer['package']) }}">
                             <div class="ph">
-                                @if ($offer['package']->imageUrl())<img src="{{ $offer['package']->imageUrl() }}" alt="{{ $offer['package']->name }}" loading="lazy">@else<div class="mono">@include('shop._svg', ['name' => 'tenir-symbol'])</div>@endif
+                                @if ($offer['package']->imageUrl())<img src="{{ $offer['package']->imageUrl() }}" alt="{{ $offer['package']->localizedName() }}" loading="lazy">@else<div class="mono">@include('shop._svg', ['name' => 'tenir-symbol'])</div>@endif
                             </div>
                             <div class="body">
-                                <h3>{{ $offer['package']->name }}</h3>
-                                @if ($offer['package']->description)<p class="desc">{{ \Illuminate\Support\Str::limit($offer['package']->description, 120) }}</p>@endif
+                                <h3>{{ $offer['package']->localizedName() }}</h3>
+                                @if ($offer['package']->localizedDescription())<p class="desc">{{ \Illuminate\Support\Str::limit($offer['package']->localizedDescription(), 120) }}</p>@endif
                                 <div class="row"><span class="price">{{ \App\Support\Money::format($offer['price']) }}</span><span class="more">{{ __('Подробнее') }} →</span></div>
                             </div>
                         </a>

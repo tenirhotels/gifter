@@ -11,7 +11,6 @@ use App\Models\Provider;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
-use App\Services\ServicePricing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -91,25 +90,39 @@ class ServiceUnifiedCreateTest extends TestCase
         $this->assertSame(1, Service::count(), 'Дубль не создан');
     }
 
-    public function test_toggle_on_edit_needs_an_approved_price(): void
+    public function test_one_toggle_works_for_pms_and_manual_services(): void
     {
-        config(['gifter.require_price_approval' => true]);
         $this->actingAs(User::factory()->create(['roles' => [Role::SalesDirector]]));
         $pms = $this->pms();
-        $service = Service::factory()->create(['name' => 'Канатная дорога'] + $this->base());
+        $service = Service::factory()->create(['name' => 'Канатная дорога', 'is_active' => false] + $this->base());
         $pms->update(['service_id' => $service->id]);
 
         Livewire::test(EditService::class, ['record' => $service->id])
-            ->assertFormFieldDisabled('pms_allowed')->assertSee('ID в PMS');
-
-        app(ServicePricing::class)->addPrice($service, '8000', today()->subDay());
-        $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
-        app(ServicePricing::class)->approve($service->prices()->sole()->refresh());
-        $this->actingAs(User::factory()->create(['roles' => [Role::SalesDirector]]));
-
-        Livewire::test(EditService::class, ['record' => $service->id])
-            ->assertFormFieldEnabled('pms_allowed')
-            ->fillForm(['pms_allowed' => true])->call('save')->assertHasNoFormErrors();
+            ->assertSee('ID в PMS')->assertFormFieldExists('is_active')->assertFormFieldDoesNotExist('pms_allowed')
+            ->fillForm(['is_active' => true])->call('save')->assertHasNoFormErrors();
         $this->assertTrue($pms->refresh()->allowed_in_certificate);
+        $this->assertTrue($service->refresh()->is_active);
+
+        Livewire::test(EditService::class, ['record' => $service->id])->fillForm(['is_active' => false])->call('save');
+        $this->assertFalse($pms->refresh()->allowed_in_certificate);
+        $this->assertFalse($service->refresh()->is_active);
+
+        $manual = Service::factory()->create(['name' => 'Спа', 'is_active' => false] + $this->base());
+        Livewire::test(EditService::class, ['record' => $manual->id])->assertFormFieldExists('is_active')
+            ->fillForm(['is_active' => true])->call('save')->assertHasNoFormErrors();
+        $this->assertTrue($manual->refresh()->is_active);
+    }
+
+    public function test_service_missing_in_pms_cannot_be_enabled(): void
+    {
+        $this->actingAs(User::factory()->create(['roles' => [Role::SalesDirector]]));
+        $pms = $this->pms();
+        $service = Service::factory()->create(['name' => 'Канатная дорога', 'is_active' => false] + $this->base());
+        $pms->update(['service_id' => $service->id, 'missing_since' => now()]);
+
+        Livewire::test(EditService::class, ['record' => $service->id])->fillForm(['is_active' => true])->call('save');
+
+        $this->assertFalse($service->refresh()->is_active);
+        $this->assertFalse($pms->refresh()->allowed_in_certificate);
     }
 }

@@ -27,7 +27,7 @@ class Service extends Model
     ];
 
     protected $fillable = [
-        'name', 'name_translations', 'description', 'category_id', 'provider_id', 'unit', 'is_active',
+        'name', 'name_translations', 'description', 'description_translations', 'category_id', 'provider_id', 'unit', 'is_active',
         'requires_fulfillment', 'requires_scheduling', 'requires_confirmation',
     ];
 
@@ -35,6 +35,7 @@ class Service extends Model
     {
         return [
             'name_translations' => 'array',
+            'description_translations' => 'array',
             'is_active' => 'boolean',
             'requires_fulfillment' => 'boolean',
             'requires_scheduling' => 'boolean',
@@ -46,7 +47,8 @@ class Service extends Model
     {
         // Время и подтверждение имеют смысл только для услуги, которую нужно готовить.
         static::saving(function (self $service) {
-            $service->name_translations = array_filter(array_map('trim', array_filter((array) $service->name_translations, 'is_string'))) ?: null;
+            $service->name_translations = LocalizedName::clean($service->name_translations);
+            $service->description_translations = LocalizedName::clean($service->description_translations);
             if ($service->requires_scheduling || $service->requires_confirmation) {
                 $service->requires_fulfillment = true;
             }
@@ -56,6 +58,11 @@ class Service extends Model
     public function localizedName(?string $lang = null): string
     {
         return LocalizedName::pick($this->name_translations, $this->name, $lang);
+    }
+
+    public function localizedDescription(?string $lang = null): string
+    {
+        return LocalizedName::pick($this->description_translations, (string) $this->description, $lang);
     }
 
     public function category(): BelongsTo

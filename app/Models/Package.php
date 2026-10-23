@@ -6,6 +6,7 @@ use App\Enums\ComplimentaryPurpose;
 use App\Enums\ValidityUnit;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\PreventsDeletion;
+use App\Support\LocalizedName;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -24,11 +25,13 @@ class Package extends Model
 
     protected $attributes = ['is_active' => true, 'validity_value' => 2, 'validity_unit' => 'months', 'is_complimentary' => false];
 
-    protected $fillable = ['name', 'description', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active', 'sold_online', 'image_path'];
+    protected $fillable = ['name', 'name_translations', 'description', 'description_translations', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active', 'sold_online', 'image_path'];
 
     protected function casts(): array
     {
         return [
+            'name_translations' => 'array',
+            'description_translations' => 'array',
             'is_active' => 'boolean',
             'sold_online' => 'boolean',
             'validity_value' => 'integer',
@@ -36,6 +39,24 @@ class Package extends Model
             'is_complimentary' => 'boolean',
             'complimentary_purpose' => ComplimentaryPurpose::class,
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $package) {
+            $package->name_translations = LocalizedName::clean($package->name_translations);
+            $package->description_translations = LocalizedName::clean($package->description_translations);
+        });
+    }
+
+    public function localizedName(?string $lang = null): string
+    {
+        return LocalizedName::pick($this->name_translations, (string) $this->name, $lang);
+    }
+
+    public function localizedDescription(?string $lang = null): string
+    {
+        return LocalizedName::pick($this->description_translations, (string) $this->description, $lang);
     }
 
     /** Срок действия сертификата этого пакета, считая с даты продажи. */

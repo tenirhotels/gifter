@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\Role;
 use App\Filament\Pages\ServiceTranslations;
+use App\Filament\Resources\Services\Pages\EditService;
 use App\Models\CertificateItem;
+use App\Models\Package;
 use App\Models\PmsService;
 use App\Models\PmsSetting;
 use App\Models\Service;
@@ -155,14 +157,44 @@ class ServiceNamesTest extends TestCase
     public function test_translations_page_shows_status_and_saves(): void
     {
         $user = User::factory()->create(['roles' => [Role::SalesDirector]]);
-        $service = Service::create(['name' => 'Ужин', 'unit' => 'шт']);
+        $service = Service::create(['name' => 'Ужин', 'unit' => 'шт', 'description' => 'Описание']);
         $this->actingAs($user);
 
         Livewire::test(ServiceTranslations::class)
             ->assertCanSeeTableRecords([$service])
             ->assertSee('Нет перевода')
-            ->callTableAction('edit', $service, ['kk' => 'Кешкі ас', 'en' => 'Dinner']);
+            ->callTableAction('edit', $service, ['name_kk' => 'Кешкі ас', 'name_en' => 'Dinner', 'desc_kk' => 'Сипаттама', 'desc_en' => 'Description']);
 
         $this->assertEqualsCanonicalizing(['kk' => 'Кешкі ас', 'en' => 'Dinner'], $service->refresh()->name_translations);
+        $this->assertSame('Сипаттама', $service->localizedDescription('kk'));
+        $this->assertSame('Описание', $service->localizedDescription('ru'));
+    }
+
+    public function test_packages_tab_saves_translations_and_shop_uses_them(): void
+    {
+        $user = User::factory()->create(['roles' => [Role::SalesDirector]]);
+        $package = Package::create(['name' => 'Зимние каникулы', 'description' => 'Две ночи', 'validity_value' => 3, 'validity_unit' => 'months']);
+        $this->actingAs($user);
+
+        Livewire::test(ServiceTranslations::class)
+            ->call('switchKind', 'packages')
+            ->assertCanSeeTableRecords([$package])
+            ->callTableAction('edit', $package, ['name_kk' => 'Қысқы демалыс', 'name_en' => 'Winter holidays', 'desc_kk' => 'Екі түн', 'desc_en' => 'Two nights']);
+
+        $package->refresh();
+        $this->assertSame('Winter holidays', $package->localizedName('en'));
+        $this->assertSame('Екі түн', $package->localizedDescription('kk'));
+        $this->assertSame('Зимние каникулы', $package->localizedName('ru'));
+        $this->assertSame('Зимние каникулы', (new Package(['name' => 'Зимние каникулы']))->localizedName('en'), 'Без перевода — русское');
+    }
+
+    public function test_service_and_package_cards_have_no_translation_fields(): void
+    {
+        $user = User::factory()->create(['roles' => [Role::SalesDirector]]);
+        $service = Service::create(['name' => 'Ужин', 'unit' => 'шт']);
+        $this->actingAs($user);
+
+        Livewire::test(EditService::class, ['record' => $service->id])
+            ->assertFormFieldDoesNotExist('name_translations.kk')->assertFormFieldDoesNotExist('name_translations.en');
     }
 }
