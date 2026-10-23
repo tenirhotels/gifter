@@ -49,6 +49,18 @@ parameters:
 			path: app/Filament/Pages/MyCommission.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\PmsService\:\:\$names\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/PmsServices.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:localizedName\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Pages/PmsServices.php
+
+		-
 			message: '#^Access to an undefined property App\\Filament\\Pages\\PmsSettings\:\:\$form\.$#'
 			identifier: property.notFound
 			count: 3
@@ -203,6 +215,18 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Filament/Pages/SellerCommissions.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Service\:\:\$name_translations\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Pages/ServiceTranslations.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$names\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Pages/ServiceTranslations.php
 
 		-
 			message: '#^Access to an undefined property App\\Filament\\Pages\\ShopSettings\:\:\$form\.$#'
@@ -1237,6 +1261,12 @@ parameters:
 			path: app/Models/CertificateCommission.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\CertificateItem\:\:\$service_name_translations\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/CertificateItem.php
+
+		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isDraft\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -1273,6 +1303,12 @@ parameters:
 			path: app/Models/Package.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\PmsService\:\:\$names\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/PmsService.php
+
+		-
 			message: '#^Unsafe usage of new static\(\)\.$#'
 			identifier: new.static
 			count: 1
@@ -1297,14 +1333,20 @@ parameters:
 			path: app/Models/Provider.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Service\:\:\$name_translations\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Models/Service.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Models/ServiceFulfillment.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$service_name_snapshot\.$#'
-			identifier: property.notFound
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:localizedName\(\)\.$#'
+			identifier: method.notFound
 			count: 1
 			path: app/Models/ServiceFulfillment.php
 
@@ -1655,6 +1697,12 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Services/CertificateMailer.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Service\:\:\$name_translations\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CertificateManager.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$full_name\.$#'
@@ -2563,9 +2611,27 @@ parameters:
 			path: app/Services/PaymentManager.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\PmsService\:\:\$names\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Services/Pms/PmsCatalogSync.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Service\:\:\$name_translations\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Pms/PmsCatalogSync.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_active\.$#'
 			identifier: property.notFound
 			count: 1
+			path: app/Services/Pms/PmsCatalogSync.php
+
+		-
+			message: '#^Parameter \#1 \$service of method App\\Services\\Pms\\PmsCatalogSync\:\:fillTranslations\(\) expects App\\Models\\Service, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 2
 			path: app/Services/Pms/PmsCatalogSync.php
 
 		-
