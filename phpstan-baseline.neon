@@ -219,13 +219,19 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description\.$#'
 			identifier: property.notFound
-			count: 5
+			count: 6
 			path: app/Filament/Pages/ServiceTranslations.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description_translations\.$#'
 			identifier: property.notFound
 			count: 1
+			path: app/Filament/Pages/ServiceTranslations.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
 			path: app/Filament/Pages/ServiceTranslations.php
 
 		-
