@@ -1512,5 +1512,18 @@
  "нет даты начала или окончания срока": "no start or end date",
  "нет покупателя (ни имени, ни телефона)": "no buyer (neither name nor phone)",
  "нет суммы платного сертификата (пусто, «#VALUE!» или 0)": "no amount for a paid certificate (empty, “#VALUE!” or 0)",
- "срок окончания раньше срока начала": "end date is before start date"
+ "срок окончания раньше срока начала": "end date is before start date",
+ "На сайте": "On the site",
+ "Не включено «Продаётся онлайн»": "“Sold online” is not enabled",
+ "Не показывается": "Not shown",
+ "Пакет не активен": "The package is not active",
+ "Период пакета закончился :p1": "The package period ended on :p1",
+ "Показывается": "Shown",
+ "Показывается на главной странице сайта": "Shown on the site’s home page",
+ "Сумма пакета равна нулю": "The package total is zero",
+ "У услуги «:p1» нет действующей цены на сегодня": "Service “:p1” has no valid price for today",
+ "Цена услуги «:p1» ждёт утверждения администратором": "The price of service “:p1” is awaiting administrator approval",
+ "Цена услуги «:p1» начинает действовать только с :p2": "The price of service “:p1” only starts on :p2",
+ "Бесплатные пакеты на сайте не продаются": "Free packages are not sold on the site",
+ "В пакете нет состава (услуг)": "The package has no composition (services)"
 }

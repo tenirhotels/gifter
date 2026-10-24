@@ -13,6 +13,7 @@ use App\Models\Service;
 use App\Models\User;
 use App\Services\CertificateManager;
 use App\Services\ServicePricing;
+use App\Services\ShopAvailability;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
@@ -118,5 +119,25 @@ class PackagePeriodTest extends TestCase
             ->fillForm(['validity_type' => 'term', 'validity_value' => 3, 'validity_unit' => 'months'])->call('save')->assertHasNoFormErrors();
         $this->assertNull($package->refresh()->period_from);
         $this->assertSame(3, $package->validity_value);
+    }
+
+    public function test_package_card_explains_why_it_is_not_on_the_site(): void
+    {
+        $availability = app(ShopAvailability::class);
+        $package = $this->period();
+        $this->assertSame([], $availability->problems($package), 'Период в будущем не мешает показу');
+
+        $package->update(['sold_online' => false, 'is_active' => false]);
+        $this->assertEqualsCanonicalizing(['Пакет не активен', 'Не включено «Продаётся онлайн»'], $availability->problems($package->refresh()));
+
+        $package->update(['sold_online' => true, 'is_active' => true]);
+        $service = $package->items()->firstOrFail()->service;
+        $service->prices()->delete();
+        $this->assertStringContainsString('нет действующей цены', $availability->problems($package->refresh())[0]);
+
+        app(ServicePricing::class)->addPrice($service, '450000', Carbon::parse('2026-12-01'));
+        $this->assertStringContainsString('начинает действовать только с 01.12.2026', $availability->problems($package->refresh())[0]);
+
+        $this->get('/')->assertDontSee('Winter holidays');
     }
 }

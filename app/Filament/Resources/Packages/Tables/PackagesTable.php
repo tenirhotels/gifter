@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Packages\Tables;
 
 use App\Models\Package;
+use App\Services\ShopAvailability;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -24,6 +25,10 @@ class PackagesTable
                     ->map(fn ($item) => "{$item->service->localizedName()} × {$item->quantity}")->implode(', '))->wrap(),
                 IconColumn::make('is_active')->label('Активен')->boolean(),
                 IconColumn::make('sold_online')->label('Онлайн')->boolean()->toggleable(),
+                TextColumn::make('shop')->label('На сайте')->badge()
+                    ->state(fn (Package $record) => app(ShopAvailability::class)->problems($record) === [] ? __('Показывается') : __('Не показывается'))
+                    ->color(fn (Package $record) => app(ShopAvailability::class)->problems($record) === [] ? 'success' : 'gray')
+                    ->tooltip(fn (Package $record) => implode("\n", app(ShopAvailability::class)->problems($record)) ?: null),
             ])
             ->modifyQueryUsing(fn ($query) => $query->with('items.service'))
             ->recordActions([EditAction::make()])

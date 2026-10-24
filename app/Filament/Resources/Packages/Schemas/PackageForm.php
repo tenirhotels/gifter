@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Packages\Schemas;
 use App\Enums\ComplimentaryPurpose;
 use App\Enums\PackageValidityType;
 use App\Enums\ValidityUnit;
+use App\Models\Package;
+use App\Services\ShopAvailability;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
@@ -18,6 +20,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Arr;
+use Illuminate\Support\HtmlString;
 
 class PackageForm
 {
@@ -33,6 +36,12 @@ class PackageForm
             TextInput::make('name')->label('Название пакета')->required()->maxLength(255)
                 ->helperText(__('Основное (русское) название. Переводы на казахский и английский — в разделе «Каталог → Переводы».')),
             Toggle::make('is_active')->label('Активен')->default(true),
+            Placeholder::make('shop_status')->label('На сайте')->visible(fn (?Package $record) => $record?->exists === true)
+                ->content(function (?Package $record) {
+                    $problems = $record ? app(ShopAvailability::class)->problems($record) : [];
+
+                    return $problems === [] ? __('Показывается на главной странице сайта') : new HtmlString('<span>'.__('Не показывается').':</span><ul style="margin:4px 0 0 18px;list-style:disc">'.collect($problems)->map(fn ($p) => '<li>'.e($p).'</li>')->implode('').'</ul>');
+                }),
             Toggle::make('sold_online')->label('Продаётся онлайн')->visible(fn (Get $get) => ! $get('is_complimentary'))
                 ->helperText(__('Показывается на публичной странице: клиент оставляет заявку.')),
             Grid::make(2)->columnSpanFull()->schema([
