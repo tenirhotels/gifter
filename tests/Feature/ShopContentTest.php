@@ -50,8 +50,9 @@ class ShopContentTest extends TestCase
 
         $setting = ShopSetting::current();
         $this->assertCount(1, $setting->faq_items);
-        $this->assertSame(['ru' => 'Есть ли парковка?', 'kk' => 'Тұрақ бар ма?'], $setting->faq_items[0]['q']);
-        $this->assertSame([['t' => ['ru' => 'Пункт один', 'en' => 'Point one']]], $setting->terms_items);
+        // MySQL хранит JSON с другим порядком ключей, поэтому сравниваем без учёта порядка.
+        $this->assertEquals(['ru' => 'Есть ли парковка?', 'kk' => 'Тұрақ бар ма?'], $setting->faq_items[0]['q']);
+        $this->assertEquals([['t' => ['ru' => 'Пункт один', 'en' => 'Point one']]], $setting->terms_items);
         $this->get('/faq?lang=kk')->assertSee('Тұрақ бар ма?');
     }
 
