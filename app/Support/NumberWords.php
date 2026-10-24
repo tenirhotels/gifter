@@ -10,8 +10,8 @@ namespace App\Support;
 final class NumberWords
 {
     public const LIST = [
-        'TAU', 'TAS', 'KUN', 'JEL', 'KOL', 'KOK', 'QAR', 'QUM', 'ARU', 'ASU', 'SAY', 'SAZ', 'MUZ', 'BEL', 'TUN', 'NUR',
-        'TAN', 'QYR', 'QUZ', 'JER', 'TAL', 'AYU', 'BAL', 'JAZ', 'QYS', 'KUZ', 'SEL', 'BAQ', 'ARA', 'ALA', 'KUL', 'UYA',
-        'GUL', 'QUS', 'JOL', 'TUZ', 'QOY', 'MAL', 'BAS', 'JAS',
+        'TAU', 'TAS', 'KUN', 'JEL', 'KOL', 'KOK', 'QAR', 'QUM', 'ARU', 'ASU', 'SAY', 'MUZ', 'BEL', 'TUN', 'NUR',
+        'TAN', 'QYR', 'QUZ', 'JER', 'TAL', 'AYU', 'BAL', 'JAZ', 'QYS', 'KUZ', 'BAQ', 'ARA', 'ALA', 'UYA',
+        'GUL', 'QUS', 'JOL', 'BAS', 'JAS', 'NAZ', 'KUY', 'JAN', 'TOY',
     ];
 }
