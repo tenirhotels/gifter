@@ -327,4 +327,29 @@ class LegacyImportTest extends TestCase
         $this->assertSame('+375291234567', $recipient->phone, 'Зарубежный номер без «+» получает «+»');
         $this->assertSame('+77012223344', $recipient->phone2);
     }
+
+    public function test_everything_that_does_not_fit_the_standard_goes_to_notes(): void
+    {
+        $writer = new Writer;
+        $writer->openToFile($this->file);
+        $writer->getCurrentSheet()->setName('Database');
+        $writer->addRow(Row::fromValues([]));
+        $writer->addRow(Row::fromValues(['№', 'Срок начала', 'Срок окончания', 'Пакет', 'Состав пакета', 'Итоговая стоимость', 'Способ оплаты', 'Покупатель', 'Номер покупателя',
+            'Гость', 'Номер гостя', 'Комментарий', 'Статус', 'Номер бронирования', 'Замечания при проверке']));
+        $writer->addRow(new Row(array_map(fn ($v) => Cell::fromValue($v), ['2023-0009', $this->d('2023-03-01'), $this->d('2023-06-01'), 'Архивный (Сертификат)', '1 ночь', 90000, 'Наличные',
+            'Дина Тестова', '+7 701 000 00 01, 12345, +7 702 000 00 02, +7 703 000 00 03', 'Гость', '20230301-9305-111 нет', 'оплата в кассе', 'Использован', 'посадить в систему', 'проверить дату'])));
+        $writer->close();
+
+        $result = app(LegacyCertificateImport::class)->run($this->file);
+
+        $this->assertSame(1, $result['counts']['imported']);
+        $notes = (string) Certificate::firstOrFail()->notes;
+        $this->assertStringContainsString('Бронь в таблице: посадить в систему', $notes);
+        $this->assertStringContainsString('Телефон покупателя в таблице: 12345', $notes);
+        $this->assertStringContainsString('Лишние телефоны покупателя в таблице: +77030000003', $notes);
+        $this->assertStringContainsString('Телефон гостя в таблице: 20230301-9305-111 нет', $notes);
+        $this->assertStringContainsString('Замечание: проверить дату', $notes);
+        $this->assertStringContainsString('Тип: Архивный (Сертификат)', $notes);
+        $this->assertStringContainsString('Комментарий: оплата в кассе', $notes);
+    }
 }

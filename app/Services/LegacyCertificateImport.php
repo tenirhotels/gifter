@@ -43,8 +43,11 @@ class LegacyCertificateImport
         'Стоимость допуслуг' => 'extras', 'Итоговая стоимость' => 'total', 'Пакет' => 'package', 'Способ оплаты' => 'payment',
         'Покупатель' => 'buyer', 'Номер покупателя' => 'buyer_phone', 'Гость' => 'guest', 'Номер гостя' => 'guest_phone',
         'Комментарий' => 'comment', 'Статус' => 'status', 'Номер бронирования' => 'booking', 'Название компании и email' => 'company',
-        'Проживание' => 'stay', 'Стоимость проживания' => 'stay', 'Состав пакета' => 'composition',
+        'Проживание' => 'stay', 'Стоимость проживания' => 'stay', 'Состав пакета' => 'composition', 'Замечания при проверке' => 'remarks',
     ];
+
+    /** Исходные значения, которые не вписались в стандарт и уходят в примечание сертификата (заполняется в prepare()). @var list<string> */
+    private array $extra = [];
 
     public function __construct(private readonly CertificateNumberGenerator $numbers) {}
 
@@ -161,6 +164,7 @@ class LegacyCertificateImport
      */
     private function prepare(array $row, array &$warnings): array
     {
+        $this->extra = [];
         $start = $this->date($row['start'] ?? null);
         $end = $this->date($row['end'] ?? null);
         if (! $start || ! $end) {
@@ -184,6 +188,12 @@ class LegacyCertificateImport
         $status = $this->status((string) ($row['status'] ?? ''), $end);
         $booking = $this->booking((string) ($row['booking'] ?? ''), $warnings);
         [$company, $companyEmail] = $this->company((string) ($row['company'] ?? ''));
+        if (filled($row['package'] ?? null)) {
+            $this->extra('Тип', (string) $row['package']);
+        }
+        if (filled($row['remarks'] ?? null)) {
+            $this->extra('Замечание', (string) $row['remarks']);
+        }
 
         return [
             'number' => trim((string) ($row['number'] ?? '')), 'start' => $start, 'end' => $end, 'status' => $status,
@@ -192,7 +202,7 @@ class LegacyCertificateImport
             'guest' => $this->person((string) ($row['guest'] ?? ''), (string) ($row['guest_phone'] ?? ''), $warnings, 'гостя'),
             'booking' => $booking, 'comment' => trim((string) preg_replace('/\s+/u', ' ', (string) ($row['comment'] ?? ''))),
             'stay' => $this->amount($row['stay'] ?? null), 'extras' => $this->amount($row['extras'] ?? null), 'nights' => $row['nights'] ?? null,
-            'raw_buyer' => trim((string) ($row['buyer'] ?? '')),
+            'raw_buyer' => trim((string) ($row['buyer'] ?? '')), 'extra' => $this->extra,
         ];
     }
 
@@ -211,6 +221,7 @@ class LegacyCertificateImport
             $data['stay'] !== null ? 'Проживание: '.number_format($data['stay'], 0, '', ' ') : null,
             $data['extras'] !== null ? 'Допуслуги: '.number_format($data['extras'], 0, '', ' ') : null,
             $data['nights'] !== null && $data['nights'] !== '' ? 'Ночей: '.$data['nights'] : null,
+            ...$data['extra'],
             'Перенесено из таблицы',
         ])->filter()->implode('. ');
 
@@ -332,6 +343,15 @@ class LegacyCertificateImport
         ]);
     }
 
+    /** Запомнить исходное значение для примечания: пробелы схлопываются, длина ограничена. */
+    private function extra(string $label, string $value): void
+    {
+        $value = trim((string) preg_replace('/\s+/u', ' ', $value));
+        if ($value !== '') {
+            $this->extra[] = $label.': '.Str::limit($value, 200, '…');
+        }
+    }
+
     /** Номер брони PMS: очищенный и в формате `ГГГГММДД-код-N`; «бартер» и мусор — без брони. @param  list<string>  $warnings */
     private function booking(string $value, array &$warnings): ?string
     {
@@ -342,6 +362,7 @@ class LegacyCertificateImport
         if (preg_match('/^\d{8}-\d+-\d+$/', $clean)) {
             return $clean;
         }
+        $this->extra('Бронь в таблице', $value);
         if (! str_contains(Str::lower($clean), 'бартер')) {
             $warnings[] = 'номер брони не распознан — без брони';
         }
@@ -402,6 +423,7 @@ class LegacyCertificateImport
             $phone = $this->phone($part);
             if ($phone === false) {
                 $bad = true;
+                $this->extra("Телефон {$who} в таблице", $part);
             } elseif ($phone !== null && ! in_array($phone, $good, true)) {
                 $good[] = $phone;
             }
@@ -410,6 +432,7 @@ class LegacyCertificateImport
             $warnings[] = "телефон {$who} непригоден — не перенесён";
         }
         if (count($good) > 2) {
+            $this->extra("Лишние телефоны {$who} в таблице", implode(', ', array_slice($good, 2)));
             $warnings[] = "у {$who} больше двух телефонов — лишние не перенесены";
         }
 
