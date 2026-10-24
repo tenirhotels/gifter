@@ -1544,5 +1544,6 @@
  "Лимит продаж, шт.": "Sales limit, pcs",
  "Пусто или 0 — без ограничений. Считаются сертификаты всех каналов.": "Empty or 0 — no limit. Certificates of all channels are counted.",
  "Продаётся с": "On sale from",
- "Продаётся по": "On sale until"
+ "Продаётся по": "On sale until",
+ "Проверьте EPAY_SHOP_ID и EPAY_TERMINAL: значения должны быть из одного набора данных банка (тест или бой). Проверка: php artisan gifter:epay-check.": "Check EPAY_SHOP_ID and EPAY_TERMINAL: the values must come from the same set of bank data (test or live). Check: php artisan gifter:epay-check."
 }

@@ -37,6 +37,16 @@ class EpayClient
         return (string) config('gifter.epay.terminal');
     }
 
+    /** Проверка настройки без секретов: окружение, хвосты ID (последние 4 символа) и получение токена. @return array{env: string, shop_separate: bool, terminal: string, shop_id: string, token: bool} */
+    public function diagnose(): array
+    {
+        $mask = fn (string $v): string => $v === '' ? '—' : '…'.substr($v, -4);
+        $this->token('payment');
+
+        return ['env' => (string) config('gifter.epay.env'), 'shop_separate' => filled(config('gifter.epay.shop_id')),
+            'terminal' => $mask($this->terminal()), 'shop_id' => $mask($this->shopId()), 'token' => true];
+    }
+
     /** @return array{id: ?string, url: string, expires: ?string} */
     public function createInvoiceLink(Payment $payment, string $description, string $email, string $phone, string $accountId, string $language): array
     {
@@ -141,7 +151,9 @@ class EpayClient
             Log::warning('Банк (оплата): отказ', ['операция' => $what, 'http' => $response->status(), 'ответ' => mb_substr((string) $response->body(), 0, 300)]);
             $reason = self::bankReason($response);
 
-            throw new EpayException(__('Банк отклонил запрос (:p1). Подробности — в журнале сервера.', ['p1' => $response->status()]).($reason !== '' ? ' '.$reason : ''));
+            $hint = stripos((string) $response->body(), 'shopId') !== false ? ' '.__('Проверьте EPAY_SHOP_ID и EPAY_TERMINAL: значения должны быть из одного набора данных банка (тест или бой). Проверка: php artisan gifter:epay-check.') : '';
+
+            throw new EpayException(__('Банк отклонил запрос (:p1). Подробности — в журнале сервера.', ['p1' => $response->status()]).($reason !== '' ? ' '.$reason : '').$hint);
         }
 
         return $response;
