@@ -161,7 +161,6 @@
  "В брони № :p1 нет дат проживания — обратитесь в бронирование.": "Booking No. :p1 has no stay dates — contact the booking department.",
  "В брони № :p1 нет имени гостя — обратитесь в бронирование.": "Booking No. :p1 has no guest name — contact the booking department.",
  "В группе есть платные услуги — укажите заказчика, который их оплатит.": "The group has paid services — specify the customer who will pay for them.",
- "В международном формате: +7 701 123 45 67": "In international format: +7 701 123 45 67",
  "В номере брони «:p1» неверная дата (:p2).": "Booking number “:p1” has an invalid date (:p2).",
  "В платном сертификате оплачивается весь состав.": "In a paid certificate the whole contents are paid for.",
  "В сертификат": "In certificate",
@@ -1557,5 +1556,8 @@
  "Оформление": "Appearance",
  "Пункт": "Item",
  "Страница «Вопросы и ответы» на сайте. Добавляйте, удаляйте и меняйте порядок; каждый пункт — на трёх языках. Нет перевода — показывается русский текст.": "The “Questions and answers” page on the site. Add, delete and reorder; each item in three languages. No translation — the Russian text is shown.",
- "Страница «Условия сертификата» на сайте (в PDF сертификата условия не меняются).": "The “Certificate terms” page on the site (the terms in the certificate PDF do not change)."
+ "Страница «Условия сертификата» на сайте (в PDF сертификата условия не меняются).": "The “Certificate terms” page on the site (the terms in the certificate PDF do not change).",
+ "В международном формате: +7 701 123 45 67 (для других стран — со своим кодом, например +998 90 123 45 67)": "In international format: +7 701 123 45 67 (for other countries — with their own code, e.g. +998 90 123 45 67)",
+ "Второй телефон": "Second phone",
+ "Необязательно. Например, рабочий или зарубежный номер.": "Optional. For example, a work or a foreign number."
 }

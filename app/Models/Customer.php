@@ -21,7 +21,7 @@ class Customer extends Model
 
     protected $attributes = ['type' => 'individual'];
 
-    protected $fillable = ['type', 'last_name', 'first_name', 'middle_name', 'phone', 'email', 'company', 'bin', 'notes'];
+    protected $fillable = ['type', 'last_name', 'first_name', 'middle_name', 'phone', 'phone2', 'email', 'company', 'bin', 'notes'];
 
     protected function casts(): array
     {

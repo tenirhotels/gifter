@@ -37,6 +37,7 @@ final class ContactFields
         return [
             self::phoneInput(),
             TextInput::make('email')->label('Email')->email()->maxLength(255),
+            self::phoneInput('phone2')->label('Второй телефон')->helperText(__('Необязательно. Например, рабочий или зарубежный номер.')),
         ];
     }
 
@@ -81,6 +82,8 @@ final class ContactFields
             })
             ->schema(fn (Model $record) => [
                 TextEntry::make('phone')->label('Телефон')->state(PhoneNumber::format($person($record)?->phone))->placeholder('—')->copyable(),
+                TextEntry::make('phone2')->label('Второй телефон')->state(PhoneNumber::format($person($record)?->phone2))->placeholder('—')->copyable()
+                    ->visible(fn () => (bool) $person($record)?->hasSecondPhone()),
                 TextEntry::make('email')->label('Email')->state($person($record)?->email)->placeholder('—')->copyable(),
             ])
             ->modalSubmitAction(false)

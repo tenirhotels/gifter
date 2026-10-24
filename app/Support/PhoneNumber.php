@@ -10,7 +10,7 @@ use App\Exceptions\DomainRuleViolation;
  */
 final class PhoneNumber
 {
-    public const HINT = 'В международном формате: +7 701 123 45 67';
+    public const HINT = 'В международном формате: +7 701 123 45 67 (для других стран — со своим кодом, например +998 90 123 45 67)';
 
     public static function normalize(?string $phone): ?string
     {

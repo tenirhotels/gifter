@@ -15,7 +15,7 @@ class Recipient extends Model
 {
     use Auditable, HasEncryptedContacts, HasFactory, HasPersonName, PreventsDeletion;
 
-    protected $fillable = ['last_name', 'first_name', 'middle_name', 'phone', 'email', 'notes'];
+    protected $fillable = ['last_name', 'first_name', 'middle_name', 'phone', 'phone2', 'email', 'notes'];
 
     public function certificates(): HasMany
     {

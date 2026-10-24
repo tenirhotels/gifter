@@ -312,4 +312,19 @@ class LegacyImportTest extends TestCase
         $this->assertSame('Архив: 1 ночь, 2 пеших билета', $certificate->package->name);
         $this->assertStringContainsString('Проживание: 150 000', (string) $certificate->notes);
     }
+
+    public function test_two_numbers_in_one_cell_and_foreign_numbers(): void
+    {
+        $result = app(LegacyCertificateImport::class)->run($this->workbook([
+            $this->row([9 => 'Айбек Тестов', 10 => "87011112233,\n+998 90 123 45 67", 11 => 'Гость Тестов', 12 => '375291234567 / 87012223344']),
+        ]));
+
+        $this->assertSame(1, $result['counts']['imported']);
+        $customer = Customer::firstOrFail();
+        $this->assertSame('+77011112233', $customer->phone);
+        $this->assertSame('+998901234567', $customer->phone2);
+        $recipient = Recipient::firstOrFail();
+        $this->assertSame('+375291234567', $recipient->phone, 'Зарубежный номер без «+» получает «+»');
+        $this->assertSame('+77012223344', $recipient->phone2);
+    }
 }

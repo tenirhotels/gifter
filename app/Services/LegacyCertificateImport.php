@@ -15,7 +15,6 @@ use App\Models\Package;
 use App\Models\Payment;
 use App\Models\Recipient;
 use App\Models\User;
-use App\Support\ContactHash;
 use DateTimeInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -364,19 +363,16 @@ class LegacyCertificateImport
     }
 
     /**
-     * Человек из имени и телефона. Телефон приводится к +7…; непригодный телефон отбрасывается с замечанием.
+     * Человек из имени и телефонов. В ячейке может быть до двух номеров (через «,», «;», «/» или перенос строки): первый — основной,
+     * второй — дополнительный. Номера приводятся к +…; непригодный номер отбрасывается с замечанием.
      *
      * @param  list<string>  $warnings
-     * @return array{last: ?string, first: ?string, middle: ?string, phone: ?string}|null
+     * @return array{last: ?string, first: ?string, middle: ?string, phone: ?string, phone2: ?string}|null
      */
     private function person(string $name, string $phone, array &$warnings, string $who): ?array
     {
         $name = trim((string) preg_replace('/\s+/u', ' ', $name));
-        $phone = $this->phone($phone);
-        if ($phone === false) {
-            $warnings[] = "телефон {$who} непригоден — не перенесён";
-            $phone = null;
-        }
+        [$phone, $phone2] = $this->phones($phone, $warnings, $who);
         if ($name === '' && $phone === null) {
             return null;
         }
@@ -388,10 +384,39 @@ class LegacyCertificateImport
             default => [$parts[0], $parts[1], implode(' ', array_slice($parts, 2))],
         };
 
-        return ['last' => $last, 'first' => $first, 'middle' => $middle, 'phone' => $phone];
+        return ['last' => $last, 'first' => $first, 'middle' => $middle, 'phone' => $phone, 'phone2' => $phone2];
     }
 
-    /** Телефон в виде +7…: 8…, 7… и 10 цифр приводятся; пусто — null; не телефон — false. */
+    /**
+     * @param  list<string>  $warnings
+     * @return array{0: ?string, 1: ?string} основной и дополнительный номер
+     */
+    private function phones(string $raw, array &$warnings, string $who): array
+    {
+        $good = [];
+        $bad = false;
+        foreach (preg_split('/[,;\/\r\n]+/u', $raw) ?: [] as $part) {
+            if (trim($part) === '') {
+                continue;
+            }
+            $phone = $this->phone($part);
+            if ($phone === false) {
+                $bad = true;
+            } elseif ($phone !== null && ! in_array($phone, $good, true)) {
+                $good[] = $phone;
+            }
+        }
+        if ($bad) {
+            $warnings[] = "телефон {$who} непригоден — не перенесён";
+        }
+        if (count($good) > 2) {
+            $warnings[] = "у {$who} больше двух телефонов — лишние не перенесены";
+        }
+
+        return [$good[0] ?? null, $good[1] ?? null];
+    }
+
+    /** Телефон в виде +…: «+» и 8–15 цифр — как есть; 8…/7… (11 цифр) и 10 цифр — казахстанский +7…; 11–15 цифр без «+» — зарубежный; пусто — null; не телефон — false. */
     private function phone(string $raw): string|false|null
     {
         $digits = preg_replace('/\D/', '', $raw);
@@ -407,14 +432,17 @@ class LegacyCertificateImport
         if (strlen($digits) === 10) {
             return '+7'.$digits;
         }
+        if (strlen($digits) >= 11 && strlen($digits) <= 15 && $digits[0] !== '0' && ! preg_match('/\d{8}-\d+-\d+/', $raw)) {
+            return '+'.$digits;
+        }
 
         return false;
     }
 
-    /** @param  array{last: ?string, first: ?string, middle: ?string, phone: ?string}  $p */
+    /** @param  array{last: ?string, first: ?string, middle: ?string, phone: ?string, phone2: ?string}  $p */
     private function customer(array $p, ?string $company, ?string $email): Customer
     {
-        $existing = $p['phone'] ? Customer::query()->where('phone_hash', ContactHash::phone($p['phone']))->first() : null;
+        $existing = $p['phone'] ? Customer::query()->whereContact($p['phone'])->first() : null;
         $existing ??= $p['phone'] ? null : Customer::query()->where('full_name', trim(implode(' ', array_filter([$p['last'], $p['first'], $p['middle']]))))->first();
         if ($existing) {
             return $existing;
@@ -422,19 +450,19 @@ class LegacyCertificateImport
 
         return Customer::create([
             'type' => 'individual', 'last_name' => $p['last'], 'first_name' => $p['first'] ?? ($p['last'] ? null : 'Покупатель (архив)'), 'middle_name' => $p['middle'],
-            'phone' => $p['phone'], 'email' => $email, 'company' => $company, 'notes' => $company ? 'Компания: '.$company : null,
+            'phone' => $p['phone'], 'phone2' => $p['phone2'], 'email' => $email, 'company' => $company, 'notes' => $company ? 'Компания: '.$company : null,
         ]);
     }
 
-    /** @param  array{last: ?string, first: ?string, middle: ?string, phone: ?string}  $p */
+    /** @param  array{last: ?string, first: ?string, middle: ?string, phone: ?string, phone2: ?string}  $p */
     private function recipient(array $p): Recipient
     {
-        $existing = $p['phone'] ? Recipient::query()->where('phone_hash', ContactHash::phone($p['phone']))->first() : null;
+        $existing = $p['phone'] ? Recipient::query()->whereContact($p['phone'])->first() : null;
         if ($existing) {
             return $existing;
         }
 
-        return Recipient::create(['last_name' => $p['last'], 'first_name' => $p['first'] ?? ($p['last'] ? null : 'Гость (архив)'), 'middle_name' => $p['middle'], 'phone' => $p['phone']]);
+        return Recipient::create(['last_name' => $p['last'], 'first_name' => $p['first'] ?? ($p['last'] ? null : 'Гость (архив)'), 'middle_name' => $p['middle'], 'phone' => $p['phone'], 'phone2' => $p['phone2']]);
     }
 
     /** Служебный неактивный пользователь: от его имени записываются перенесённые данные. */
