@@ -14,6 +14,8 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
         $this->withHeader('Accept-Language', 'ru');
+        // Большинство проверок опираются на предсказуемые порядковые номера; непредсказуемые номера проверяет CertificateNumberTest.
+        config(['gifter.number.style' => 'sequence']);
     }
 
     /** Пакет без базового состава со сроком 12 месяцев — состав в тестах набирается доп. услугами. */

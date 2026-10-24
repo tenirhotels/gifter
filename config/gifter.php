@@ -48,6 +48,8 @@ return [
     ],
 
     'number' => [
+        // words — непредсказуемый номер из двух казахских слов и 4 цифр (TAU-KOL-4827); sequence — порядковый по шаблону ниже.
+        'style' => env('GIFTER_NUMBER_STYLE', 'words'),
         // Шаблон номера: {PREFIX}, {YYYY}, {YY}, {SEQ}. Если в шаблоне есть год,
         // нумерация начинается заново каждый год (по дате продажи).
         'pattern' => env('GIFTER_NUMBER_PATTERN', '{PREFIX}-{SEQ}'),

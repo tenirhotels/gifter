@@ -9,6 +9,7 @@ use App\Filament\Support\RunsDomainActions;
 use App\Filament\Support\TranslatesPageLabels;
 use App\Models\Certificate;
 use App\Services\ReservationManager;
+use App\Support\CertificateNumber;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -64,7 +65,7 @@ class ReservationReviews extends Page implements HasTable
         return $table
             ->query(fn () => Certificate::query()->whereNotNull('reservation_review_status')->with(['recipient', 'customer', 'reservationReviewer']))
             ->columns([
-                TextColumn::make('number')->label('Сертификат')->searchable()
+                TextColumn::make('number')->label('Сертификат')->searchable(query: CertificateNumber::searchQuery())
                     ->url(fn (Certificate $record) => CertificateResource::getUrl('view', ['record' => $record]))
                     ->description(fn (Certificate $record) => __(':p1 · до :p2', ['p1' => $record->status->getLabel(), 'p2' => $record->valid_until->format('d.m.Y')])),
                 TextColumn::make('pms_booking_number')->label('Номер брони')->searchable()

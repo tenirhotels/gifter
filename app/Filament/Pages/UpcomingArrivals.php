@@ -11,6 +11,7 @@ use App\Models\Certificate;
 use App\Models\ServiceFulfillment;
 use App\Policies\CertificatePolicy;
 use App\Support\ArrivalReadiness;
+use App\Support\CertificateNumber;
 use BackedEnum;
 use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Page;
@@ -81,7 +82,7 @@ class UpcomingArrivals extends Page implements HasTable
                     ->description(fn (Certificate $record) => self::dayLabel($record->arrival_date)),
                 TextColumn::make('booking_guest_name')->label('Гость')->searchable()->weight('medium')
                     ->description(fn (Certificate $record) => __(':p1 ноч., до :p2', ['p1' => $record->arrival_date->diffInDays($record->departure_date), 'p2' => $record->departure_date->format('d.m')])),
-                TextColumn::make('number')->label('Сертификат')->searchable()
+                TextColumn::make('number')->label('Сертификат')->searchable(query: CertificateNumber::searchQuery())
                     ->url(fn (Certificate $record) => CertificateResource::getUrl('view', ['record' => $record]))
                     ->description(fn (Certificate $record) => $record->package?->name),
                 TextColumn::make('pms_booking_number')->label('Номер брони')->searchable()->copyable(),

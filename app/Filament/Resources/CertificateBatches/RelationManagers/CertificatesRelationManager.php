@@ -4,6 +4,7 @@ namespace App\Filament\Resources\CertificateBatches\RelationManagers;
 
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Models\Certificate;
+use App\Support\CertificateNumber;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -22,7 +23,7 @@ class CertificatesRelationManager extends RelationManager
             ->modifyQueryUsing(fn ($query) => $query->with('recipient'))
             ->recordUrl(fn (Certificate $record) => CertificateResource::getUrl('view', ['record' => $record]))
             ->columns([
-                TextColumn::make('number')->label('Номер')->searchable(),
+                TextColumn::make('number')->label('Номер')->searchable(query: CertificateNumber::searchQuery()),
                 TextColumn::make('status')->label('Статус')->badge(),
                 TextColumn::make('recipient.full_name')->label('Получатель')->placeholder(__('не указан')),
                 TextColumn::make('valid_until')->label('Действует по')->date('d.m.Y'),

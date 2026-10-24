@@ -11,6 +11,7 @@ use App\Filament\Support\CommissionPeriod;
 use App\Filament\Support\TranslatesPageLabels;
 use App\Filament\Widgets\MySalesWidget;
 use App\Models\Certificate;
+use App\Support\CertificateNumber;
 use App\Support\Money;
 use BackedEnum;
 use Filament\Pages\Page;
@@ -63,7 +64,7 @@ class MyCommission extends Page implements HasTable
             ->query(fn () => Certificate::query()->where('sold_by', auth()->id())->where('kind', CertificateKind::Sale)->whereNotNull('issued_at')
                 ->with(['commission', 'recipient', 'package']))
             ->columns([
-                TextColumn::make('number')->label('Сертификат')->searchable()
+                TextColumn::make('number')->label('Сертификат')->searchable(query: CertificateNumber::searchQuery())
                     ->url(fn (Certificate $record) => CertificateResource::getUrl('view', ['record' => $record]))
                     ->color('primary')->description(fn (Certificate $record) => $record->package?->name),
                 TextColumn::make('sold_at')->label('Дата продажи')->date('d.m.Y')->sortable(),

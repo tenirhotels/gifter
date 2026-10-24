@@ -8,6 +8,7 @@ use App\Enums\SaleSource;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
 use App\Models\AuditLog;
 use App\Models\Certificate;
+use App\Support\CertificateNumber;
 use App\Support\Money;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\TextInput;
@@ -30,7 +31,7 @@ class CertificatesTable
                     ->getTitleFromRecordUsing(fn (Certificate $record) => $record->batch?->label() ?? __('Без группы')),
             ])
             ->columns([
-                TextColumn::make('number')->label('Номер')->searchable()->sortable()->copyable(),
+                TextColumn::make('number')->label('Номер')->searchable(query: CertificateNumber::searchQuery())->sortable()->copyable(),
                 TextColumn::make('status')->label('Статус')->badge()->sortable(),
                 TextColumn::make('kind')->label('Вид выпуска')->badge()->toggleable(),
                 TextColumn::make('source')->label('Канал')->badge()->toggleable(),
