@@ -292,4 +292,24 @@ class LegacyImportTest extends TestCase
         $this->artisan('gifter:import-check-bookings', ['--pause' => 0])->expectsOutputToContain('Проверено: 0')->assertSuccessful();
         $this->artisan('gifter:import-check-bookings', ['--pause' => 0, '--retry' => true])->expectsOutputToContain('Проверено: 1')->assertSuccessful();
     }
+
+    public function test_new_table_format_with_composition_and_stay_columns(): void
+    {
+        $writer = new Writer;
+        $writer->openToFile($this->file);
+        $writer->getCurrentSheet()->setName('Database');
+        $writer->addRow(Row::fromValues([]));
+        $writer->addRow(Row::fromValues(['№', 'Ночей', 'Срок начала', 'Срок окончания', 'Дней', 'Пакет', 'Состав пакета', 'Стоимость проживания', 'Стоимость допуслуг', 'Итоговая стоимость',
+            'Способ оплаты', 'Покупатель', 'Номер покупателя', 'Гость', 'Номер гостя', 'Комментарий', 'Статус', 'Номер бронирования', 'Название компании и email']));
+        $writer->addRow(new Row(array_map(fn ($v) => Cell::fromValue($v), ['2022-0007', 1, $this->d('2022-03-01'), $this->d('2022-06-01'), 92, 'Архивный (Сертификат)', '1 ночь, 2 пеших билета',
+            150000, null, 150000, 'Наличные', 'Ерлан Тестов', '87010000000', null, null, 'комментарий', 'Использован', null, null])));
+        $writer->close();
+
+        $result = app(LegacyCertificateImport::class)->run($this->file);
+
+        $this->assertSame(1, $result['counts']['imported']);
+        $certificate = Certificate::firstOrFail();
+        $this->assertSame('Архив: 1 ночь, 2 пеших билета', $certificate->package->name);
+        $this->assertStringContainsString('Проживание: 150 000', (string) $certificate->notes);
+    }
 }

@@ -44,7 +44,7 @@ class LegacyCertificateImport
         'Стоимость допуслуг' => 'extras', 'Итоговая стоимость' => 'total', 'Пакет' => 'package', 'Способ оплаты' => 'payment',
         'Покупатель' => 'buyer', 'Номер покупателя' => 'buyer_phone', 'Гость' => 'guest', 'Номер гостя' => 'guest_phone',
         'Комментарий' => 'comment', 'Статус' => 'status', 'Номер бронирования' => 'booking', 'Название компании и email' => 'company',
-        'Проживание' => 'stay',
+        'Проживание' => 'stay', 'Стоимость проживания' => 'stay', 'Состав пакета' => 'composition',
     ];
 
     public function __construct(private readonly CertificateNumberGenerator $numbers) {}
@@ -189,7 +189,7 @@ class LegacyCertificateImport
         return [
             'number' => trim((string) ($row['number'] ?? '')), 'start' => $start, 'end' => $end, 'status' => $status,
             'free' => $free, 'payment' => $payment, 'total' => $total ?? 0.0,
-            'package' => $this->packageName((string) ($row['package'] ?? '')), 'buyer' => $buyer, 'company' => $company, 'company_email' => $companyEmail,
+            'package' => $this->packageName((string) (array_key_exists('composition', $row) ? ($row['composition'] ?? '') : ($row['package'] ?? ''))), 'package_type' => trim((string) ($row['package'] ?? '')), 'buyer' => $buyer, 'company' => $company, 'company_email' => $companyEmail,
             'guest' => $this->person((string) ($row['guest'] ?? ''), (string) ($row['guest_phone'] ?? ''), $warnings, 'гостя'),
             'booking' => $booking, 'comment' => trim((string) preg_replace('/\s+/u', ' ', (string) ($row['comment'] ?? ''))),
             'stay' => $this->amount($row['stay'] ?? null), 'extras' => $this->amount($row['extras'] ?? null), 'nights' => $row['nights'] ?? null,
