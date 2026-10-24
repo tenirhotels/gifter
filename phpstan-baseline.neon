@@ -3205,6 +3205,30 @@ parameters:
 			path: app/Services/ServicePricing.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$service\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ShopAvailability.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$valid_from\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ShopAvailability.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:effectiveOn\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/ShopAvailability.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/ShopAvailability.php
+
+		-
 			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\FulfillmentStatus\:\:Pending, App\\Enums\\FulfillmentStatus\:\:Requested\} and true will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
