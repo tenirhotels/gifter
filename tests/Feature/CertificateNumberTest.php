@@ -53,7 +53,7 @@ class CertificateNumberTest extends TestCase
         $numbers = [];
         for ($i = 0; $i < 300; $i++) {
             $number = CertificateNumber::random();
-            $this->assertMatchesRegularExpression('/^[A-Z]{3}-[A-Z]{3}-\d{4}$/', $number);
+            $this->assertMatchesRegularExpression('/^[A-Z]{3}-[A-Z]{3}-\d{5}$/', $number);
             $this->assertTrue(CertificateNumber::isValid($number));
             $numbers[] = $number;
         }
@@ -63,16 +63,38 @@ class CertificateNumberTest extends TestCase
         $this->assertGreaterThan(290, count(array_unique($numbers)), 'Номера почти не повторяются');
     }
 
-    public function test_input_is_normalized_and_typos_in_words_are_caught(): void
+    public function test_input_is_normalized_and_typos_are_caught_by_the_check_digit(): void
     {
-        $this->assertSame('TAU-KOL-0482', CertificateNumber::normalize(' tau kol 0482 '));
-        $this->assertSame('TAU-KOL-0482', CertificateNumber::normalize('TAU.KOL.0482'));
-        $this->assertSame('TAU-KOL-0482', CertificateNumber::normalize('taukol0482'));
+        $number = CertificateNumber::random();
+        [$words, $tail] = [substr($number, 0, 7), substr($number, 8)];
+        $this->assertTrue(CertificateNumber::isValid(strtolower(str_replace('-', ' ', $number))));
+        $this->assertSame($number, CertificateNumber::normalize(str_replace('-', '.', $number)));
+        $this->assertSame($number, CertificateNumber::normalize(str_replace('-', '', strtolower($number))));
+
+        // Любая замена одной цифры ломает контрольную цифру или меняет номер на другой, но не на этот же.
+        $wrongCheck = $words.'-'.substr($tail, 0, 4).(((int) $tail[4] + 1) % 10);
+        $this->assertFalse(CertificateNumber::isValid($wrongCheck));
         $this->assertNull(CertificateNumber::normalize('TAU-KOL-482'));
         $this->assertNull(CertificateNumber::normalize('GIF-000001'));
-        $this->assertTrue(CertificateNumber::isValid('tau kol 0482'));
-        $this->assertFalse(CertificateNumber::isValid('TAU-TAU-0482'), 'Слова не повторяются');
-        $this->assertFalse(CertificateNumber::isValid('TAU-XYZ-0482'), 'Слова только из списка');
+        $this->assertFalse(CertificateNumber::isValid('TAU-TAU-48273'), 'Слова не повторяются');
+        $this->assertFalse(CertificateNumber::isValid('TAU-XYZ-48273'), 'Слова только из списка');
+    }
+
+    public function test_check_digit_depends_on_the_secret_key(): void
+    {
+        config(['gifter.security.contact_hash_key' => 'first-key']);
+        $number = CertificateNumber::random();
+        $this->assertTrue(CertificateNumber::isValid($number));
+        config(['gifter.security.contact_hash_key' => 'second-key-different']);
+        $valid = 0;
+        for ($i = 0; $i < 200; $i++) {
+            $valid += CertificateNumber::isValid(CertificateNumber::random()) ? 1 : 0;
+        }
+        $this->assertSame(200, $valid, 'С новым ключом новые номера проверяются');
+        // Подделать номер без ключа нельзя: из 10 вариантов последней цифры подходит один.
+        $words = substr($number, 0, 7).'-'.substr($number, 8, 4);
+        $accepted = collect(range(0, 9))->filter(fn ($d) => CertificateNumber::isValid($words.$d))->count();
+        $this->assertLessThanOrEqual(1, $accepted);
     }
 
     public function test_new_certificates_get_unique_words_numbers_and_are_found_in_any_case(): void
