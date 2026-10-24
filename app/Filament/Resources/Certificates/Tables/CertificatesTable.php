@@ -6,10 +6,13 @@ use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Enums\SaleSource;
 use App\Filament\Resources\CertificateBatches\CertificateBatchResource;
+use App\Filament\Support\SellerCommissionForm;
 use App\Models\AuditLog;
 use App\Models\Certificate;
 use App\Support\CertificateNumber;
 use App\Support\Money;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
@@ -18,6 +21,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class CertificatesTable
 {
@@ -51,6 +55,10 @@ class CertificatesTable
                 SelectFilter::make('status')->label('Статус')->options(CertificateStatus::class)->multiple(),
                 SelectFilter::make('kind')->label('Вид выпуска')->options(CertificateKind::class),
                 SelectFilter::make('source')->label('Канал')->options(SaleSource::class),
+                Filter::make('no_seller')->label('Без продавца')
+                    ->query(fn (Builder $query) => $query->whereNull('sold_by')),
+                Filter::make('imported')->label('Перенесённые из таблицы')
+                    ->query(fn (Builder $query) => $query->whereNotNull('legacy_number')),
                 Filter::make('mine')->label('Только мои')
                     ->query(fn (Builder $query) => $query->where('created_by', auth()->id())),
                 Filter::make('no_recipient')->label('Без получателя')
@@ -69,6 +77,16 @@ class CertificatesTable
                         ->where('auditable_type', (new Certificate)->getMorphClass())->where('created_at', '>=', now()->subDays(30))->select('auditable_id'))),
             ])
             ->recordActions([ViewAction::make()])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('sellerCommission')->label('Продавец и комиссия')->icon('heroicon-o-banknotes')
+                        ->visible(fn () => SellerCommissionForm::allowed())
+                        ->modalDescription(__('Назначит продавца выбранным выпущенным сертификатам и рассчитает комиссию по указанному размеру. Черновики, бесплатные и сертификаты с согласованной или выплаченной комиссией будут пропущены.'))
+                        ->schema(SellerCommissionForm::schema())
+                        ->action(fn (Collection $records, array $data) => SellerCommissionForm::applyMany($records, $data))
+                        ->deselectRecordsAfterCompletion(),
+                ]),
+            ])
             ->defaultSort('id', 'desc');
     }
 }

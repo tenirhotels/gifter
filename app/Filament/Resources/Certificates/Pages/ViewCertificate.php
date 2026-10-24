@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Certificates\Pages;
 
+use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Enums\FulfillmentStatus;
 use App\Enums\NameMatch;
@@ -14,6 +15,7 @@ use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\Recipients\Schemas\RecipientForm;
 use App\Filament\Support\ContactFields;
 use App\Filament\Support\RunsDomainActions;
+use App\Filament\Support\SellerCommissionForm;
 use App\Filament\Support\WithoutPageHeading;
 use App\Models\Certificate;
 use App\Models\Recipient;
@@ -120,6 +122,17 @@ class ViewCertificate extends ViewRecord
                     Textarea::make('reason')->label('Причина смены продавца')->required()->minLength(5)->helperText(__('Причину увидит директор по продажам.'))])
                 ->action(fn (Certificate $record, array $data, Action $action) => $this->run($action,
                     fn () => $this->manager()->setSeller($record, (int) $data['seller'], reason: $data['reason'] ?? null), __('Продавец назначен'))),
+
+            Action::make('sellerCommission')->label('Продавец и комиссия')->icon('heroicon-o-banknotes')->color('gray')
+                ->visible(fn (Certificate $record) => SellerCommissionForm::allowed() && ! $record->isDraft() && $record->kind === CertificateKind::Sale)
+                ->modalDescription(__('Для выпущенных сертификатов, в том числе перенесённых из таблицы: размер комиссии задаётся здесь. Использованный сертификат — комиссия «Начислена» (дальше согласование и выплата). Согласованную или выплаченную комиссию изменить нельзя.'))
+                ->fillForm(fn (Certificate $record) => ['seller' => $record->sold_by])
+                ->schema(SellerCommissionForm::schema())
+                ->action(function (Certificate $record, array $data) {
+                    if (SellerCommissionForm::apply($record, $data)) {
+                        $this->redirect(CertificateResource::getUrl('view', ['record' => $record]));
+                    }
+                }),
 
             Action::make('approveComplimentary')->label('Согласовать бесплатный')->icon('heroicon-o-hand-thumb-up')->color('success')
                 ->authorize(Permission::ApproveComplimentary)

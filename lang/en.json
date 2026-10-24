@@ -1560,5 +1560,21 @@
  "В международном формате: +7 701 123 45 67 (для других стран — со своим кодом, например +998 90 123 45 67)": "In international format: +7 701 123 45 67 (for other countries — with their own code, e.g. +998 90 123 45 67)",
  "Второй телефон": "Second phone",
  "Необязательно. Например, рабочий или зарубежный номер.": "Optional. For example, a work or a foreign number.",
- "Порядк. №": "Serial no."
+ "Порядк. №": "Serial no.",
+ "Назначить продавца и пересчитать комиссию может администратор или директор по продажам.": "Only an administrator or the sales director can assign a seller and recalculate the commission.",
+ "Укажите причину (не короче 5 знаков) — она останется в истории и журнале.": "Give a reason (at least 5 characters) — it stays in the history and the log.",
+ "Процент комиссии — число от 0 до 100.": "The commission percentage is a number from 0 to 100.",
+ "Сумма комиссии должна быть больше нуля.": "The commission amount must be greater than zero.",
+ "Комиссия считается только по выпущенным платным сертификатам.": "Commission is calculated only for issued paid certificates.",
+ "Комиссия уже в статусе «:p1»: сначала отмените согласование или выплату в разделе «Комиссии».": "The commission is already “:p1”: first cancel the approval or payment in the “Commissions” section.",
+ "Комиссия получилась нулевой: проверьте сумму сертификата и размер комиссии.": "The commission came out as zero: check the certificate amount and the commission rate.",
+ "Продавец и комиссия": "Seller and commission",
+ "Для выпущенных сертификатов, в том числе перенесённых из таблицы: размер комиссии задаётся здесь. Использованный сертификат — комиссия «Начислена» (дальше согласование и выплата). Согласованную или выплаченную комиссию изменить нельзя.": "For issued certificates, including those imported from the table: the commission is set here. A used certificate gets the commission “Earned” (then approval and payment). An approved or paid commission cannot be changed.",
+ "Назначит продавца выбранным выпущенным сертификатам и рассчитает комиссию по указанному размеру. Черновики, бесплатные и сертификаты с согласованной или выплаченной комиссией будут пропущены.": "Assigns the seller to the selected issued certificates and calculates the commission at the given rate. Drafts, free certificates and those with an approved or paid commission are skipped.",
+ "Сумма комиссии, ₸": "Commission amount, ₸",
+ "Например: «перенос из старой таблицы, продавец по договорённости». Останется в истории и журнале.": "For example: “imported from the old table, seller by agreement”. It stays in the history and the log.",
+ "Продавец назначен, комиссия пересчитана": "Seller assigned, commission recalculated",
+ "Готово: :p1, пропущено: :p2": "Done: :p1, skipped: :p2",
+ "Без продавца": "Without a seller",
+ "Перенесённые из таблицы": "Imported from the table"
 }

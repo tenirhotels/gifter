@@ -6,11 +6,14 @@ use App\Enums\CertificateKind;
 use App\Enums\CertificateStatus;
 use App\Enums\CommissionStatus;
 use App\Enums\CommissionType;
+use App\Enums\HistoryEvent;
+use App\Enums\Permission;
 use App\Exceptions\DomainRuleViolation;
 use App\Models\AuditLog;
 use App\Models\Certificate;
 use App\Models\CertificateCommission;
 use App\Models\CommissionRule;
+use App\Models\User;
 use App\Support\Money;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -164,6 +167,77 @@ class CommissionManager
         if ($commission && $commission->status === CommissionStatus::Void) {
             $this->move($commission, CommissionStatus::PendingRedemption, 'commission_reopened', ['void_reason' => null]);
         }
+    }
+
+    /**
+     * Продавец и комиссия у уже выпущенной продажи (например, перенесённой из таблицы): размер задаётся здесь, правил на пакет может не быть.
+     * Нет записи — создаётся снимок без правила; статус по сертификату: активен — ждёт погашения, использован — начислена, аннулирован/истёк — не начисляется.
+     * Есть запись (ждёт, начислена, не начисляется) — меняются продавец и расчёт, статус сохраняется; согласованную и выплаченную не трогаем.
+     *
+     * @throws DomainRuleViolation
+     */
+    public function assignSellerAndRecalculate(Certificate $certificate, User $seller, CommissionType $type, string|float $value, string $reason): ?CertificateCommission
+    {
+        $user = auth()->user();
+        if ($user && ! $user->can(Permission::AdminCorrections) && ! $user->can(Permission::ApproveCommissions)) {
+            throw new DomainRuleViolation(__('Назначить продавца и пересчитать комиссию может администратор или директор по продажам.'));
+        }
+        $reason = trim($reason);
+        if (mb_strlen($reason) < 5) {
+            throw new DomainRuleViolation(__('Укажите причину (не короче 5 знаков) — она останется в истории и журнале.'));
+        }
+        if (! $seller->is_active || ! $seller->hasPermission(Permission::CreateCertificates)) {
+            throw new DomainRuleViolation(__('Продавцом может быть только действующий сотрудник отдела продаж.'));
+        }
+        $value = str_replace(',', '.', trim((string) $value));
+        if (! is_numeric($value) || (float) $value <= 0 || ($type === CommissionType::Percent && (float) $value > 100)) {
+            throw new DomainRuleViolation($type === CommissionType::Percent ? __('Процент комиссии — число от 0 до 100.') : __('Сумма комиссии должна быть больше нуля.'));
+        }
+
+        return DB::transaction(function () use ($certificate, $seller, $type, $value, $reason) {
+            $certificate = Certificate::query()->lockForUpdate()->findOrFail($certificate->id);
+            if ($certificate->kind !== CertificateKind::Sale || $certificate->isDraft()) {
+                throw new DomainRuleViolation(__('Комиссия считается только по выпущенным платным сертификатам.'));
+            }
+            $commission = $certificate->commission()->lockForUpdate()->first();
+            if ($commission && in_array($commission->status, [CommissionStatus::Approved, CommissionStatus::Paid], true)) {
+                throw new DomainRuleViolation(__('Комиссия уже в статусе «:p1»: сначала отмените согласование или выплату в разделе «Комиссии».', ['p1' => mb_strtolower($commission->status->getLabel())]));
+            }
+
+            $rule = new CommissionRule(['type' => $type, 'rate' => $type === CommissionType::Percent ? $value : null, 'fixed_amount' => $type === CommissionType::Fixed ? $value : null]);
+            $amount = $rule->calculate($certificate->total_amount);
+            if (Money::toMinor($amount) <= 0) {
+                throw new DomainRuleViolation(__('Комиссия получилась нулевой: проверьте сумму сертификата и размер комиссии.'));
+            }
+
+            $beforeSeller = $certificate->sold_by;
+            $certificate->update(['sold_by' => $seller->id, 'updated_by' => auth()->id()]);
+            $fields = ['seller_id' => $seller->id, 'rule_id' => null, 'rule_type' => $type, 'rule_rate' => $rule->rate, 'rule_fixed_amount' => $rule->fixed_amount,
+                'sale_price' => $certificate->total_amount, 'amount' => $amount];
+
+            if ($commission) {
+                $before = $this->snapshot($commission);
+                $commission->update($fields);
+                AuditLog::record('commission_recalculated', $commission, $before, $this->snapshot($commission) + ['reason' => $reason]);
+            } else {
+                [$status, $extra] = match ($certificate->status) {
+                    CertificateStatus::Used => [CommissionStatus::Earned, ['earned_at' => now()]],
+                    CertificateStatus::Cancelled, CertificateStatus::Expired => [CommissionStatus::Void, ['void_reason' => "Назначение продавца: {$reason}"]],
+                    default => [CommissionStatus::PendingRedemption, []],
+                };
+                $commission = $certificate->commission()->create($fields + ['status' => $status] + $extra);
+                AuditLog::record('commission_created', $commission, null, $this->snapshot($commission) + ['reason' => $reason]);
+            }
+
+            $certificate->history()->create([
+                'user_id' => auth()->id(), 'event' => HistoryEvent::Updated,
+                'description' => "Продавец: {$seller->name}, комиссия {$amount} ({$type->getLabel()}). Причина: {$reason}",
+                'before' => ['sold_by' => $beforeSeller], 'after' => ['sold_by' => $seller->id, 'commission' => (string) $amount],
+            ]);
+            AuditLog::record('seller_overridden', $certificate, null, ['sold_by' => $seller->id, 'was' => $beforeSeller, 'reason' => $reason]);
+
+            return $commission;
+        });
     }
 
     /** Согласование к выплате — директор по продажам. */
