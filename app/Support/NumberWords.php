@@ -11,8 +11,7 @@ namespace App\Support;
 final class NumberWords
 {
     public const LIST = [
-        'TAU', 'NUR', 'GUL', 'ARU', 'KOL', 'JEL', 'KUN', 'QAR', 'JAN', 'NAZ', 'TOY', 'ALA', 'QYS', 'MUZ', 'UYA', 'BAL', 'SAY',
-        'TAS', 'TAL',
-        'KOK', 'JAZ', 'KUZ', // времена года вместе с QYS: весна, лето, осень, зима
+        'TAU', 'NUR', 'GUL', 'ARU', 'KOL', 'JEL', 'KUN', 'QAR', 'ALA', 'QYS', 'MUZ', 'BAL', 'SAY', 'TAL',
+        'JAZ', 'KUZ', // времена года вместе с QYS: лето, осень, зима
     ];
 }
