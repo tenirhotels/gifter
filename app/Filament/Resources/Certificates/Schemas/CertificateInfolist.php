@@ -24,7 +24,6 @@ class CertificateInfolist
         return $schema->columns(3)->components([
             Section::make('Сертификат')->columns(2)->columnSpan(2)->schema([
                 TextEntry::make('number')->label('Номер')->copyable()->weight('bold'),
-                TextEntry::make('serial_number')->label('Порядковый № в системе')->placeholder('—')->helperText(__('Внутренний номер для реестра и отчётов; гостю не показывается.')),
                 TextEntry::make('status')->label('Статус')->badge(),
                 TextEntry::make('kind')->label('Вид выпуска')->badge(),
                 TextEntry::make('source')->label('Канал')->badge()

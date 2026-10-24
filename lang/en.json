@@ -1560,7 +1560,5 @@
  "В международном формате: +7 701 123 45 67 (для других стран — со своим кодом, например +998 90 123 45 67)": "In international format: +7 701 123 45 67 (for other countries — with their own code, e.g. +998 90 123 45 67)",
  "Второй телефон": "Second phone",
  "Необязательно. Например, рабочий или зарубежный номер.": "Optional. For example, a work or a foreign number.",
- "Порядковый № в системе": "Serial no. in the system",
- "Внутренний номер для реестра и отчётов; гостю не показывается.": "Internal number for the register and reports; not shown to the guest.",
  "Порядк. №": "Serial no."
 }
