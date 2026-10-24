@@ -17,11 +17,79 @@ class ShopSetting extends Model
     /** Тексты главной, которые правятся в настройках на трёх языках (русский — в колонке, kk/en — в `text_translations`). */
     public const TEXTS = ['hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite'];
 
-    protected $fillable = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'updated_by'];
+    protected $fillable = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'faq_items', 'terms_items', 'updated_by'];
 
     protected function casts(): array
     {
-        return ['text_translations' => 'array', 'delivery_methods' => 'array'];
+        return ['text_translations' => 'array', 'delivery_methods' => 'array', 'faq_items' => 'array', 'terms_items' => 'array'];
+    }
+
+    /** Стандартные вопросы и ответы (пока в настройках ничего не задано). Ответ — абзацы через перевод строки. */
+    public const DEFAULT_FAQ = [
+        ['Как купить сертификат?', ['Выберите понравившийся сертификат и оставьте заявку. Менеджер свяжется с вами, уточнит детали и оформит покупку.', 'После оплаты мы выпустим сертификат и передадим его выбранным вами способом.']],
+        ['Как я получу сертификат?', ['Вы можете забрать сертификат в отеле, заказать доставку курьером по городу или получить электронный сертификат на email.']],
+        ['Сколько действует сертификат?', ['Срок действия указан на странице выбранного сертификата и на самом сертификате. Срок начинает отсчитываться с даты продажи.']],
+        ['Как воспользоваться сертификатом?', ['Когда будете готовы воспользоваться сертификатом, свяжитесь с отелем и назовите номер сертификата. Мы проверим его действительность и поможем оформить бронирование.', 'Для проживания рекомендуем обращаться заранее — выбранная дата зависит от доступности номеров.']],
+        ['Можно ли выбрать дату проживания при покупке?', ['Не обязательно. Вы можете выбрать дату позже, в пределах срока действия сертификата и с учётом доступности номеров.']],
+        ['Что входит в сертификат?', ['Состав зависит от выбранного сертификата. На странице каждого сертификата указаны стоимость, срок действия и точный состав подарка.']],
+        ['Можно ли использовать сертификат частично?', ['Нет. Если сертификат включает несколько услуг, он используется целиком. Отдельные услуги нельзя использовать независимо друг от друга или вернуть их стоимость.']],
+        ['Что делать, если срок действия сертификата заканчивается?', ['Если сертификат ещё не использован, заранее свяжитесь с отелем и уточните возможность бронирования до окончания срока его действия.']],
+    ];
+
+    /**
+     * Вопросы и ответы на языке посетителя: из настроек, а если там пусто — стандартные. Ответ — абзацы.
+     *
+     * @return list<array{q: string, a: list<string>}>
+     */
+    public function faq(?string $lang = null): array
+    {
+        $items = [];
+        foreach ((array) $this->faq_items as $item) {
+            $q = LocalizedName::pick($item['q'] ?? null, '', $lang);
+            $a = LocalizedName::pick($item['a'] ?? null, '', $lang);
+            if ($q !== '' && $a !== '') {
+                $items[] = ['q' => $q, 'a' => array_values(array_filter(array_map('trim', preg_split('/\R+/u', $a) ?: []), fn ($p) => $p !== ''))];
+            }
+        }
+        if ($items !== []) {
+            return $items;
+        }
+
+        return array_map(fn (array $row) => ['q' => __($row[0], [], $lang), 'a' => array_map(fn ($p) => __($p, [], $lang), $row[1])], self::DEFAULT_FAQ);
+    }
+
+    /** Условия сертификата на языке посетителя: из настроек, а если пусто — стандартные из конфигурации. @return list<string> */
+    public function terms(?string $lang = null): array
+    {
+        $items = [];
+        foreach ((array) $this->terms_items as $item) {
+            $text = LocalizedName::pick($item['t'] ?? null, '', $lang);
+            if ($text !== '') {
+                $items[] = $text;
+            }
+        }
+
+        return $items !== [] ? $items : array_map(fn ($t) => __($t, [], $lang), (array) config('gifter.certificate.terms'));
+    }
+
+    /** Стандартные вопросы для формы на трёх языках: [{q:{ru,kk,en}, a:{ru,kk,en}}]. @return list<array<string, array<string, string>>> */
+    public static function defaultFaqItems(): array
+    {
+        return array_map(function (array $row): array {
+            $item = ['q' => [], 'a' => []];
+            foreach (LocalizedName::LANGS as $lang) {
+                $item['q'][$lang] = __($row[0], [], $lang);
+                $item['a'][$lang] = implode("\n", array_map(fn ($p) => __($p, [], $lang), $row[1]));
+            }
+
+            return $item;
+        }, self::DEFAULT_FAQ);
+    }
+
+    /** @return list<array<string, array<string, string>>> */
+    public static function defaultTermsItems(): array
+    {
+        return array_map(fn ($term) => ['t' => collect(LocalizedName::LANGS)->mapWithKeys(fn ($lang) => [$lang => __($term, [], $lang)])->all()], array_values((array) config('gifter.certificate.terms')));
     }
 
     public static function current(): self

@@ -45,8 +45,8 @@
     .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 16px; }
     .brand { display: block; color: var(--accent); line-height: 0; }
     .brand svg { height: 46px; width: auto; display: block; }
-    .nav { display: flex; align-items: center; gap: 28px; font-size: .875rem; }
-    .nav .links { display: flex; gap: 26px; }
+    .nav { display: flex; align-items: center; gap: 36px; font-size: 1.0625rem; }
+    .nav .links { display: flex; gap: 32px; }
     .chip { display: inline-block; margin-top: 22px; padding: 8px 18px; border: 1px solid rgba(255,255,255,.45); border-radius: 999px; font: 500 .75rem var(--label); letter-spacing: .08em; color: #fff; }
     .feat { display: grid; gap: 18px; margin-top: 28px; }
     .feat div { display: grid; gap: 2px; padding-left: 18px; border-left: 1px solid var(--warm); }
@@ -56,11 +56,12 @@
     @media (max-width: 520px) { .aud { grid-template-columns: 1fr; } }
     .aud div { border-top: 1px solid var(--line); padding-top: 20px; }
     .aud h3 { font-size: 1.35rem; margin-bottom: 6px; }
-    .nav a { text-decoration: none; color: var(--muted); transition: color .2s; }
-    .nav a:hover { color: var(--graphite); }
-    .lang a { margin-left: 10px; font-size: .75rem; letter-spacing: .12em; }
-    .lang a.on { color: var(--graphite); font-weight: 600; }
-    @media (max-width: 720px) { .nav .links { display: none; } .brand svg { height: 38px; } }
+    .nav a { text-decoration: none; color: var(--ink); font-weight: 500; transition: color .2s; }
+    .nav a:hover { color: var(--accent); }
+    .lang a { margin-left: 14px; font-size: .9375rem; letter-spacing: .1em; color: var(--muted); }
+    .lang a.on { color: var(--graphite); font-weight: 700; }
+    @media (max-width: 900px) { .nav { gap: 18px; font-size: 1rem; } .nav .links { gap: 18px; } }
+    @media (max-width: 720px) { .top .wrap { height: auto; min-height: 64px; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; row-gap: 4px; } .nav { width: 100%; justify-content: space-between; gap: 12px; font-size: .9375rem; } .nav .links { gap: 16px; flex-wrap: wrap; } .lang a { margin-left: 10px; } .brand svg { height: 38px; } }
 
     /* Кнопки */
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent); border-radius: 999px; padding: 15px 32px; font: 600 .9375rem var(--sans); letter-spacing: .04em; text-decoration: none; cursor: pointer; transition: transform .25s var(--ease), box-shadow .25s var(--ease), background .25s; }
@@ -198,7 +199,7 @@
                     <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'gifts') }}">{{ __('Сертификаты') }}</a>
                     <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'how') }}">{{ __('Как это работает') }}</a>
                 @endif
-                <a href="{{ \App\Support\ShopUrl::route('shop.faq') }}">FAQ</a>
+                <a href="{{ \App\Support\ShopUrl::route('shop.faq') }}">{{ __('Вопросы и ответы') }}</a>
             </span>
             <span class="lang">@foreach (array_keys(config('gifter.locales')) as $code)<a href="?lang={{ $code }}" @class(['on' => app()->getLocale() === $code])>{{ strtoupper($code) }}</a>@endforeach</span>
         </nav>

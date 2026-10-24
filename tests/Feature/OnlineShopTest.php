@@ -229,7 +229,7 @@ class OnlineShopTest extends TestCase
                 $this->assertStringNotContainsStringIgnoringCase('halyk', $html, "$lang $url");
             }
         }
-        $this->get('/?lang=ru')->assertSeeInOrder(['Сертификаты', 'Как это работает', 'FAQ', 'KK', 'RU', 'EN'])
+        $this->get('/?lang=ru')->assertSeeInOrder(['Сертификаты', 'Как это работает', 'Вопросы и ответы', 'KK', 'RU', 'EN'])
             ->assertSeeInOrder(['Сертификаты', 'Как это работает', 'Вопросы и ответы', 'Условия сертификата', 'Контакты'], false)
             ->assertSee('Остались вопросы?')->assertSee('Физический сертификат с доставкой · Срок действия — 3 месяца');
         $this->get('/faq?lang=ru')->assertSee('Всё о сертификатах')->assertSee('Можно ли использовать сертификат частично?')->assertSee('Что делать, если срок действия сертификата заканчивается?');

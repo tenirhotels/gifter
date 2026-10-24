@@ -1545,5 +1545,17 @@
  "Пусто или 0 — без ограничений. Считаются сертификаты всех каналов.": "Empty or 0 — no limit. Certificates of all channels are counted.",
  "Продаётся с": "On sale from",
  "Продаётся по": "On sale until",
- "Проверьте EPAY_SHOP_ID и EPAY_TERMINAL: значения должны быть из одного набора данных банка (тест или бой). Проверка: php artisan gifter:epay-check.": "Check EPAY_SHOP_ID and EPAY_TERMINAL: the values must come from the same set of bank data (test or live). Check: php artisan gifter:epay-check."
+ "Проверьте EPAY_SHOP_ID и EPAY_TERMINAL: значения должны быть из одного набора данных банка (тест или бой). Проверка: php artisan gifter:epay-check.": "Check EPAY_SHOP_ID and EPAY_TERMINAL: the values must come from the same set of bank data (test or live). Check: php artisan gifter:epay-check.",
+ "Вопрос": "Question",
+ "Добавить вопрос": "Add question",
+ "Добавить пункт": "Add item",
+ "Контент": "Content",
+ "Новый абзац — с новой строки.": "A new paragraph starts on a new line.",
+ "Новый вопрос": "New question",
+ "Новый пункт": "New item",
+ "Ответ": "Answer",
+ "Оформление": "Appearance",
+ "Пункт": "Item",
+ "Страница «Вопросы и ответы» на сайте. Добавляйте, удаляйте и меняйте порядок; каждый пункт — на трёх языках. Нет перевода — показывается русский текст.": "The “Questions and answers” page on the site. Add, delete and reorder; each item in three languages. No translation — the Russian text is shown.",
+ "Страница «Условия сертификата» на сайте (в PDF сертификата условия не меняются).": "The “Certificate terms” page on the site (the terms in the certificate PDF do not change)."
 }

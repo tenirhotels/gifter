@@ -3,6 +3,6 @@
 @section('content')
 <div class="wrap"><div class="prose">
     <h1>{{ __('Условия сертификата') }}</h1>
-    <ol>@foreach (config('gifter.certificate.terms') as $term)<li>{{ __($term) }}</li>@endforeach</ol>
+    <ol>@foreach ($shop->terms() as $term)<li>{{ $term }}</li>@endforeach</ol>
 </div></div>
 @endsection
