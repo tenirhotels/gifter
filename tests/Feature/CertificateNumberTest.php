@@ -53,7 +53,7 @@ class CertificateNumberTest extends TestCase
         $numbers = [];
         for ($i = 0; $i < 300; $i++) {
             $number = CertificateNumber::random();
-            $this->assertMatchesRegularExpression('/^[A-Z]{3}-[A-Z]{3}-\d{5}$/', $number);
+            $this->assertMatchesRegularExpression('/^[A-Z]{3}-\d{6}$/', $number);
             $this->assertTrue(CertificateNumber::isValid($number));
             $numbers[] = $number;
         }
@@ -66,18 +66,16 @@ class CertificateNumberTest extends TestCase
     public function test_input_is_normalized_and_typos_are_caught_by_the_check_digit(): void
     {
         $number = CertificateNumber::random();
-        [$words, $tail] = [substr($number, 0, 7), substr($number, 8)];
+        [$word, $tail] = [substr($number, 0, 3), substr($number, 4)];
         $this->assertTrue(CertificateNumber::isValid(strtolower(str_replace('-', ' ', $number))));
         $this->assertSame($number, CertificateNumber::normalize(str_replace('-', '.', $number)));
         $this->assertSame($number, CertificateNumber::normalize(str_replace('-', '', strtolower($number))));
 
-        // Любая замена одной цифры ломает контрольную цифру или меняет номер на другой, но не на этот же.
-        $wrongCheck = $words.'-'.substr($tail, 0, 4).(((int) $tail[4] + 1) % 10);
-        $this->assertFalse(CertificateNumber::isValid($wrongCheck));
-        $this->assertNull(CertificateNumber::normalize('TAU-KOL-482'));
-        $this->assertNull(CertificateNumber::normalize('GIF-000001'));
-        $this->assertFalse(CertificateNumber::isValid('TAU-TAU-48273'), 'Слова не повторяются');
-        $this->assertFalse(CertificateNumber::isValid('TAU-XYZ-48273'), 'Слова только из списка');
+        $wrongCheck = $word.'-'.substr($tail, 0, 5).(((int) $tail[5] + 1) % 10);
+        $this->assertFalse(CertificateNumber::isValid($wrongCheck), 'Неверная контрольная цифра');
+        $this->assertNull(CertificateNumber::normalize('TAU-4827'));
+        $this->assertFalse(CertificateNumber::isValid('GIF-000001'), 'Прежний порядковый номер не проходит проверку');
+        $this->assertFalse(CertificateNumber::isValid('XYZ-482731'), 'Слово только из списка');
     }
 
     public function test_check_digit_depends_on_the_secret_key(): void
@@ -92,8 +90,8 @@ class CertificateNumberTest extends TestCase
         }
         $this->assertSame(200, $valid, 'С новым ключом новые номера проверяются');
         // Подделать номер без ключа нельзя: из 10 вариантов последней цифры подходит один.
-        $words = substr($number, 0, 7).'-'.substr($number, 8, 4);
-        $accepted = collect(range(0, 9))->filter(fn ($d) => CertificateNumber::isValid($words.$d))->count();
+        $base = substr($number, 0, 9);
+        $accepted = collect(range(0, 9))->filter(fn ($d) => CertificateNumber::isValid($base.$d))->count();
         $this->assertLessThanOrEqual(1, $accepted);
     }
 
@@ -131,6 +129,6 @@ class CertificateNumberTest extends TestCase
 
         $this->assertSame(1, (int) $first->serial_number);
         $this->assertSame(2, (int) $second->serial_number);
-        $this->assertDoesNotMatchRegularExpression('/\d{6}/', $first->number, 'Публичный номер не содержит порядкового номера');
+        $this->assertTrue(CertificateNumber::isValid($first->number), 'Публичный номер — не порядковый, а из слова и случайных цифр');
     }
 }
