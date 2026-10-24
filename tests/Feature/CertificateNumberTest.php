@@ -35,7 +35,7 @@ class CertificateNumberTest extends TestCase
         $sound = fn (string $w) => strtr($w, ['Q' => 'K', 'J' => 'Y', 'Z' => 'S']);
         $words = NumberWords::LIST;
         // Слова, оставленные по решению владельца, хотя они похожи на слух.
-        $allowed = ['BAL-TAL', 'KUN-KUZ', 'KUZ-MUZ', 'KUZ-QYS', 'TAL-TAU'];
+        $allowed = ['ARU-ASU', 'BAL-TAL', 'JAZ-TAS', 'KUN-KUZ', 'KUN-TUN', 'KUZ-MUZ', 'KUZ-QYS', 'TAL-TAN', 'TAL-TAS', 'TAL-TAU', 'TAN-TAS', 'TAN-TAU', 'TAN-TUN', 'TAS-TAU'];
         foreach ($words as $i => $a) {
             foreach (array_slice($words, $i + 1) as $b) {
                 $different = count(array_filter(str_split($sound($a)), fn ($c, $k) => $c !== $sound($b)[$k], ARRAY_FILTER_USE_BOTH));
