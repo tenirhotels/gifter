@@ -30,6 +30,18 @@ class CertificateNumberTest extends TestCase
         $this->assertLessThanOrEqual(100, count(NumberWords::LIST));
     }
 
+    public function test_words_are_not_confusable_by_ear(): void
+    {
+        $sound = fn (string $w) => strtr($w, ['Q' => 'K', 'J' => 'Y', 'Z' => 'S']);
+        $words = NumberWords::LIST;
+        foreach ($words as $i => $a) {
+            foreach (array_slice($words, $i + 1) as $b) {
+                $different = count(array_filter(str_split($sound($a)), fn ($c, $k) => $c !== $sound($b)[$k], ARRAY_FILTER_USE_BOTH));
+                $this->assertGreaterThanOrEqual(2, $different, "$a и $b слишком похожи на слух");
+            }
+        }
+    }
+
     public function test_random_numbers_have_the_format_and_do_not_follow_an_order(): void
     {
         $numbers = [];
