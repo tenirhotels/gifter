@@ -70,7 +70,7 @@ class CertificateManager
             [$validFrom, $validUntil] = $validity->resolve($package, $soldAt);
 
             $certificate = Certificate::create([
-                'number' => $this->numbers->next($soldAt),
+                'number' => $this->numbers->next($soldAt), 'serial_number' => $this->numbers->nextSerial(),
                 'customer_id' => $data['customer_id'] ?? null,
                 'recipient_id' => $data['recipient_id'] ?? null,
                 'package_id' => $package->id,

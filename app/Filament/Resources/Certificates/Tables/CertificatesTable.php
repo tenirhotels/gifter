@@ -32,6 +32,7 @@ class CertificatesTable
             ])
             ->columns([
                 TextColumn::make('number')->label('Номер')->searchable(query: CertificateNumber::searchQuery())->sortable()->copyable(),
+                TextColumn::make('serial_number')->label('Порядк. №')->sortable()->searchable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('status')->label('Статус')->badge()->sortable(),
                 TextColumn::make('kind')->label('Вид выпуска')->badge()->toggleable(),
                 TextColumn::make('source')->label('Канал')->badge()->toggleable(),

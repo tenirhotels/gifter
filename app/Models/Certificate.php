@@ -30,7 +30,7 @@ class Certificate extends Model
     protected $attributes = ['kind' => 'sale', 'custom_validity' => false, 'source' => 'staff'];
 
     protected $fillable = [
-        'number', 'legacy_number', 'legacy_key', 'verification_token', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'complimentary_purpose', 'batch_id', 'complimentary_approved_by', 'complimentary_approved_at', 'sold_at', 'valid_from',
+        'number', 'serial_number', 'legacy_number', 'legacy_key', 'verification_token', 'customer_id', 'recipient_id', 'package_id', 'status', 'kind', 'complimentary_reason', 'complimentary_purpose', 'batch_id', 'complimentary_approved_by', 'complimentary_approved_at', 'sold_at', 'valid_from',
         'valid_until', 'custom_validity', 'total_amount', 'total_cost', 'payable_amount', 'marketing_cost', 'currency', 'issued_at', 'cancelled_at', 'cancellation_reason',
         'notes', 'gift_message', 'created_by', 'sold_by', 'updated_by', 'source', 'online_order_id', 'expiry_reminded_at',
         'pms_booking_number', 'pms_verified_at', 'pms_data_age_minutes', 'pms_checked_at', 'pms_check_status', 'pms_check_note', 'booking_guest_name', 'arrival_date', 'departure_date', 'name_match', 'reservation_note',

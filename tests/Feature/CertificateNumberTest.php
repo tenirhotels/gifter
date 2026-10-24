@@ -82,4 +82,15 @@ class CertificateNumberTest extends TestCase
 
         $this->assertSame('GIF-000001', $number);
     }
+
+    public function test_internal_serial_number_grows_by_one_and_is_independent_of_the_public_number(): void
+    {
+        $customer = Customer::factory()->create();
+        $first = app(CertificateManager::class)->createDraft(['package_id' => $this->emptyPackageId(), 'customer_id' => $customer->id]);
+        $second = app(CertificateManager::class)->createDraft(['package_id' => $this->emptyPackageId(), 'customer_id' => $customer->id]);
+
+        $this->assertSame(1, (int) $first->serial_number);
+        $this->assertSame(2, (int) $second->serial_number);
+        $this->assertDoesNotMatchRegularExpression('/\d{6}/', $first->number, 'Публичный номер не содержит порядкового номера');
+    }
 }

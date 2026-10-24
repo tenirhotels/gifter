@@ -227,7 +227,7 @@ class LegacyCertificateImport
 
         $cancelled = $data['status'] === CertificateStatus::Cancelled;
         $certificate = Certificate::create([
-            'number' => $this->numbers->next($soldAt), 'legacy_number' => $data['number'] !== '' ? Str::limit($data['number'], 60, '') : null, 'legacy_key' => $key,
+            'number' => $this->numbers->next($soldAt), 'serial_number' => $this->numbers->nextSerial(), 'legacy_number' => $data['number'] !== '' ? Str::limit($data['number'], 60, '') : null, 'legacy_key' => $key,
             'verification_token' => Str::random(32),
             'customer_id' => $customer?->id, 'recipient_id' => $recipient?->id, 'package_id' => $package->id,
             'status' => $data['status'], 'kind' => $kind,

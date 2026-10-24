@@ -14,6 +14,18 @@ use Illuminate\Support\Facades\DB;
  */
 class CertificateNumberGenerator
 {
+    /** Внутренний порядковый номер (реестр, отчёты, сортировка): растёт на единицу, пропусков и повторов нет; гостю не показывается. */
+    public function nextSerial(): int
+    {
+        return DB::transaction(function () {
+            DB::table('certificate_number_sequences')->insertOrIgnore(['scope' => 'serial', 'last_value' => 0]);
+            $next = DB::table('certificate_number_sequences')->where('scope', 'serial')->lockForUpdate()->value('last_value') + 1;
+            DB::table('certificate_number_sequences')->where('scope', 'serial')->update(['last_value' => $next]);
+
+            return (int) $next;
+        });
+    }
+
     public function next(Carbon $soldAt): string
     {
         if (config('gifter.number.style', 'words') === 'words') {
