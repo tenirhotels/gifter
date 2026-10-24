@@ -32,6 +32,9 @@
             </ul>
             <div class="total"><span class="muted">{{ __('Стоимость') }}</span><span class="price">{{ \App\Support\Money::format($offer['price']) }}</span></div>
 
+            @if ($offer['sale_note'])
+                <p class="period" style="color:#9b4a2f;font-weight:600;margin-top:28px;font-size:1.05rem">{{ $offer['sale_note'] }}</p>
+            @else
             <form method="post" action="{{ \App\Support\ShopUrl::route('shop.store', $offer['package']) }}" style="margin-top:36px">
                 @csrf
                 <fieldset>
@@ -72,6 +75,7 @@
                 <button class="btn" type="submit" style="margin-top:20px;width:100%">{{ __('Отправить заявку') }}</button>
                 <p class="hint" style="margin-top:12px;text-align:center">{{ __('Менеджер свяжется с вами для завершения заказа и оплаты.') }}</p>
             </form>
+            @endif
         </div>
     </div>
 </div>

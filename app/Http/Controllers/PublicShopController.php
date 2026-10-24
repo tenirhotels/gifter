@@ -9,6 +9,7 @@ use App\Models\OnlineOrder;
 use App\Models\Package;
 use App\Models\ShopSetting;
 use App\Services\CertificateManager;
+use App\Services\PackageSales;
 use App\Support\PhoneNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -59,6 +60,9 @@ class PublicShopController extends Controller
     {
         $offer = $this->offer($this->sellable($package));
         abort_if($offer === null, 404);
+        if ($offer['sale'] !== PackageSales::OPEN) {
+            return redirect()->route('shop.order', $package)->with('sale_closed', true);
+        }
 
         // Приманка для ботов: человек это поле не видит и не заполняет.
         if (filled($request->input('website'))) {
@@ -163,7 +167,7 @@ class PublicShopController extends Controller
         return $package->is_active && ! $package->is_complimentary && $package->sold_online && ! $package->periodEnded() ? $package : null;
     }
 
-    /** @return array{package: Package, price: string, lines: list<array<string, mixed>>, validity: string}|null  Пакет без цены на сегодня не продаётся. */
+    /** @return array{package: Package, price: string, lines: list<array<string, mixed>>, validity: string, sale: string, sale_note: ?string}|null  Пакет без цены на сегодня не продаётся. */
     private function offer(?Package $package): ?array
     {
         if ($package === null) {
@@ -177,7 +181,11 @@ class PublicShopController extends Controller
 
         $validity = $package->validityText();
 
-        return ['package' => $package, 'price' => $quote['total'], 'lines' => $quote['lines'], 'validity' => $validity];
+        return ['package' => $package, 'price' => $quote['total'], 'lines' => $quote['lines'], 'validity' => $validity, 'sale' => ($sale = app(PackageSales::class)->state($package)), 'sale_note' => match ($sale) {
+            PackageSales::NOT_STARTED => __('Продажа начнётся :p1', ['p1' => $package->sales_from->format('d.m.Y')]),
+            PackageSales::ENDED, PackageSales::SOLD_OUT => __('Продажа завершена'),
+            default => null,
+        }];
     }
 
     /** Письма не должны терять заявку: сбой почты только пишется в журнал, без контактов клиента. */

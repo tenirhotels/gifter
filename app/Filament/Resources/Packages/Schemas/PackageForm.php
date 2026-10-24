@@ -62,6 +62,14 @@ class PackageForm
                 DatePicker::make('period_from')->label('Период с')->required(fn (Get $get) => self::isPeriod($get('validity_type'))),
                 DatePicker::make('period_until')->label('Период по')->required(fn (Get $get) => self::isPeriod($get('validity_type')))->afterOrEqual('period_from'),
             ])->columnSpanFull()->visible(fn (Get $get) => self::isPeriod($get('validity_type'))),
+            Toggle::make('sales_limits_enabled')->label('Дополнительные ограничения продажи')->live()->columnSpanFull()
+                ->helperText(__('Лимит по количеству и/или окно продаж (например, Black Friday). Когда продажа закрыта, оформить сертификат нельзя ни на сайте, ни в админке; на сайте пакет остаётся с пометкой «Продажа завершена». Снять ограничения — выключить тумблер.')),
+            Grid::make(3)->columnSpanFull()->visible(fn (Get $get) => (bool) $get('sales_limits_enabled'))->schema([
+                TextInput::make('sales_quota')->label('Лимит продаж, шт.')->integer()->minValue(0)->maxValue(100000)
+                    ->helperText(__('Пусто или 0 — без ограничений. Считаются сертификаты всех каналов.')),
+                DatePicker::make('sales_from')->label('Продаётся с'),
+                DatePicker::make('sales_until')->label('Продаётся по')->afterOrEqual('sales_from'),
+            ]),
             Textarea::make('description')->label('Описание')->columnSpanFull()
                 ->helperText(__('Основное (русское) описание. Переводы — в разделе «Каталог → Переводы».')),
             FileUpload::make('image_path')->label('Фото для сайта')->image()->disk('public')->directory('shop')->visibility('public')

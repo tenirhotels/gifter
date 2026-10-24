@@ -59,6 +59,7 @@ class CertificateManager
             }
             $soldAt = Carbon::parse($data['sold_at'] ?? today())->startOfDay();
             $this->assertPeriodNotEnded($package, $soldAt);
+            app(PackageSales::class)->assertCanSell($package, 1, fromOrder: ! empty($data['online_order_id']));
             $soldAtReason = $soldAt->isSameDay(today()) ? null : $this->overrideReason('Дата продажи отличается от сегодняшней', $data['sold_at_reason'] ?? null);
             $sellerReason = ($data['sold_by'] ?? null) && (int) $data['sold_by'] !== auth()->id()
                 ? $this->overrideReason('Продавец назначен не автором оформления', $data['seller_reason'] ?? null) : null;
@@ -179,6 +180,9 @@ class CertificateManager
             $package = $newPackage ?? $certificate->package;
             if ($packageChanged && ! $package->is_active) {
                 throw new DomainRuleViolation(__('Пакет «:p1» не активен.', ['p1' => $package->name]));
+            }
+            if ($packageChanged) {
+                app(PackageSales::class)->assertCanSell($package);
             }
 
             $before = $this->snapshot($certificate);

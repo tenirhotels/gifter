@@ -27,7 +27,7 @@ class Package extends Model
 
     protected $attributes = ['is_active' => true, 'validity_value' => 2, 'validity_unit' => 'months', 'is_complimentary' => false];
 
-    protected $fillable = ['name', 'name_translations', 'description', 'description_translations', 'validity_type', 'period_from', 'period_until', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active', 'sold_online', 'image_path'];
+    protected $fillable = ['name', 'name_translations', 'description', 'description_translations', 'validity_type', 'period_from', 'period_until', 'sales_limits_enabled', 'sales_quota', 'sales_from', 'sales_until', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active', 'sold_online', 'image_path'];
 
     protected function casts(): array
     {
@@ -39,6 +39,10 @@ class Package extends Model
             'validity_type' => PackageValidityType::class,
             'period_from' => 'date',
             'period_until' => 'date',
+            'sales_limits_enabled' => 'boolean',
+            'sales_quota' => 'integer',
+            'sales_from' => 'date',
+            'sales_until' => 'date',
             'validity_value' => 'integer',
             'validity_unit' => ValidityUnit::class,
             'is_complimentary' => 'boolean',
@@ -51,6 +55,14 @@ class Package extends Model
         static::saving(function (self $package) {
             $package->name_translations = LocalizedName::clean($package->name_translations);
             $package->description_translations = LocalizedName::clean($package->description_translations);
+            if (! $package->sales_limits_enabled) {
+                $package->sales_quota = $package->sales_from = $package->sales_until = null;
+            } else {
+                $package->sales_quota = (int) $package->sales_quota > 0 ? (int) $package->sales_quota : null;
+                if ($package->sales_from && $package->sales_until && $package->sales_until->lt($package->sales_from)) {
+                    throw new DomainRuleViolation(__('Окно продаж: дата «по» не раньше даты «с».'));
+                }
+            }
             if ($package->validity_type === PackageValidityType::Period) {
                 if ($package->period_from === null || $package->period_until === null || $package->period_until->lt($package->period_from)) {
                     throw new DomainRuleViolation(__('Укажите период пакета: дата «по» не раньше даты «с».'));

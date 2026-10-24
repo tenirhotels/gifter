@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Packages\Tables;
 
 use App\Models\Package;
+use App\Services\PackageSales;
 use App\Services\ShopAvailability;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
@@ -29,6 +30,9 @@ class PackagesTable
                     ->state(fn (Package $record) => app(ShopAvailability::class)->problems($record) === [] ? __('Показывается') : __('Не показывается'))
                     ->color(fn (Package $record) => app(ShopAvailability::class)->problems($record) === [] ? 'success' : 'gray')
                     ->tooltip(fn (Package $record) => implode("\n", app(ShopAvailability::class)->problems($record)) ?: null),
+                TextColumn::make('sales')->label('Продажа')->wrap()->toggleable()
+                    ->state(fn (Package $record) => app(PackageSales::class)->label($record))
+                    ->color(fn (Package $record) => app(PackageSales::class)->state($record) === PackageSales::OPEN ? null : 'warning'),
             ])
             ->modifyQueryUsing(fn ($query) => $query->with('items.service'))
             ->recordActions([EditAction::make()])
