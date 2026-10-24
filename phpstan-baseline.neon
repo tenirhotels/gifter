@@ -1147,6 +1147,12 @@ parameters:
 			path: app/Filament/Widgets/MyCommissionWidget.php
 
 		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/PublicShopController.php
+
+		-
 			message: '#^Cannot call method lt\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -1335,7 +1341,7 @@ parameters:
 		-
 			message: '#^Cannot call method lt\(\) on string\.$#'
 			identifier: method.nonObject
-			count: 2
+			count: 3
 			path: app/Models/Package.php
 
 		-
@@ -1939,6 +1945,12 @@ parameters:
 			path: app/Services/CertificateManager.php
 
 		-
+			message: '#^Offset ''online_order_id'' on array\{package_id\: int\<min, \-1\>\|int\<1, max\>, customer_id\?\: int\|null, recipient_id\?\: int\|null, complimentary_reason\?\: string\|null, complimentary_purpose\?\: App\\Enums\\ComplimentaryPurpose\|string\|null, sold_at\?\: Illuminate\\Support\\Carbon\|string\|null, notes\?\: string\|null, batch_id\?\: int\|null, \.\.\.\} in empty\(\) does not exist\.$#'
+			identifier: empty.offset
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
 			message: '#^Offset ''online_order_id'' on array\{package_id\: int\<min, \-1\>\|int\<1, max\>, customer_id\?\: int\|null, recipient_id\?\: int\|null, complimentary_reason\?\: string\|null, complimentary_purpose\?\: App\\Enums\\ComplimentaryPurpose\|string\|null, sold_at\?\: Illuminate\\Support\\Carbon\|string\|null, notes\?\: string\|null, batch_id\?\: int\|null, \.\.\.\} on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -2005,13 +2017,19 @@ parameters:
 			path: app/Services/CertificateManager.php
 
 		-
+			message: '#^Parameter \#1 \$package of method App\\Services\\PackageSales\:\:assertCanSell\(\) expects App\\Models\\Package, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CertificateManager.php
+
+		-
 			message: '#^Parameter \#2 \$date of method App\\Services\\ServicePricing\:\:priceOn\(\) expects Illuminate\\Support\\Carbon, string given\.$#'
 			identifier: argument.type
 			count: 2
 			path: app/Services/CertificateManager.php
 
 		-
-			message: '#^Parameter \#2 \$package of method App\\Services\\CertificateManager\:\:addPackageItems\(\) expects App\\Models\\Package, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			message: '#^Parameter \#2 \$package of method App\\Services\\CertificateManager\:\:addPackageItems\(\) expects App\\Models\\Package, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Services/CertificateManager.php
@@ -2603,6 +2621,12 @@ parameters:
 			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Services/OnlineOrderManager.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 5
+			path: app/Services/PackageSales.php
 
 		-
 			message: '#^Anonymous function has an unused use \$amount\.$#'
