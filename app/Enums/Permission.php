@@ -65,6 +65,9 @@ enum Permission: string
     /** Указать или сменить продавца сертификата в черновике. */
     case AssignSeller = 'certificates.assign_seller';
 
+    /** Страница «Аналитика»: продажа, оплата и использование сертификатов. */
+    case ViewAnalytics = 'analytics.view';
+
     // Каталог
     case ViewCatalog = 'catalog.view';
     case ManageCatalog = 'catalog.manage';
@@ -107,7 +110,7 @@ enum Permission: string
             self::RequestReservationException => [Role::FrontOffice],
             self::ApproveReservationException => [Role::SalesDirector],
             self::ViewOwnCommissions => $sales,
-            self::ViewAllCommissions => [Role::SalesDirector, Role::Finance],
+            self::ViewAllCommissions, self::ViewAnalytics => [Role::SalesDirector, Role::Finance],
             self::ApproveCommissions => [Role::SalesDirector],
             self::PayCommissions => [Role::Finance],
             self::AssignSeller => [Role::SalesManager],
