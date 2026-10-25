@@ -352,4 +352,47 @@ class LegacyImportTest extends TestCase
         $this->assertStringContainsString('Тип: Архивный (Сертификат)', $notes);
         $this->assertStringContainsString('Комментарий: оплата в кассе', $notes);
     }
+
+    public function test_consistency_checks_add_warnings_and_notes(): void
+    {
+        $result = app(LegacyCertificateImport::class)->run($this->workbook([
+            $this->row([0 => 'A-1', 4 => 50, 14 => 'Аннулирован']),
+        ]));
+
+        $this->assertSame(1, $result['counts']['imported']);
+        $reason = $result['rows'][0]['reason'];
+        $this->assertStringContainsString('срок в днях не совпадает с датами', $reason);
+        $this->assertStringContainsString('итоговая сумма не сходится', $reason);
+        $this->assertStringContainsString('проверьте возврат', $reason);
+        $notes = (string) Certificate::firstOrFail()->notes;
+        $this->assertStringContainsString('Дней в таблице: 50, по датам: 111', $notes);
+        $this->assertStringContainsString('Сумма не сходится: итого: 200 000, проживание + допуслуги: 160 000', $notes);
+        $this->assertStringContainsString('Аннулирован в таблице', $notes);
+    }
+
+    public function test_company_and_email_are_kept_in_notes_when_there_is_no_buyer(): void
+    {
+        $result = app(LegacyCertificateImport::class)->run($this->workbook([
+            $this->row([8 => 'Промо', 9 => null, 10 => null, 16 => 'ТОО Тест info@example.com']),
+        ]));
+
+        $this->assertSame(1, $result['counts']['imported']);
+        $notes = (string) Certificate::firstOrFail()->notes;
+        $this->assertStringContainsString('Компания в таблице: ТОО Тест', $notes);
+        $this->assertStringContainsString('Email в таблице: info@example.com', $notes);
+    }
+
+    public function test_summary_counts_statuses_kinds_and_paid_sales_by_year(): void
+    {
+        $result = app(LegacyCertificateImport::class)->run($this->workbook([
+            $this->row([0 => 'S-1']),
+            $this->row([0 => 'S-2', 2 => $this->d('2022-02-01'), 3 => $this->d('2022-05-01'), 4 => 89, 14 => 'Просрочен', 6 => 100000, 17 => 100000]),
+            $this->row([0 => 'S-3', 8 => 'Промо / Бартер', 14 => null]),
+        ]));
+
+        $summary = $result['summary'];
+        $this->assertSame(['used' => 1, 'expired' => 2], $summary['status']);
+        $this->assertSame(['продажа' => 2, 'бесплатный' => 1], $summary['kind']);
+        $this->assertSame([2021 => ['count' => 1, 'sum' => 200000.0], 2022 => ['count' => 1, 'sum' => 100000.0]], $summary['paid_by_year']);
+    }
 }

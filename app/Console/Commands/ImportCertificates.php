@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\CertificateStatus;
 use App\Exceptions\DomainRuleViolation;
 use App\Services\LegacyCertificateImport;
 use Illuminate\Console\Command;
@@ -47,12 +48,43 @@ class ImportCertificates extends Command
         foreach ($result['rows'] as $row) {
             fputcsv($handle, [$row['row'], $row['number'], $row['result'], $row['reason']], ';');
         }
+        $lines = $this->summaryLines($result['summary']);
+        fputcsv($handle, [], ';');
+        foreach ($lines as $line) {
+            fputcsv($handle, [$line], ';');
+        }
         fclose($handle);
 
         $c = $result['counts'];
         $this->info(($dry ? 'СУХОЙ ПРОГОН (ничего не записано). ' : '')."Перенесено: {$c['imported']} (с замечаниями: {$c['warnings']}), пропущено: {$c['skipped']}, уже были: {$c['duplicate']}.");
         $this->line('Отчёт: '.$report);
+        $this->line('');
+        foreach ($lines as $line) {
+            $this->line($line);
+        }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Сводка для сверки с таблицей (без данных клиентов).
+     *
+     * @param  array<string, mixed>  $summary
+     * @return list<string>
+     */
+    private function summaryLines(array $summary): array
+    {
+        $lines = ['СВОДКА (перенесённые строки)'];
+        $labels = collect(CertificateStatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->getLabel()])->all();
+        $lines[] = 'По статусам: '.collect($summary['status'])->map(fn ($n, $k) => ($labels[$k] ?? $k).' — '.$n)->implode('; ');
+        $lines[] = 'По видам: '.collect($summary['kind'])->map(fn ($n, $k) => "{$k} — {$n}")->implode('; ');
+        foreach ($summary['paid_by_year'] as $year => $row) {
+            $lines[] = "Платные продажи {$year}: {$row['count']} шт., ".number_format($row['sum'], 0, '', ' ').' ₸';
+        }
+        foreach ($summary['warnings'] as $text => $n) {
+            $lines[] = "Замечание «{$text}»: {$n}";
+        }
+
+        return $lines;
     }
 }

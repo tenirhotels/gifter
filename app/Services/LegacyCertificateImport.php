@@ -52,13 +52,14 @@ class LegacyCertificateImport
     public function __construct(private readonly CertificateNumberGenerator $numbers) {}
 
     /**
-     * @return array{rows: list<array{row: int, number: string, result: string, reason: string}>, counts: array<string, int>}
+     * @return array{rows: list<array{row: int, number: string, result: string, reason: string}>, counts: array<string, int>, summary: array<string, mixed>}
      */
     public function run(string $path, bool $dryRun = false): array
     {
         $rows = $this->read($path);
         $report = [];
         $counts = ['imported' => 0, 'skipped' => 0, 'duplicate' => 0, 'warnings' => 0];
+        $summary = ['status' => [], 'kind' => [], 'paid_by_year' => [], 'warnings' => []];
         $seen = [];
 
         DB::beginTransaction();
@@ -78,6 +79,7 @@ class LegacyCertificateImport
                     }
                     DB::transaction(fn () => $this->store($data, $key, $user));
                     $counts['imported']++;
+                    $this->tally($summary, $data, $warnings);
                     $counts['warnings'] += $warnings ? 1 : 0;
                     $report[] = ['row' => $line, 'number' => $number, 'result' => $warnings ? 'перенесён с замечанием' : 'перенесён', 'reason' => implode('; ', $warnings)];
                 } catch (DomainRuleViolation $e) {
@@ -95,7 +97,9 @@ class LegacyCertificateImport
             throw $e;
         }
 
-        return ['rows' => $report, 'counts' => $counts];
+        ksort($summary['paid_by_year']);
+
+        return ['rows' => $report, 'counts' => $counts, 'summary' => $summary];
     }
 
     /** @return array<int, array<string, mixed>> строки таблицы по номеру строки в файле */
@@ -158,6 +162,28 @@ class LegacyCertificateImport
     }
 
     /**
+     * Сводка для сверки с таблицей: по статусам, видам, платным продажам по годам и видам замечаний.
+     *
+     * @param  array<string, mixed>  $summary
+     * @param  array<string, mixed>  $data
+     * @param  list<string>  $warnings
+     */
+    private function tally(array &$summary, array $data, array $warnings): void
+    {
+        $summary['status'][$data['status']->value] = ($summary['status'][$data['status']->value] ?? 0) + 1;
+        $kind = $data['free'] ? 'бесплатный' : 'продажа';
+        $summary['kind'][$kind] = ($summary['kind'][$kind] ?? 0) + 1;
+        if (! $data['free']) {
+            $year = $data['start']->year;
+            $row = $summary['paid_by_year'][$year] ?? ['count' => 0, 'sum' => 0.0];
+            $summary['paid_by_year'][$year] = ['count' => $row['count'] + 1, 'sum' => $row['sum'] + $data['total']];
+        }
+        foreach ($warnings as $warning) {
+            $summary['warnings'][$warning] = ($summary['warnings'][$warning] ?? 0) + 1;
+        }
+    }
+
+    /**
      * @param  array<string, mixed>  $row
      * @param  list<string>  $warnings
      * @return array<string, mixed>
@@ -191,6 +217,11 @@ class LegacyCertificateImport
         if (filled($row['package'] ?? null)) {
             $this->extra('Тип', (string) $row['package']);
         }
+        if ($buyer === null) { // компания и email без покупателя иначе пропали бы
+            $this->extra('Компания в таблице', (string) $company);
+            $this->extra('Email в таблице', (string) $companyEmail);
+        }
+        $this->checkConsistency($row, $start, $end, $free, $total, $status, $warnings);
         if (filled($row['remarks'] ?? null)) {
             $this->extra('Замечание', (string) $row['remarks']);
         }
@@ -204,6 +235,34 @@ class LegacyCertificateImport
             'stay' => $this->amount($row['stay'] ?? null), 'extras' => $this->amount($row['extras'] ?? null), 'nights' => $row['nights'] ?? null,
             'raw_buyer' => trim((string) ($row['buyer'] ?? '')), 'extra' => $this->extra,
         ];
+    }
+
+    /**
+     * Проверки согласованности строки: расхождения не мешают переносу, но попадают в замечания отчёта и в примечание.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  list<string>  $warnings
+     */
+    private function checkConsistency(array $row, Carbon $start, Carbon $end, bool $free, ?float $total, CertificateStatus $status, array &$warnings): void
+    {
+        $days = $this->amount($row['days'] ?? null);
+        $byDates = (int) $start->diffInDays($end);
+        if ($days !== null && abs($days - $byDates) > 1) {
+            $warnings[] = 'срок в днях не совпадает с датами';
+            $this->extra('Дней в таблице', number_format($days, 0, '', '').', по датам: '.$byDates);
+        }
+        $stay = $this->amount($row['stay'] ?? null);
+        if (! $free && $total !== null && $stay !== null) {
+            $parts = $stay + ($this->amount($row['extras'] ?? null) ?? 0);
+            if (abs($total - $parts) > 1) {
+                $warnings[] = 'итоговая сумма не сходится с проживанием и допуслугами';
+                $this->extra('Сумма не сходится: итого', number_format($total, 0, '', ' ').', проживание + допуслуги: '.number_format($parts, 0, '', ' '));
+            }
+        }
+        if (! $free && $status === CertificateStatus::Cancelled) {
+            $warnings[] = 'аннулирован, платёж записан как оплаченный — проверьте возврат';
+            $this->extra('Аннулирован в таблице', 'платёж записан как оплаченный, проверьте возврат');
+        }
     }
 
     /** @param  array<string, mixed>  $data */
