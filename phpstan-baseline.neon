@@ -1639,9 +1639,21 @@ parameters:
 			path: app/Services/AdminCorrections.php
 
 		-
+			message: '#^Cannot access property \$month on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
 			message: '#^Cannot access property \$year on string\.$#'
 			identifier: property.nonObject
-			count: 2
+			count: 4
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Cannot call method diffInDays\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
 			path: app/Services/AnalyticsReport.php
 
 		-
@@ -1651,13 +1663,37 @@ parameters:
 			path: app/Services/AnalyticsReport.php
 
 		-
+			message: '#^Comparison operation "\>" between int\<1, max\> and 0 is always true\.$#'
+			identifier: greater.alwaysTrue
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
 			message: '#^Elseif condition is always false\.$#'
 			identifier: elseif.alwaysFalse
 			count: 1
 			path: app/Services/AnalyticsReport.php
 
 		-
-			message: '#^Method App\\Services\\AnalyticsReport\:\:build\(\) should return array\{labels\: list\<string\>, sold\: list\<float\>, sold_count\: list\<int\>, paid\: list\<float\>, refunded\: list\<float\>, used\: list\<float\>, used_count\: list\<int\>, free_count\: list\<int\>, \.\.\.\} but returns array\{labels\: non\-empty\-list\<string\>, sold\: non\-empty\-list\<0\|float\>, sold_count\: non\-empty\-list\<int\<0, max\>\>, paid\: non\-empty\-list\<0\|float\>, refunded\: non\-empty\-list\<0\|float\>, used\: non\-empty\-list\<0\>, used_count\: non\-empty\-list\<0\>, free_count\: non\-empty\-list\<0\>, \.\.\.\}\.$#'
+			message: '#^Match arm comparison between string and App\\Enums\\CertificateStatus\:\:Cancelled is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\CertificateStatus\:\:Expired is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\CertificateStatus\:\:Used is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsReport\:\:compute\(\) should return array\{labels\: list\<string\>, sold\: list\<float\>, sold_count\: list\<int\>, paid\: list\<float\>, refunded\: list\<float\>, used\: list\<float\>, used_count\: list\<int\>, free_count\: list\<int\>, \.\.\.\} but returns array\{labels\: list\<string\>, monthly\: bool, sold\: list\<0\|float\>, sold_count\: list\<int\<0, max\>\>, paid\: list\<0\|float\>, refunded\: list\<0\|float\>, used\: list\<0\>, used_count\: list\<0\>, \.\.\.\}\.$#'
 			identifier: return.type
 			count: 1
 			path: app/Services/AnalyticsReport.php
@@ -1681,13 +1717,13 @@ parameters:
 			path: app/Services/AnalyticsReport.php
 
 		-
-			message: '#^Parameter \#1 \$date of closure expects Illuminate\\Support\\Carbon\|null, string given\.$#'
+			message: '#^Parameter \#1 \$date of method App\\Support\\AnalyticsPeriod\:\:bucketOf\(\) expects Illuminate\\Support\\Carbon\|null, string given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Services/AnalyticsReport.php
 
 		-
-			message: '#^Parameter \#1 \$date of closure expects Illuminate\\Support\\Carbon\|null, string\|null given\.$#'
+			message: '#^Parameter \#1 \$date of method App\\Support\\AnalyticsPeriod\:\:bucketOf\(\) expects Illuminate\\Support\\Carbon\|null, string\|null given\.$#'
 			identifier: argument.type
 			count: 2
 			path: app/Services/AnalyticsReport.php
@@ -1725,7 +1761,7 @@ parameters:
 		-
 			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
-			count: 1
+			count: 2
 			path: app/Services/AnalyticsReport.php
 
 		-
