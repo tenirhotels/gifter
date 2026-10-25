@@ -1639,6 +1639,96 @@ parameters:
 			path: app/Services/AdminCorrections.php
 
 		-
+			message: '#^Cannot access property \$year on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Cannot call method getLabel\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 5
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Elseif condition is always false\.$#'
+			identifier: elseif.alwaysFalse
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsReport\:\:build\(\) should return array\{labels\: list\<string\>, sold\: list\<float\>, sold_count\: list\<int\>, paid\: list\<float\>, refunded\: list\<float\>, used\: list\<float\>, used_count\: list\<int\>, free_count\: list\<int\>, \.\.\.\} but returns array\{labels\: non\-empty\-list\<string\>, sold\: non\-empty\-list\<0\|float\>, sold_count\: non\-empty\-list\<int\<0, max\>\>, paid\: non\-empty\-list\<0\|float\>, refunded\: non\-empty\-list\<0\|float\>, used\: non\-empty\-list\<0\>, used_count\: non\-empty\-list\<0\>, free_count\: non\-empty\-list\<0\>, \.\.\.\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsReport\:\:usedAt\(\) should return array\<int, Illuminate\\Support\\Carbon\|null\> but returns array\<int\<0, max\>, string\|null\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Offset ''status'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Parameter \#1 \$date of closure expects Illuminate\\Support\\Carbon\|null, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Parameter \#1 \$date of closure expects Illuminate\\Support\\Carbon\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between null and ''used'' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateKind\:\:Complimentary will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Cancelled will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus\:\:Used will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/AnalyticsReport.php
+
+		-
 			message: '#^Cannot call method format\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 2
