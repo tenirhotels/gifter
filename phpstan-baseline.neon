@@ -607,6 +607,12 @@ parameters:
 			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
 
 		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateKind\:\:Sale will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Filament/Resources/Certificates/Pages/ViewCertificate.php
+
+		-
 			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\CertificateStatus will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
@@ -2163,11 +2169,29 @@ parameters:
 		-
 			message: '#^Anonymous function has an unused use \$reason\.$#'
 			identifier: closure.unusedUse
-			count: 2
+			count: 3
 			path: app/Services/CommissionManager.php
 
 		-
 			message: '#^Anonymous function has an unused use \$reference\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$seller\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$type\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/CommissionManager.php
+
+		-
+			message: '#^Anonymous function has an unused use \$value\.$#'
 			identifier: closure.unusedUse
 			count: 1
 			path: app/Services/CommissionManager.php
@@ -2283,19 +2307,19 @@ parameters:
 		-
 			message: '#^Result of static method Illuminate\\Database\\Connection\:\:transaction\(\) \(void\) is used\.$#'
 			identifier: staticMethod.void
-			count: 4
+			count: 5
 			path: app/Services/CommissionManager.php
 
 		-
 			message: '#^Result of \|\| is always true\.$#'
 			identifier: booleanOr.alwaysTrue
-			count: 1
+			count: 2
 			path: app/Services/CommissionManager.php
 
 		-
 			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\CertificateKind\:\:Sale will always evaluate to true\.$#'
 			identifier: notIdentical.alwaysTrue
-			count: 1
+			count: 2
 			path: app/Services/CommissionManager.php
 
 		-
@@ -2355,7 +2379,7 @@ parameters:
 		-
 			message: '#^Unreachable statement \- code above always terminates\.$#'
 			identifier: deadCode.unreachable
-			count: 5
+			count: 6
 			path: app/Services/CommissionManager.php
 
 		-
