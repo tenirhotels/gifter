@@ -17,6 +17,7 @@ use App\Services\AnalyticsReport;
 use App\Support\AnalyticsPeriod;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Pages\Dashboard;
@@ -57,14 +58,15 @@ class Analytics extends Dashboard
     public function filtersForm(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make()->schema([
+            Section::make()->columnSpanFull()->schema([
                 Select::make('period')->label('Период')->native(false)->selectablePlaceholder(false)->default(AnalyticsPeriod::ALL)
                     ->options(fn () => [
                         AnalyticsPeriod::THIS_YEAR => __('Этот год'), AnalyticsPeriod::LAST_YEAR => __('Прошлый год'), AnalyticsPeriod::LAST_12 => __('Последние 12 месяцев'), AnalyticsPeriod::ALL => __('Всё время'),
                     ] + collect(app(AnalyticsReport::class)->years())->reverse()->mapWithKeys(fn ($y) => [(string) $y => $y.' '.__('год')])->all()),
-                Toggle::make('compare')->label('Сравнить с прошлым периодом')->inline(false)->default(false),
-            ])->columns(['default' => 1, 'md' => 2, 'xl' => 3])
-                ->description(__('Продажа — по дате продажи, оплата — по дате оплаты, использование — по заезду по брони или отметке в системе.')),
+                Toggle::make('compare')->label('Сравнить с прошлым периодом')->default(false)->inline(false),
+                Placeholder::make('definitions')->label('Как считаем')->columnSpan(['default' => 1, 'md' => 3, 'xl' => 1])
+                    ->content(__('Продажа — по дате продажи, оплата — по дате оплаты, использование — по заезду по брони или отметке в системе.')),
+            ])->columns(['default' => 1, 'md' => 3]),
         ]);
     }
 
@@ -91,6 +93,12 @@ class Analytics extends Dashboard
 
     public function getWidgets(): array
     {
+        // Нет данных за период — одно пустое состояние вместо набора пустых графиков.
+        $period = AnalyticsPeriod::resolve($this->filters['period'] ?? AnalyticsPeriod::ALL, app(AnalyticsReport::class)->years());
+        if (app(AnalyticsReport::class)->isEmpty(app(AnalyticsReport::class)->build($period))) {
+            return [AnalyticsNotice::class];
+        }
+
         return [
             AnalyticsNotice::class, AnalyticsStats::class, AnalyticsFlowChart::class, AnalyticsFreeChart::class, AnalyticsPackagesChart::class,
             AnalyticsChannelsChart::class, AnalyticsSeasonChart::class, AnalyticsYearsTable::class, AnalyticsCohortsTable::class,
