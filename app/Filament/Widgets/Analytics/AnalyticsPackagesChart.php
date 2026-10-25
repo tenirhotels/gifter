@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets\Analytics;
 
+use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 
@@ -22,9 +23,17 @@ class AnalyticsPackagesChart extends ChartWidget
         return 'bar';
     }
 
+    public function getEmptyStateHeading(): string
+    {
+        return __('Нет продаж за период');
+    }
+
     protected function getData(): array
     {
         $packages = $this->report()['packages'];
+        if ($packages === []) {
+            return [];
+        }
 
         return [
             'labels' => array_map(fn ($p) => $p['name'], $packages),
@@ -32,8 +41,14 @@ class AnalyticsPackagesChart extends ChartWidget
         ];
     }
 
-    protected function getOptions(): array
+    protected function getOptions(): array|RawJs|null
     {
-        return ['indexAxis' => 'y', 'plugins' => ['legend' => ['display' => false]]];
+        return RawJs::make(<<<'JS'
+        {
+            indexAxis: 'y',
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => new Intl.NumberFormat('ru-RU').format(ctx.parsed.x) + ' шт.' } } },
+            scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+        }
+        JS);
     }
 }

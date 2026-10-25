@@ -22,9 +22,17 @@ class AnalyticsChannelsChart extends ChartWidget
         return 'doughnut';
     }
 
+    public function getEmptyStateHeading(): string
+    {
+        return __('Нет данных за период');
+    }
+
     protected function getData(): array
     {
         $channels = $this->report()['channels'];
+        if ($channels === []) {
+            return [];
+        }
 
         return [
             'labels' => array_keys($channels),

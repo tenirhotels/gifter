@@ -2,6 +2,8 @@
 
 namespace App\Filament\Widgets\Analytics;
 
+use App\Services\AnalyticsReport;
+use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 
@@ -22,9 +24,17 @@ class AnalyticsFreeChart extends ChartWidget
         return 'bar';
     }
 
+    public function getEmptyStateHeading(): string
+    {
+        return __('Нет данных за период');
+    }
+
     protected function getData(): array
     {
         $r = $this->report();
+        if (app(AnalyticsReport::class)->isEmpty($r)) {
+            return [];
+        }
 
         return [
             'labels' => $r['labels'],
@@ -36,8 +46,17 @@ class AnalyticsFreeChart extends ChartWidget
         ];
     }
 
-    protected function getOptions(): array
+    protected function getOptions(): array|RawJs|null
     {
-        return ['scales' => ['y' => ['position' => 'left', 'beginAtZero' => true], 'y1' => ['position' => 'right', 'beginAtZero' => true, 'grid' => ['drawOnChartArea' => false]]]];
+        return RawJs::make(<<<'JS'
+        {
+            interaction: { mode: 'index', intersect: false },
+            plugins: { tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + new Intl.NumberFormat('ru-RU').format(ctx.parsed.y) } } },
+            scales: {
+                y: { position: 'left', beginAtZero: true, ticks: { precision: 0 } },
+                y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { callback: (v) => new Intl.NumberFormat('ru-RU', { notation: 'compact' }).format(v) } },
+            },
+        }
+        JS);
     }
 }
