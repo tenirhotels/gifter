@@ -1630,5 +1630,6 @@
  "в среднем через :p1 дн.": "on average after :p1 days",
  "год": "year",
  "к прошлому периоду": "vs the previous period",
- "нет данных за прошлый период": "no data for the previous period"
+ "нет данных за прошлый период": "no data for the previous period",
+ "Как считаем": "How we count"
 }
