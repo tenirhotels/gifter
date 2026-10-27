@@ -14,10 +14,12 @@ use Illuminate\Support\Facades\Log;
 /**
  * Обмен с посредником по приёму Kaspi Pay (yespay). Только транспорт: бизнес-правила — в KaspiYespayPayments.
  * Ключ только в заголовке, в журнал не попадают ни ключи, ни телефоны; TLS проверяется.
- * Повторы — только по кодам 429/502/503 и с тем же Idempotency-Key.
+ * Повторы — только при 429/502/503 и сетевых ошибках: до 5 попыток с экспоненциальной выдержкой и тем же Idempotency-Key; 4xx не повторяются.
  */
 class KaspiYespayClient
 {
+    public const ATTEMPTS = 5;
+
     public static function configured(): bool
     {
         return (bool) config('gifter.kaspi_yespay.enabled') && filled(config('gifter.kaspi_yespay.api_key')) && filled(config('gifter.kaspi_yespay.webhook_secret'))
@@ -52,6 +54,31 @@ class KaspiYespayClient
         return $this->normalize((array) $response->json());
     }
 
+    /** Платёж по нашему номеру счёта (order_id): GET /v1/payments?order_id=… @return ?array{id: string, status: string, amount: ?int, currency: ?string, order_id: ?string} */
+    public function findByOrderId(string $orderId): ?array
+    {
+        $response = $this->send(fn (PendingRequest $http) => $http->get($this->url('/v1/payments'), ['order_id' => $orderId]), 'поиск по order_id');
+        $json = (array) $response->json();
+        $list = is_array($json['data'] ?? null) ? $json['data'] : $json;
+        $first = isset($list['id']) ? $list : ($list[0] ?? null);
+
+        return is_array($first) ? $this->normalize($first) : null;
+    }
+
+    /**
+     * Полный возврат: POST /v1/refunds с Idempotency-Key. ВНИМАНИЕ: имена полей тела запроса в доступном описании не приведены —
+     * поле payment_id предположительное, сверить с https://getyespay.com/docs/api на песочнице; из интерфейса метод не вызывается.
+     *
+     * @return array<string, mixed>
+     */
+    public function refund(Payment $payment): array
+    {
+        $response = $this->send(fn (PendingRequest $http) => $http->withHeaders(['Idempotency-Key' => 'refund-'.$payment->invoice_number])
+            ->post($this->url('/v1/refunds'), ['payment_id' => (string) $payment->kaspi_yespay_payment_id]), 'возврат');
+
+        return (array) $response->json();
+    }
+
     /** @return array{id: string, status: string, amount: ?int, currency: ?string, order_id: ?string} */
     public function getPayment(string $id): array
     {
@@ -68,7 +95,7 @@ class KaspiYespayClient
     /** Проверка настройки без секретов. @return array{sandbox: bool, reachable: bool} */
     public function diagnose(): array
     {
-        $this->send(fn (PendingRequest $http) => $http->get($this->url('/v1/payments'), ['order_id' => 'gifter-check']), 'проверка связи');
+        $this->findByOrderId('gifter-check');
 
         return ['sandbox' => self::sandbox(), 'reachable' => true];
     }
@@ -87,11 +114,12 @@ class KaspiYespayClient
     private function send(callable $call, string $what): Response
     {
         if (! self::configured()) {
-            throw new KaspiYespayException(__('Счета Kaspi не настроены: нужны KASPI_YESPAY_ENABLED, KASPI_YESPAY_API_KEY и KASPI_YESPAY_WEBHOOK_SECRET в настройках сервера.'));
+            throw new KaspiYespayException(__('Счета Kaspi не настроены: нужны KASPI_YESPAY_ENABLED, YESPAY_SECRET_KEY и YESPAY_WEBHOOK_SECRET в настройках сервера.'));
         }
         try {
             $http = Http::timeout(15)->connectTimeout(5)->withToken((string) config('gifter.kaspi_yespay.api_key'))->acceptJson()->asJson()
-                ->retry(3, 500, fn ($e) => $e instanceof RequestException && in_array($e->response->status(), [429, 502, 503], true), throw: false);
+                ->retry(self::ATTEMPTS, fn (int $attempt) => 200 * 2 ** ($attempt - 1),
+                    fn ($e) => $e instanceof ConnectionException || ($e instanceof RequestException && in_array($e->response->status(), [429, 502, 503], true)), throw: false);
             $response = $call($http);
         } catch (ConnectionException $e) {
             Log::warning('Kaspi (счета): нет связи', ['операция' => $what, 'причина' => $e::class]);

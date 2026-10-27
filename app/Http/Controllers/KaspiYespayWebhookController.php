@@ -2,34 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\KaspiYespay\KaspiYespayException;
 use App\Services\KaspiYespayPayments;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Log;
 
 /**
- * Вебхук посредника по счетам Kaspi. Подпись проверяется по СЫРОМУ телу сразу (неверная — 401), 200 уходит быстро,
- * проверка статуса в API — после ответа. Потерянное уведомление подхватит gifter:kaspi-yespay-reconcile.
+ * Вебхук посредника по счетам Kaspi (yespay). Берётся СЫРОЕ тело (`getContent`), JSON не разбирается до проверки подписи.
+ * Неверная подпись или событие старше 5 минут — 400 без каких-либо действий; остальное — 200, работа в очереди.
+ * Потерянное уведомление подхватит gifter:kaspi-yespay-reconcile.
  */
 class KaspiYespayWebhookController extends Controller
 {
     public function __invoke(Request $request, KaspiYespayPayments $payments): Response
     {
-        $raw = $request->getContent();
-        if (! $payments->validSignature($raw, (string) $request->header('X-Yespay-Signature'))) {
-            return response('Invalid signature', 401);
-        }
-        $headers = ['signature' => (string) $request->header('X-Yespay-Signature'), 'event_id' => (string) $request->header('X-Yespay-Event-Id')];
+        $code = $payments->receive($request->getContent(), [
+            'signature' => (string) $request->header('X-Yespay-Signature'),
+            'event_id' => (string) $request->header('X-Yespay-Event-Id'),
+        ]);
 
-        dispatch(function () use ($payments, $raw, $headers) {
-            try {
-                $payments->handleWebhook($raw, $headers);
-            } catch (KaspiYespayException $e) {
-                Log::warning('Kaspi (счета): уведомление не обработано, платёж проверит расписание', ['причина' => $e->getMessage()]);
-            }
-        })->afterResponse();
-
-        return response('OK', 200);
+        return response($code === 200 ? 'OK' : 'Bad request', $code);
     }
 }

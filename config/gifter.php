@@ -36,9 +36,10 @@ return [
     // Счёт Kaspi Pay на телефон клиента через посредника yespay (не официальный API Kaspi). Ключи — только в .env; выключено по умолчанию.
     'kaspi_yespay' => [
         'enabled' => (bool) env('KASPI_YESPAY_ENABLED', false),
-        'base_url' => env('KASPI_YESPAY_BASE_URL', 'https://api.getyespay.com'),
-        'api_key' => env('KASPI_YESPAY_API_KEY'),
-        'webhook_secret' => env('KASPI_YESPAY_WEBHOOK_SECRET'),
+        'base_url' => env('YESPAY_API_BASE', 'https://api.getyespay.com'),
+        'api_key' => env('YESPAY_SECRET_KEY'),
+        'webhook_secret' => env('YESPAY_WEBHOOK_SECRET'),
+        'alert_mail_to' => env('KASPI_YESPAY_ALERT_MAIL_TO'), // кому писать об инцидентах (нужна проверка, расхождение суммы, вход кассира); пусто — GIFTER_ORDERS_MAIL_TO, затем ERROR_MAIL_TO
         'expire_minutes' => (int) env('KASPI_YESPAY_EXPIRE_MINUTES', 1440),
     ],
 

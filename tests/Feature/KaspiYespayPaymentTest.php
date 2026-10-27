@@ -7,13 +7,16 @@ use App\Enums\PaymentStatus;
 use App\Enums\Role;
 use App\Exceptions\DomainRuleViolation;
 use App\Filament\Resources\Certificates\Pages\ViewCertificate;
+use App\Mail\PaymentAlertMail;
 use App\Models\Certificate;
 use App\Models\Customer;
 use App\Models\Package;
 use App\Models\Payment;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\YespayWebhookEvent;
 use App\Services\CertificateManager;
+use App\Services\KaspiYespay\KaspiYespayClient;
 use App\Services\KaspiYespayPayments;
 use App\Services\PaymentManager;
 use App\Services\SecurityAudit;
@@ -23,6 +26,9 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Sleep;
+use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -157,23 +163,206 @@ class KaspiYespayPaymentTest extends TestCase
         $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
     }
 
-    public function test_webhook_signature_age_and_duplicates(): void
+    /** @param  array<string, mixed>  $data */
+    private function event(string $type, array $data, ?string $id = null): array
+    {
+        $body = json_encode(['id' => $id ?? 'evt_'.bin2hex(random_bytes(3)), 'type' => $type, 'createdAt' => now()->toIso8601String(), 'livemode' => false, 'data' => $data]);
+
+        return [$body, $this->signed($body) + ['X-Yespay-Event-Id' => $id ?? 'evt_'.bin2hex(random_bytes(3))]];
+    }
+
+    private function deliver(string $body, array $headers): TestResponse
+    {
+        return $this->call('POST', '/pay/kaspi-yespay/webhook', [], [], [], $this->server($headers), $body);
+    }
+
+    public function test_webhook_rejects_bad_signature_and_stale_timestamp_with_400_and_runs_nothing(): void
     {
         $state = [];
         $this->fake($state);
         $payment = app(KaspiYespayPayments::class)->createInvoice($this->draft());
         $state['status'] = ['id' => 'pay_1', 'status' => 'paid', 'amount' => 50000, 'currency' => 'KZT'];
-        $body = json_encode(['id' => 'evt_1', 'type' => 'payment.paid', 'createdAt' => now()->toIso8601String(), 'livemode' => false, 'data' => ['id' => 'pay_1', 'order_id' => $payment->invoice_number]]);
+        [$body] = $this->event('payment.paid', ['id' => 'pay_1', 'amount' => 50000]);
 
-        $this->call('POST', '/pay/kaspi-yespay/webhook', [], [], [], $this->server($this->signed($body, secret: 'wrong')), $body)->assertStatus(401);
-        $this->call('POST', '/pay/kaspi-yespay/webhook', [], [], [], $this->server($this->signed($body, time() - 1000)), $body)->assertStatus(401);
+        $this->deliver($body, $this->signed($body, secret: 'wrong'))->assertStatus(400);
+        $this->deliver($body, $this->signed($body, time() - 1000))->assertStatus(400);
+        $this->deliver($body.' ', $this->signed($body))->assertStatus(400); // тело изменено после подписи
+        $this->deliver($body, ['Content-Type' => 'application/json'])->assertStatus(400);
+
         $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
+        $this->assertSame(0, YespayWebhookEvent::query()->count());
+    }
 
-        $headers = $this->signed($body);
-        $this->call('POST', '/pay/kaspi-yespay/webhook', [], [], [], $this->server($headers), $body)->assertOk();
+    public function test_valid_paid_event_settles_and_repeated_delivery_is_not_processed_twice(): void
+    {
+        $state = [];
+        $this->fake($state);
+        $payment = app(KaspiYespayPayments::class)->createInvoice($this->draft());
+        $state['status'] = ['id' => 'pay_1', 'status' => 'paid', 'amount' => 50000, 'currency' => 'KZT'];
+        $body = json_encode(['id' => 'evt_1', 'type' => 'payment.paid', 'createdAt' => now()->toIso8601String(), 'livemode' => false, 'data' => ['id' => 'pay_1', 'order_id' => $payment->invoice_number, 'amount' => 50000]]);
+        $headers = $this->signed($body) + [];
+        $headers['X-Yespay-Event-Id'] = 'evt_fixed';
+
+        $this->deliver($body, $headers)->assertOk();
         $this->assertSame(PaymentStatus::Paid, $payment->refresh()->status);
+        $reads = collect(Http::recorded())->filter(fn ($pair) => $pair[0]->method() === 'GET')->count();
 
-        $this->assertNull(app(KaspiYespayPayments::class)->handleWebhook($body, ['signature' => $headers['X-Yespay-Signature'], 'event_id' => $headers['X-Yespay-Event-Id']]), 'Повтор того же события игнорируется');
+        $repeat = $this->signed($body);
+        $repeat['X-Yespay-Event-Id'] = 'evt_fixed';
+        $this->deliver($body, $repeat)->assertOk();
+        $this->assertSame($reads, collect(Http::recorded())->filter(fn ($pair) => $pair[0]->method() === 'GET')->count(), 'Повтор того же события ничего не выполняет');
+        $this->assertSame(1, YespayWebhookEvent::query()->where('event_id', 'evt_fixed')->count());
+    }
+
+    public function test_unknown_event_type_is_ignored_with_200(): void
+    {
+        [$body, $headers] = $this->event('something.new', ['id' => 'pay_x']);
+
+        $this->deliver($body, $headers)->assertOk();
+        $this->assertSame(1, YespayWebhookEvent::query()->count());
+    }
+
+    public function test_paid_event_with_wrong_amount_does_not_settle_and_alerts(): void
+    {
+        Mail::fake();
+        config(['gifter.kaspi_yespay.alert_mail_to' => 'ops@example.com']);
+        $state = [];
+        $this->fake($state);
+        $payment = app(KaspiYespayPayments::class)->createInvoice($this->draft());
+        $state['status'] = ['id' => 'pay_1', 'status' => 'paid', 'amount' => 50000, 'currency' => 'KZT'];
+        [$body, $headers] = $this->event('payment.paid', ['id' => 'pay_1', 'amount' => 49000]);
+
+        $this->deliver($body, $headers)->assertOk();
+
+        $payment->refresh();
+        $this->assertSame(PaymentStatus::Pending, $payment->status);
+        $this->assertNotNull($payment->needs_review_at);
+        Mail::assertQueued(PaymentAlertMail::class, 1);
+    }
+
+    public function test_unknown_status_event_marks_review_keeps_order_open_and_alerts_once(): void
+    {
+        Mail::fake();
+        config(['gifter.kaspi_yespay.alert_mail_to' => 'ops@example.com']);
+        $state = [];
+        $this->fake($state);
+        $certificate = $this->draft();
+        $payment = app(KaspiYespayPayments::class)->createInvoice($certificate);
+
+        foreach ([1, 2] as $_) {
+            [$body, $headers] = $this->event('payment.status_unknown', ['id' => 'pay_1']);
+            $this->deliver($body, $headers)->assertOk();
+        }
+
+        $payment->refresh();
+        $this->assertSame(PaymentStatus::Pending, $payment->status, 'Не отказ и не оплата');
+        $this->assertNotNull($payment->needs_review_at);
+        $this->assertArrayNotHasKey('cancelled', $state, 'Счёт у посредника не отменялся');
+        $this->assertFalse($certificate->refresh()->isReadyToIssue(), 'Сертификат не выпускается');
+        Mail::assertQueued(PaymentAlertMail::class, 1);
+
+        $this->expectException(DomainRuleViolation::class); // отмена вручную тоже запрещена, пока результат неизвестен
+        $state['status'] = ['id' => 'pay_1', 'status' => 'unknown'];
+        app(PaymentManager::class)->cancel($payment, 'Проверка');
+    }
+
+    public function test_failed_expired_cancelled_events_close_the_payment(): void
+    {
+        $state = [];
+        $this->fake($state);
+        foreach (['failed', 'expired', 'cancelled'] as $status) {
+            $payment = app(KaspiYespayPayments::class)->createInvoice($this->draft());
+            $state['status'] = ['id' => 'pay_'.$state['n'], 'status' => $status];
+            [$body, $headers] = $this->event('payment.'.$status, ['id' => 'pay_'.$state['n']]);
+
+            $this->deliver($body, $headers)->assertOk();
+
+            $this->assertSame(PaymentStatus::Cancelled, $payment->refresh()->status, $status);
+        }
+        $this->assertArrayNotHasKey('cancelled', $state, 'У посредника уже закрыто — повторно не отменяем');
+    }
+
+    public function test_reauth_event_reaches_a_person_by_mail(): void
+    {
+        Mail::fake();
+        config(['gifter.kaspi_yespay.alert_mail_to' => 'ops@example.com']);
+        [$body, $headers] = $this->event('payment_account.reauth_required', []);
+
+        $this->deliver($body, $headers)->assertOk();
+
+        Mail::assertQueued(PaymentAlertMail::class, fn ($m) => $m->hasTo('ops@example.com'));
+        Mail::assertQueued(PaymentAlertMail::class, fn ($m) => str_contains(mb_strtolower($m->text), 'kaspi'));
+    }
+
+    public function test_refund_event_is_noted_and_reported(): void
+    {
+        Mail::fake();
+        config(['gifter.kaspi_yespay.alert_mail_to' => 'ops@example.com']);
+        $state = [];
+        $this->fake($state);
+        app(KaspiYespayPayments::class)->createInvoice($this->draft());
+        [$body, $headers] = $this->event('refund.succeeded', ['payment_id' => 'pay_1']);
+
+        $this->deliver($body, $headers)->assertOk();
+
+        Mail::assertQueued(PaymentAlertMail::class, 1);
+    }
+
+    public function test_idempotency_key_is_derived_from_the_order_and_retries_reuse_it(): void
+    {
+        Sleep::fake();
+        $payment = app(KaspiYespayPayments::class);
+        $certificate = $this->draft();
+        Http::fake(['*' => Http::sequence()->push([], 503)->push([], 429)->push(['id' => 'pay_1', 'status' => 'pending'], 201)]);
+
+        $created = $payment->createInvoice($certificate);
+
+        $this->assertSame($created->invoice_number, $created->kaspi_yespay_idempotency_key, 'Ключ — от номера счёта, а не случайный');
+        $posts = collect(Http::recorded())->map(fn ($pair) => $pair[0])->filter(fn (Request $r) => $r->method() === 'POST');
+        $this->assertCount(3, $posts);
+        $this->assertSame([$created->invoice_number], $posts->map(fn (Request $r) => $r->header('Idempotency-Key')[0])->unique()->values()->all());
+    }
+
+    public function test_client_error_is_not_retried(): void
+    {
+        Sleep::fake();
+        Http::fake(['*' => Http::response(['error' => ['code' => 'invalid_request']], 400)]);
+        try {
+            app(KaspiYespayPayments::class)->createInvoice($this->draft());
+            $this->fail('Ожидалась ошибка');
+        } catch (DomainRuleViolation) {
+        }
+
+        $this->assertCount(1, Http::recorded());
+    }
+
+    public function test_retries_stop_after_five_attempts_with_growing_pause(): void
+    {
+        Sleep::fake();
+        Http::fake(['*' => Http::response([], 503)]);
+        try {
+            app(KaspiYespayPayments::class)->createInvoice($this->draft());
+            $this->fail('Ожидалась ошибка');
+        } catch (DomainRuleViolation) {
+        }
+
+        $this->assertCount(5, Http::recorded(), 'Не больше 5 попыток');
+    }
+
+    public function test_client_finds_payment_by_order_id_and_refund_sends_idempotency_key(): void
+    {
+        Http::fake([
+            '*/v1/payments?*' => Http::response(['data' => [['id' => 'pay_9', 'status' => 'paid', 'amount' => 100, 'currency' => 'KZT', 'order_id' => 'K1']]]),
+            '*/v1/refunds' => Http::response(['id' => 'ref_1']),
+        ]);
+        $client = app(KaspiYespayClient::class);
+
+        $found = $client->findByOrderId('K1');
+        $this->assertSame('pay_9', $found['id']);
+
+        $payment = new Payment(['invoice_number' => 'K000000001', 'kaspi_yespay_payment_id' => 'pay_9']);
+        $client->refund($payment);
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/v1/refunds') && $r->header('Idempotency-Key')[0] === 'refund-K000000001');
     }
 
     /** @param  array<string, string>  $headers */
