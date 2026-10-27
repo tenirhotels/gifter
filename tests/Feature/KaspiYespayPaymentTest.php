@@ -14,7 +14,7 @@ use App\Models\Payment;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\CertificateManager;
-use App\Services\KaspiPayments;
+use App\Services\KaspiYespayPayments;
 use App\Services\PaymentManager;
 use App\Services\SecurityAudit;
 use App\Services\ServicePricing;
@@ -27,7 +27,7 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /** Счета Kaspi через посредника: все обращения подменены (Http::fake), ключи вымышленные. */
-class KaspiPaymentTest extends TestCase
+class KaspiYespayPaymentTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -40,8 +40,8 @@ class KaspiPaymentTest extends TestCase
         parent::setUp();
         Carbon::setTestNow('2026-05-15 12:00:00');
         Cache::flush();
-        config(['gifter.kaspi.enabled' => true, 'gifter.kaspi.api_key' => 'sk_test_fictional', 'gifter.kaspi.webhook_secret' => self::SECRET,
-            'gifter.kaspi.base_url' => 'https://kaspi.example', 'gifter.kaspi.expire_minutes' => 60]);
+        config(['gifter.kaspi_yespay.enabled' => true, 'gifter.kaspi_yespay.api_key' => 'sk_test_fictional', 'gifter.kaspi_yespay.webhook_secret' => self::SECRET,
+            'gifter.kaspi_yespay.base_url' => 'https://kaspi.example', 'gifter.kaspi_yespay.expire_minutes' => 60]);
         $this->actingAs(User::factory()->create(['roles' => [Role::SuperAdmin]]));
         $service = Service::factory()->create();
         app(ServicePricing::class)->addPrice($service, '50000', Carbon::parse('2026-01-01'));
@@ -92,16 +92,16 @@ class KaspiPaymentTest extends TestCase
         $state = [];
         $this->fake($state);
 
-        $payment = app(KaspiPayments::class)->createInvoice($this->draft());
+        $payment = app(KaspiYespayPayments::class)->createInvoice($this->draft());
 
-        $this->assertSame(PaymentMethod::KaspiPay, $payment->method);
+        $this->assertSame(PaymentMethod::KaspiYespay, $payment->method);
         $this->assertSame(PaymentStatus::Pending, $payment->status);
-        $this->assertSame('pay_1', $payment->kaspi_payment_id);
+        $this->assertSame('pay_1', $payment->kaspi_yespay_payment_id);
         $this->assertSame(50000, $state['create']['amount']);
         $this->assertSame('KZT', $state['create']['currency']);
         $this->assertSame('+77011234567', $state['create']['customer']['phone']);
         $this->assertSame($payment->invoice_number, $state['create']['order_id']);
-        $this->assertSame($payment->kaspi_idempotency_key, $state['key']);
+        $this->assertSame($payment->kaspi_yespay_idempotency_key, $state['key']);
         $this->assertSame('Bearer sk_test_fictional', $state['auth']);
     }
 
@@ -110,7 +110,7 @@ class KaspiPaymentTest extends TestCase
         $certificate = $this->draft('+998901234567');
 
         try {
-            app(KaspiPayments::class)->createInvoice($certificate);
+            app(KaspiYespayPayments::class)->createInvoice($certificate);
             $this->fail('Ожидалась ошибка');
         } catch (DomainRuleViolation) {
         }
@@ -118,7 +118,7 @@ class KaspiPaymentTest extends TestCase
 
         Http::fake(['*' => Http::response(['error' => ['code' => 'payment_account_reauth_required']], 409)]);
         try {
-            app(KaspiPayments::class)->createInvoice($this->draft());
+            app(KaspiYespayPayments::class)->createInvoice($this->draft());
             $this->fail('Ожидалась ошибка');
         } catch (DomainRuleViolation $e) {
             $this->assertStringContainsString('отключился', $e->getMessage());
@@ -131,15 +131,15 @@ class KaspiPaymentTest extends TestCase
         $state = [];
         $this->fake($state);
         $certificate = $this->draft();
-        $payment = app(KaspiPayments::class)->createInvoice($certificate);
+        $payment = app(KaspiYespayPayments::class)->createInvoice($certificate);
 
         $state['status'] = ['id' => 'pay_1', 'status' => 'unknown'];
-        $this->assertSame(KaspiPayments::PENDING, app(KaspiPayments::class)->check($payment));
+        $this->assertSame(KaspiYespayPayments::PENDING, app(KaspiYespayPayments::class)->check($payment));
         $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
 
         $state['status'] = ['id' => 'pay_1', 'status' => 'paid', 'amount' => 50000, 'currency' => 'KZT'];
-        $this->assertSame(KaspiPayments::PAID, app(KaspiPayments::class)->check($payment));
-        $this->assertSame(KaspiPayments::PAID, app(KaspiPayments::class)->check($payment));
+        $this->assertSame(KaspiYespayPayments::PAID, app(KaspiYespayPayments::class)->check($payment));
+        $this->assertSame(KaspiYespayPayments::PAID, app(KaspiYespayPayments::class)->check($payment));
         $payment->refresh();
         $this->assertSame(PaymentStatus::Paid, $payment->status);
         $this->assertNotNull($payment->reconciled_at, 'Подтверждено API — сверка Финансами не нужна');
@@ -149,11 +149,11 @@ class KaspiPaymentTest extends TestCase
     {
         $state = [];
         $this->fake($state);
-        $payment = app(KaspiPayments::class)->createInvoice($this->draft());
+        $payment = app(KaspiYespayPayments::class)->createInvoice($this->draft());
 
         $state['status'] = ['id' => 'pay_1', 'status' => 'paid', 'amount' => 49999, 'currency' => 'KZT'];
 
-        $this->assertSame(KaspiPayments::REVIEW, app(KaspiPayments::class)->check($payment));
+        $this->assertSame(KaspiYespayPayments::REVIEW, app(KaspiYespayPayments::class)->check($payment));
         $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
     }
 
@@ -161,19 +161,19 @@ class KaspiPaymentTest extends TestCase
     {
         $state = [];
         $this->fake($state);
-        $payment = app(KaspiPayments::class)->createInvoice($this->draft());
+        $payment = app(KaspiYespayPayments::class)->createInvoice($this->draft());
         $state['status'] = ['id' => 'pay_1', 'status' => 'paid', 'amount' => 50000, 'currency' => 'KZT'];
         $body = json_encode(['id' => 'evt_1', 'type' => 'payment.paid', 'createdAt' => now()->toIso8601String(), 'livemode' => false, 'data' => ['id' => 'pay_1', 'order_id' => $payment->invoice_number]]);
 
-        $this->call('POST', '/pay/kaspi/webhook', [], [], [], $this->server($this->signed($body, secret: 'wrong')), $body)->assertStatus(401);
-        $this->call('POST', '/pay/kaspi/webhook', [], [], [], $this->server($this->signed($body, time() - 1000)), $body)->assertStatus(401);
+        $this->call('POST', '/pay/kaspi-yespay/webhook', [], [], [], $this->server($this->signed($body, secret: 'wrong')), $body)->assertStatus(401);
+        $this->call('POST', '/pay/kaspi-yespay/webhook', [], [], [], $this->server($this->signed($body, time() - 1000)), $body)->assertStatus(401);
         $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
 
         $headers = $this->signed($body);
-        $this->call('POST', '/pay/kaspi/webhook', [], [], [], $this->server($headers), $body)->assertOk();
+        $this->call('POST', '/pay/kaspi-yespay/webhook', [], [], [], $this->server($headers), $body)->assertOk();
         $this->assertSame(PaymentStatus::Paid, $payment->refresh()->status);
 
-        $this->assertNull(app(KaspiPayments::class)->handleWebhook($body, ['signature' => $headers['X-Yespay-Signature'], 'event_id' => $headers['X-Yespay-Event-Id']]), 'Повтор того же события игнорируется');
+        $this->assertNull(app(KaspiYespayPayments::class)->handleWebhook($body, ['signature' => $headers['X-Yespay-Signature'], 'event_id' => $headers['X-Yespay-Event-Id']]), 'Повтор того же события игнорируется');
     }
 
     /** @param  array<string, string>  $headers */
@@ -191,13 +191,13 @@ class KaspiPaymentTest extends TestCase
     {
         $state = [];
         $this->fake($state);
-        $payment = app(KaspiPayments::class)->createInvoice($this->draft());
+        $payment = app(KaspiYespayPayments::class)->createInvoice($this->draft());
 
         app(PaymentManager::class)->cancel($payment, 'Клиент передумал');
         $this->assertTrue($state['cancelled']);
         $this->assertSame(PaymentStatus::Cancelled, $payment->refresh()->status);
 
-        $second = app(KaspiPayments::class)->createInvoice($this->draft());
+        $second = app(KaspiYespayPayments::class)->createInvoice($this->draft());
         $state['status'] = ['id' => 'pay_1', 'status' => 'paid', 'amount' => 50000, 'currency' => 'KZT'];
         $this->expectException(DomainRuleViolation::class);
         app(PaymentManager::class)->cancel($second, 'Поздно');
@@ -207,17 +207,17 @@ class KaspiPaymentTest extends TestCase
     {
         $state = [];
         $this->fake($state);
-        $paid = app(KaspiPayments::class)->createInvoice($this->draft());
+        $paid = app(KaspiYespayPayments::class)->createInvoice($this->draft());
         $state['status'] = ['id' => 'pay_1', 'status' => 'paid', 'amount' => 50000, 'currency' => 'KZT'];
         Carbon::setTestNow(now()->addMinutes(15));
 
-        $this->assertSame(['paid' => 1, 'expired' => 0], app(KaspiPayments::class)->reconcilePending());
+        $this->assertSame(['paid' => 1, 'expired' => 0], app(KaspiYespayPayments::class)->reconcilePending());
         $this->assertSame(PaymentStatus::Paid, $paid->refresh()->status);
 
-        $expired = app(KaspiPayments::class)->createInvoice($this->draft());
+        $expired = app(KaspiYespayPayments::class)->createInvoice($this->draft());
         $state['status'] = ['id' => 'pay_1', 'status' => 'pending', 'amount' => 50000, 'currency' => 'KZT'];
         Carbon::setTestNow(now()->addHours(2));
-        $this->assertSame(['paid' => 0, 'expired' => 1], app(KaspiPayments::class)->reconcilePending());
+        $this->assertSame(['paid' => 0, 'expired' => 1], app(KaspiYespayPayments::class)->reconcilePending());
         $this->assertSame(PaymentStatus::Cancelled, $expired->refresh()->status);
     }
 
@@ -226,14 +226,14 @@ class KaspiPaymentTest extends TestCase
         $certificate = $this->draft();
         Livewire::test(ViewCertificate::class, ['record' => $certificate->getRouteKey()])->assertActionVisible('kaspiInvoice');
 
-        config(['gifter.kaspi.enabled' => false]);
+        config(['gifter.kaspi_yespay.enabled' => false]);
         Livewire::test(ViewCertificate::class, ['record' => $certificate->getRouteKey()])->assertActionHidden('kaspiInvoice');
 
-        config(['gifter.kaspi.enabled' => true, 'gifter.kaspi.api_key' => null]);
+        config(['gifter.kaspi_yespay.enabled' => true, 'gifter.kaspi_yespay.api_key' => null]);
         $failed = collect(app(SecurityAudit::class)->run(checkHttp: false))->where('status', '!=', SecurityAudit::OK)->pluck('check');
         $this->assertTrue($failed->contains('Счета Kaspi: ключи заданы'));
 
-        config(['gifter.kaspi.api_key' => 'sk_test_fictional']);
+        config(['gifter.kaspi_yespay.api_key' => 'sk_test_fictional']);
         $this->app['env'] = 'production';
         $failed = collect(app(SecurityAudit::class)->run(checkHttp: false))->where('status', '!=', SecurityAudit::OK)->pluck('check');
         $this->assertTrue($failed->contains('Счета Kaspi: боевой ключ'));

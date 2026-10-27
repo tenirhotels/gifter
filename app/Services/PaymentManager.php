@@ -134,7 +134,7 @@ class PaymentManager
     public function cancel(Payment $payment, string $reason): Payment
     {
         if ($payment->method->isGateway()) {
-            $payment->method === PaymentMethod::KaspiPay ? app(KaspiPayments::class)->beforeCancel($payment) : app(EpayPayments::class)->beforeCancel($payment);
+            $payment->method === PaymentMethod::KaspiYespay ? app(KaspiYespayPayments::class)->beforeCancel($payment) : app(EpayPayments::class)->beforeCancel($payment);
         }
         if ($payment->batch_id) {
             return $this->forBatchSiblings($payment, PaymentStatus::Pending, fn (Payment $line) => $this->cancelLine($line, $reason));

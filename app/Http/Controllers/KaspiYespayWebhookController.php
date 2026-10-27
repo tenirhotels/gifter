@@ -2,19 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\Kaspi\KaspiException;
-use App\Services\KaspiPayments;
+use App\Services\KaspiYespay\KaspiYespayException;
+use App\Services\KaspiYespayPayments;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Вебхук посредника по счетам Kaspi. Подпись проверяется по СЫРОМУ телу сразу (неверная — 401), 200 уходит быстро,
- * проверка статуса в API — после ответа. Потерянное уведомление подхватит gifter:kaspi-reconcile.
+ * проверка статуса в API — после ответа. Потерянное уведомление подхватит gifter:kaspi-yespay-reconcile.
  */
-class KaspiWebhookController extends Controller
+class KaspiYespayWebhookController extends Controller
 {
-    public function __invoke(Request $request, KaspiPayments $payments): Response
+    public function __invoke(Request $request, KaspiYespayPayments $payments): Response
     {
         $raw = $request->getContent();
         if (! $payments->validSignature($raw, (string) $request->header('X-Yespay-Signature'))) {
@@ -25,7 +25,7 @@ class KaspiWebhookController extends Controller
         dispatch(function () use ($payments, $raw, $headers) {
             try {
                 $payments->handleWebhook($raw, $headers);
-            } catch (KaspiException $e) {
+            } catch (KaspiYespayException $e) {
                 Log::warning('Kaspi (счета): уведомление не обработано, платёж проверит расписание', ['причина' => $e->getMessage()]);
             }
         })->afterResponse();

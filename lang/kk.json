@@ -1651,7 +1651,7 @@
  "Сервис счетов Kaspi не отвечает. Попробуйте позже.": "Kaspi шоттар сервисі жауап бермейді. Кейінірек қайталаңыз.",
  "Сервис счетов Kaspi отклонил запрос (:p1).": "Kaspi шоттар сервисі сұрауды қабылдамады (:p1).",
  "Состояние счёта в Kaspi: :p1.": "Kaspi шотының күйі: :p1.",
- "Счета Kaspi не настроены: нужны KASPI_ENABLED, KASPI_API_KEY и KASPI_WEBHOOK_SECRET в настройках сервера.": "Kaspi шоттары бапталмаған: сервер баптауларында KASPI_ENABLED, KASPI_API_KEY және KASPI_WEBHOOK_SECRET қажет.",
+ "Счета Kaspi не настроены: нужны KASPI_YESPAY_ENABLED, KASPI_YESPAY_API_KEY и KASPI_YESPAY_WEBHOOK_SECRET в настройках сервера.": "Kaspi шоттары бапталмаған: сервер баптауларында KASPI_YESPAY_ENABLED, KASPI_YESPAY_API_KEY және KASPI_YESPAY_WEBHOOK_SECRET қажет.",
  "Счёт Kaspi отправлен клиенту на телефон": "Kaspi шоты клиенттің телефонына жіберілді",
  "Счёт в Kaspi": "Kaspi-дегі шот",
  "Счёт в Kaspi (автоматически)": "Kaspi-дегі шот (автоматты)",

@@ -17,7 +17,7 @@ class Payment extends Model
         'certificate_id', 'batch_id', 'method', 'status', 'amount', 'currency', 'invoice_number', 'invoiced_at',
         'paid_at', 'cancelled_at', 'reconciled_at', 'reconciled_by', 'comment', 'recorded_by',
         'epay_invoice_id', 'epay_link_id', 'epay_transaction_id', 'pay_url', 'pay_expires_at', 'epay_status', 'epay_checked_at',
-        'kaspi_payment_id', 'kaspi_status', 'kaspi_checked_at', 'kaspi_idempotency_key',
+        'kaspi_yespay_payment_id', 'kaspi_yespay_status', 'kaspi_yespay_checked_at', 'kaspi_yespay_idempotency_key',
     ];
 
     protected function casts(): array
@@ -32,7 +32,7 @@ class Payment extends Model
             'reconciled_at' => 'datetime',
             'pay_expires_at' => 'datetime',
             'epay_checked_at' => 'datetime',
-            'kaspi_checked_at' => 'datetime',
+            'kaspi_yespay_checked_at' => 'datetime',
         ];
     }
 

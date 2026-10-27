@@ -1651,7 +1651,7 @@
  "Сервис счетов Kaspi не отвечает. Попробуйте позже.": "The Kaspi invoicing service is not responding. Try again later.",
  "Сервис счетов Kaspi отклонил запрос (:p1).": "The Kaspi invoicing service rejected the request (:p1).",
  "Состояние счёта в Kaspi: :p1.": "Kaspi invoice state: :p1.",
- "Счета Kaspi не настроены: нужны KASPI_ENABLED, KASPI_API_KEY и KASPI_WEBHOOK_SECRET в настройках сервера.": "Kaspi invoices are not configured: KASPI_ENABLED, KASPI_API_KEY and KASPI_WEBHOOK_SECRET are needed in the server settings.",
+ "Счета Kaspi не настроены: нужны KASPI_YESPAY_ENABLED, KASPI_YESPAY_API_KEY и KASPI_YESPAY_WEBHOOK_SECRET в настройках сервера.": "Kaspi invoices are not configured: KASPI_YESPAY_ENABLED, KASPI_YESPAY_API_KEY and KASPI_YESPAY_WEBHOOK_SECRET are needed in the server settings.",
  "Счёт Kaspi отправлен клиенту на телефон": "Kaspi invoice sent to the customer's phone",
  "Счёт в Kaspi": "Kaspi invoice",
  "Счёт в Kaspi (автоматически)": "Kaspi invoice (automatic)",

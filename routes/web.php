@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\EpayCallbackController;
-use App\Http\Controllers\KaspiWebhookController;
+use App\Http\Controllers\KaspiYespayWebhookController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PublicShopController;
 use App\Http\Controllers\SeoController;
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 
 // Публичная страница: витрина онлайн-пакетов и заявка на сертификат. Сотрудники входят на /admin.
 // Уведомления банка об оплате картой: без CSRF (внешний вызов), подлинность проверяется запросом в банк.
-Route::post('/pay/kaspi/webhook', KaspiWebhookController::class)->middleware('throttle:120,1')->name('kaspi.webhook');
+Route::post('/pay/kaspi-yespay/webhook', KaspiYespayWebhookController::class)->middleware('throttle:120,1')->name('kaspi_yespay.webhook');
 Route::post('/pay/halyk/postlink', EpayCallbackController::class)->middleware('throttle:120,1')->name('epay.postlink');
 Route::get('/robots.txt', [SeoController::class, 'robots']);
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);

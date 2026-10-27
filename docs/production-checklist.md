@@ -43,6 +43,6 @@
 - [ ] Новый домен `gift.tenirhotels.com`: корневая папка сайта — `public` (или запасной корневой `.htaccess`), `APP_URL=https://gift.tenirhotels.com`, адрес уведомлений банка и домены в GA4/Метрике обновлены; со старого домена — редирект после проверки. Порядок — `docs/deploy-hoster-kz.md`, раздел 0.
 
 ## Счета Kaspi (необязательно)
-1. Завести аккаунт у посредника, подключить кассира Kaspi Pay; ключи — только в `.env` (`KASPI_*`), `KASPI_ENABLED=true` после проверки.
-2. Указать адрес вебхука `/pay/kaspi/webhook` в кабинете посредника; разрешить в Cloudflare.
+1. Завести аккаунт у посредника, подключить кассира Kaspi Pay; ключи — только в `.env` (`KASPI_*`), `KASPI_YESPAY_ENABLED=true` после проверки.
+2. Указать адрес вебхука `/pay/kaspi-yespay/webhook` в кабинете посредника; разрешить в Cloudflare.
 3. Проверить на `sk_test_…` все сценарии, затем малая боевая сумма; `php artisan gifter:security-check`.

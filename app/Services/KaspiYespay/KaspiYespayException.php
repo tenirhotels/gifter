@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services\Kaspi;
+namespace App\Services\KaspiYespay;
 
 use RuntimeException;
 
-class KaspiException extends RuntimeException
+class KaspiYespayException extends RuntimeException
 {
     /** Кассир Kaspi отключился: нужен вход человека в кабинете посредника. */
     public const REAUTH = 'payment_account_reauth_required';

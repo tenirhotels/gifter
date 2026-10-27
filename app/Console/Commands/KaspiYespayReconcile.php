@@ -2,19 +2,19 @@
 
 namespace App\Console\Commands;
 
-use App\Services\Kaspi\KaspiClient;
-use App\Services\KaspiPayments;
+use App\Services\KaspiYespay\KaspiYespayClient;
+use App\Services\KaspiYespayPayments;
 use Illuminate\Console\Command;
 
-class KaspiReconcile extends Command
+class KaspiYespayReconcile extends Command
 {
-    protected $signature = 'gifter:kaspi-reconcile';
+    protected $signature = 'gifter:kaspi-yespay-reconcile';
 
     protected $description = 'Проверить у посредника ожидающие счета Kaspi и отменить просроченные';
 
-    public function handle(KaspiPayments $payments): int
+    public function handle(KaspiYespayPayments $payments): int
     {
-        if (! KaspiClient::configured()) {
+        if (! KaspiYespayClient::configured()) {
             return self::SUCCESS;
         }
         $result = $payments->reconcilePending();

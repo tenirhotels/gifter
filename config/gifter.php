@@ -34,12 +34,12 @@ return [
     ],
 
     // Счёт Kaspi Pay на телефон клиента через посредника yespay (не официальный API Kaspi). Ключи — только в .env; выключено по умолчанию.
-    'kaspi' => [
-        'enabled' => (bool) env('KASPI_ENABLED', false),
-        'base_url' => env('KASPI_BASE_URL', 'https://api.getyespay.com'),
-        'api_key' => env('KASPI_API_KEY'),
-        'webhook_secret' => env('KASPI_WEBHOOK_SECRET'),
-        'expire_minutes' => (int) env('KASPI_EXPIRE_MINUTES', 1440),
+    'kaspi_yespay' => [
+        'enabled' => (bool) env('KASPI_YESPAY_ENABLED', false),
+        'base_url' => env('KASPI_YESPAY_BASE_URL', 'https://api.getyespay.com'),
+        'api_key' => env('KASPI_YESPAY_API_KEY'),
+        'webhook_secret' => env('KASPI_YESPAY_WEBHOOK_SECRET'),
+        'expire_minutes' => (int) env('KASPI_YESPAY_EXPIRE_MINUTES', 1440),
     ],
 
     // Оплата картой по ссылке (эквайринг Halyk Epay). Ключи — только в .env; пусто — функция выключена.

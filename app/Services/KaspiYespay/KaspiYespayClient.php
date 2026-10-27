@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Kaspi;
+namespace App\Services\KaspiYespay;
 
 use App\Models\Payment;
 use App\Support\Money;
@@ -12,22 +12,22 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Обмен с посредником по приёму Kaspi Pay (yespay). Только транспорт: бизнес-правила — в KaspiPayments.
+ * Обмен с посредником по приёму Kaspi Pay (yespay). Только транспорт: бизнес-правила — в KaspiYespayPayments.
  * Ключ только в заголовке, в журнал не попадают ни ключи, ни телефоны; TLS проверяется.
  * Повторы — только по кодам 429/502/503 и с тем же Idempotency-Key.
  */
-class KaspiClient
+class KaspiYespayClient
 {
     public static function configured(): bool
     {
-        return (bool) config('gifter.kaspi.enabled') && filled(config('gifter.kaspi.api_key')) && filled(config('gifter.kaspi.webhook_secret'))
-            && str_starts_with((string) config('gifter.kaspi.base_url'), 'https://');
+        return (bool) config('gifter.kaspi_yespay.enabled') && filled(config('gifter.kaspi_yespay.api_key')) && filled(config('gifter.kaspi_yespay.webhook_secret'))
+            && str_starts_with((string) config('gifter.kaspi_yespay.base_url'), 'https://');
     }
 
     /** Ключ песочницы (sk_test_…): платежи не настоящие. */
     public static function sandbox(): bool
     {
-        return str_starts_with((string) config('gifter.kaspi.api_key'), 'sk_test_');
+        return str_starts_with((string) config('gifter.kaspi_yespay.api_key'), 'sk_test_');
     }
 
     /**
@@ -39,9 +39,9 @@ class KaspiClient
     {
         $minor = Money::toMinor($payment->amount);
         if ($minor % 100 !== 0) {
-            throw new KaspiException(__('Kaspi принимает только целые тенге: сумма :p1 не подходит.', ['p1' => Money::format($payment->amount)]));
+            throw new KaspiYespayException(__('Kaspi принимает только целые тенге: сумма :p1 не подходит.', ['p1' => Money::format($payment->amount)]));
         }
-        $response = $this->send(fn (PendingRequest $http) => $http->withHeaders(['Idempotency-Key' => (string) $payment->kaspi_idempotency_key])->post($this->url('/v1/payments'), [
+        $response = $this->send(fn (PendingRequest $http) => $http->withHeaders(['Idempotency-Key' => (string) $payment->kaspi_yespay_idempotency_key])->post($this->url('/v1/payments'), [
             'amount' => intdiv($minor, 100),
             'currency' => 'KZT',
             'customer' => ['phone' => $phone],
@@ -87,25 +87,25 @@ class KaspiClient
     private function send(callable $call, string $what): Response
     {
         if (! self::configured()) {
-            throw new KaspiException(__('Счета Kaspi не настроены: нужны KASPI_ENABLED, KASPI_API_KEY и KASPI_WEBHOOK_SECRET в настройках сервера.'));
+            throw new KaspiYespayException(__('Счета Kaspi не настроены: нужны KASPI_YESPAY_ENABLED, KASPI_YESPAY_API_KEY и KASPI_YESPAY_WEBHOOK_SECRET в настройках сервера.'));
         }
         try {
-            $http = Http::timeout(15)->connectTimeout(5)->withToken((string) config('gifter.kaspi.api_key'))->acceptJson()->asJson()
+            $http = Http::timeout(15)->connectTimeout(5)->withToken((string) config('gifter.kaspi_yespay.api_key'))->acceptJson()->asJson()
                 ->retry(3, 500, fn ($e) => $e instanceof RequestException && in_array($e->response->status(), [429, 502, 503], true), throw: false);
             $response = $call($http);
         } catch (ConnectionException $e) {
             Log::warning('Kaspi (счета): нет связи', ['операция' => $what, 'причина' => $e::class]);
-            throw new KaspiException(__('Сервис счетов Kaspi не отвечает. Попробуйте позже.'));
+            throw new KaspiYespayException(__('Сервис счетов Kaspi не отвечает. Попробуйте позже.'));
         }
         if ($response->failed()) {
             $code = $response->json('error.code') ?? $response->json('code') ?? $response->json('error');
             $code = is_string($code) ? $code : null;
             Log::warning('Kaspi (счета): отказ', ['операция' => $what, 'http' => $response->status(), 'код' => $code]);
-            if ($code === KaspiException::REAUTH) {
-                throw new KaspiException(__('Кассир Kaspi отключился от сервиса счетов — нужен повторный вход в кабинете посредника.'), $code);
+            if ($code === KaspiYespayException::REAUTH) {
+                throw new KaspiYespayException(__('Кассир Kaspi отключился от сервиса счетов — нужен повторный вход в кабинете посредника.'), $code);
             }
 
-            throw new KaspiException(__('Сервис счетов Kaspi отклонил запрос (:p1).', ['p1' => $response->status()]).($code ? ' '.$code : ''), $code);
+            throw new KaspiYespayException(__('Сервис счетов Kaspi отклонил запрос (:p1).', ['p1' => $response->status()]).($code ? ' '.$code : ''), $code);
         }
 
         return $response;
@@ -113,6 +113,6 @@ class KaspiClient
 
     private function url(string $path): string
     {
-        return rtrim((string) config('gifter.kaspi.base_url'), '/').$path;
+        return rtrim((string) config('gifter.kaspi_yespay.base_url'), '/').$path;
     }
 }

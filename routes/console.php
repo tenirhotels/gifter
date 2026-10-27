@@ -10,7 +10,7 @@ Schedule::command('gifter:remind-expiring')->dailyAt('10:00')->withoutOverlappin
 
 // Оплата картой по ссылке: если уведомление банка потерялось — проверяем платежи сами; истёкшие ссылки отменяем.
 Schedule::command('gifter:epay-reconcile')->everyTenMinutes()->withoutOverlapping();
-Schedule::command('gifter:kaspi-reconcile')->everyTenMinutes()->withoutOverlapping();
+Schedule::command('gifter:kaspi-yespay-reconcile')->everyTenMinutes()->withoutOverlapping();
 
 // Резервные копии базы: зашифрованный архив каждую ночь, чистка старых, проверка свежести;
 // раз в неделю — копия на почту BACKUP_MAIL_TO (вне хостинга). См. docs/security.md.
