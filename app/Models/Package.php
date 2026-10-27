@@ -27,7 +27,7 @@ class Package extends Model
 
     protected $attributes = ['is_active' => true, 'validity_value' => 2, 'validity_unit' => 'months', 'is_complimentary' => false];
 
-    protected $fillable = ['name', 'name_translations', 'description', 'description_translations', 'validity_type', 'period_from', 'period_until', 'sales_limits_enabled', 'sales_quota', 'sales_from', 'sales_until', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active', 'sold_online', 'image_path'];
+    protected $fillable = ['name', 'name_translations', 'description', 'description_translations', 'validity_type', 'period_from', 'period_until', 'sales_limits_enabled', 'sales_quota', 'sales_from', 'sales_until', 'validity_value', 'validity_unit', 'is_complimentary', 'complimentary_purpose', 'is_active', 'sold_online', 'shop_position', 'image_path'];
 
     protected function casts(): array
     {
@@ -36,6 +36,7 @@ class Package extends Model
             'description_translations' => 'array',
             'is_active' => 'boolean',
             'sold_online' => 'boolean',
+            'shop_position' => 'integer',
             'validity_type' => PackageValidityType::class,
             'period_from' => 'date',
             'period_until' => 'date',

@@ -1633,5 +1633,8 @@
  "Как считаем": "How we count",
  "Пусто — бессрочно. Если новая цена начинается внутри периода действующей, та закончится днём раньше.": "Empty — unlimited. If the new price starts inside the current price's period, the current one ends the day before.",
  "Начало новой цены попадает в период действующей (до :p1) — укажите дату не раньше сегодняшней.": "The new price starts inside the current period (until :p1) — enter a date no earlier than today.",
- "Действующая цена идёт до :p1 — оставьте дату «по» пустой или не раньше этой даты.": "The current price runs until :p1 — leave “until” empty or not earlier than this date."
+ "Действующая цена идёт до :p1 — оставьте дату «по» пустой или не раньше этой даты.": "The current price runs until :p1 — leave “until” empty or not earlier than this date.",
+ "Нет цены": "No price",
+ "Пакеты, которые сейчас продаются на сайте. Перетащите или используйте стрелки — на главной они идут в этом порядке. Не видите пакет — смотрите причину в списке «Пакеты сертификатов».": "Packages currently on sale on the site. Drag them or use the arrows — the home page shows them in this order. If a package is missing, see the reason in the “Certificate packages” list.",
+ "Цена на :p1 (начало периода пакета)": "Price on :p1 (start of the package period)"
 }

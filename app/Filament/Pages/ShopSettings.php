@@ -6,13 +6,17 @@ use App\Enums\DeliveryMethod;
 use App\Enums\Permission;
 use App\Filament\Support\TranslatesPageLabels;
 use App\Models\AuditLog;
+use App\Models\Package;
 use App\Models\ShopSetting;
+use App\Services\ShopAvailability;
+use App\Support\Money;
 use App\Support\PhoneNumber;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -24,6 +28,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Collection;
 use UnitEnum;
 
 /**
@@ -67,9 +72,27 @@ class ShopSettings extends Page
             ...$this->textState($setting),
             'ga4_id' => $setting->ga4_id, 'metrika_id' => $setting->metrika_id, 'whatsapp_phone' => $setting->whatsapp_phone,
             'operator_name' => $setting->operator_name, 'offer_url' => $setting->offer_url,
+            'shop_order' => $this->shownPackages()->map(fn (Package $p) => ['id' => $p->id, 'label' => $this->orderLabel($p)])->all(),
             'faq_items' => self::faqState($setting->faq_items ?: ShopSetting::defaultFaqItems()),
             'terms_items' => self::termsState($setting->terms_items ?: ShopSetting::defaultTermsItems()),
         ]);
+    }
+
+    /** Пакеты, которые сейчас показываются на сайте, в порядке витрины. @return \Illuminate\Support\Collection<int, Package> */
+    private function shownPackages(): Collection
+    {
+        $availability = app(ShopAvailability::class);
+
+        return Package::query()->where('is_active', true)->where('is_complimentary', false)->where('sold_online', true)
+            ->with('items.service')->orderByRaw('shop_position is null')->orderBy('shop_position')->orderBy('name')->get()
+            ->filter(fn (Package $p) => $availability->problems($p) === [])->values();
+    }
+
+    private function orderLabel(Package $package): string
+    {
+        $price = app(ShopAvailability::class)->price($package);
+
+        return $package->localizedName().' — '.($price['total'] !== null ? Money::format($price['total']) : '—').' · '.($package->isFixedPeriod() ? $package->validityText() : $package->validity_unit->format($package->validity_value));
     }
 
     /** Тексты на трёх языках: `hero_title` (рус), `hero_title_kk`, `hero_title_en` и т. д. @return array<string, ?string> */
@@ -185,6 +208,11 @@ class ShopSettings extends Page
                     ])->columns(1),
                 ]),
                 Tab::make(__('Контент'))->schema([
+                    Section::make('Порядок сертификатов на сайте')->description(__('Пакеты, которые сейчас продаются на сайте. Перетащите или используйте стрелки — на главной они идут в этом порядке. Не видите пакет — смотрите причину в списке «Пакеты сертификатов».'))->schema([
+                        Repeater::make('shop_order')->hiddenLabel()->addable(false)->deletable(false)->reorderable()->reorderableWithButtons()
+                            ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
+                            ->schema([Hidden::make('id'), Hidden::make('label')]),
+                    ])->columns(1),
                     Section::make('Сайт-визитка')->description(__('Если нет ни одного пакета на продажу, сайт показывает приглашение связаться вместо выбора сертификата.'))->schema([
                         ...self::trilingual('contact_invite', __('Приглашение связаться'), __('Подарочные сертификаты TENIR — свяжитесь с нами, и мы подберём и оформим подарок.'), long: true, max: 600),
                     ])->columns(1),
@@ -242,10 +270,24 @@ class ShopSettings extends Page
         return $columns;
     }
 
+    /** Позиции 1…N у показываемых пакетов; остальные не трогаем (аудит — в модели пакета). @param  array<int, mixed>  $rows */
+    private function saveShopOrder(array $rows): void
+    {
+        $ids = array_values(array_filter(array_map(fn ($r) => (int) ($r['id'] ?? 0), $rows)));
+        $shown = $this->shownPackages()->keyBy('id');
+        $position = 0;
+        foreach ($ids as $id) {
+            if ($package = $shown->get($id)) {
+                $package->update(['shop_position' => ++$position]);
+            }
+        }
+    }
+
     public function save(): void
     {
         $state = $this->form->getState();
         $setting = ShopSetting::current();
+        $this->saveShopOrder((array) ($state['shop_order'] ?? []));
         $image = collect($state['hero_image_path'] ?? [])->first();
         $before = $setting->only(self::TRACKED);
         $setting->fill([

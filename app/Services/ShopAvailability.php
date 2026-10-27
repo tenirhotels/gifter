@@ -52,10 +52,37 @@ class ShopAvailability
         return array_values(array_unique($problems));
     }
 
-    /** Нет цены на сегодня у услуги: не задана, ждёт утверждения или начнёт действовать позже. */
-    private function priceProblem(Service $service): ?string
+    /**
+     * Цена пакета для списка: сумма на сегодня (для пакета с будущим периодом — на дату начала периода)
+     * либо причины, по которым цену назвать нельзя.
+     *
+     * @return array{total: ?string, date: Carbon, problems: list<string>}
+     */
+    public function price(Package $package): array
     {
-        $today = today();
+        $package->loadMissing('items.service');
+        $date = $package->isFixedPeriod() && $package->period_from->gt(today()) ? $package->period_from->copy() : today();
+        if ($package->items->isEmpty()) {
+            return ['total' => null, 'date' => $date, 'problems' => [__('В пакете нет состава (услуг)')]];
+        }
+        $problems = [];
+        foreach ($package->items as $item) {
+            if ($reason = $this->priceProblem($item->service, $date)) {
+                $problems[] = $reason;
+            }
+        }
+        if ($problems !== []) {
+            return ['total' => null, 'date' => $date, 'problems' => array_values(array_unique($problems))];
+        }
+        $total = $this->certificates->quote($package, [], $date)['total'];
+
+        return ['total' => $total, 'date' => $date, 'problems' => (float) $total <= 0 ? [__('Сумма пакета равна нулю')] : []];
+    }
+
+    /** Нет цены на дату у услуги: не задана, ждёт утверждения или начнёт действовать позже. */
+    private function priceProblem(Service $service, ?Carbon $date = null): ?string
+    {
+        $today = $date ?? today();
         if ($service->prices()->getQuery()->reorder()->effectiveOn($today)->exists()) {
             return null;
         }

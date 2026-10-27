@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Packages\Tables;
 use App\Models\Package;
 use App\Services\PackageSales;
 use App\Services\ShopAvailability;
+use App\Support\Money;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -34,6 +35,30 @@ class PackagesTable
         })();
     }
 
+    /**
+     * Цена пакета в списке: сумма либо причина, почему её нет (красным).
+     *
+     * @return array{text: string, ok: bool, tooltip: ?string}
+     */
+    private static function price(Package $package): array
+    {
+        static $cache;
+        $cache ??= new \WeakMap;
+
+        return $cache[$package] ??= (function () use ($package): array {
+            if ($package->is_complimentary) {
+                return ['text' => __('Бесплатный'), 'ok' => true, 'tooltip' => null];
+            }
+            $price = app(ShopAvailability::class)->price($package);
+            $note = $price['date']->isFuture() ? __('Цена на :p1 (начало периода пакета)', ['p1' => $price['date']->format('d.m.Y')]) : null;
+            if ($price['total'] === null || $price['problems'] !== []) {
+                return ['text' => $price['problems'][0] ?? __('Нет цены'), 'ok' => false, 'tooltip' => implode("\n", $price['problems'])];
+            }
+
+            return ['text' => Money::format($price['total']), 'ok' => true, 'tooltip' => $note];
+        })();
+    }
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -46,6 +71,11 @@ class PackagesTable
                 TextColumn::make('validity')->label('Срок действия')->state(fn (Package $record): string => $record->isFixedPeriod() ? $record->validityText('ru') : $record->validity_unit->format($record->validity_value)),
                 TextColumn::make('composition')->label('Состав сертификата')->state(fn (Package $record): string => $record->items
                     ->map(fn ($item) => "{$item->service->localizedName()} × {$item->quantity}")->implode(', '))->wrap(),
+                TextColumn::make('price')->label('Цена')->alignEnd()->wrap()
+                    ->state(fn (Package $record) => self::price($record)['text'])
+                    ->color(fn (Package $record) => self::price($record)['ok'] ? null : 'danger')
+                    ->icon(fn (Package $record) => self::price($record)['ok'] ? null : 'heroicon-o-exclamation-triangle')
+                    ->tooltip(fn (Package $record) => self::price($record)['tooltip']),
                 IconColumn::make('is_active')->label('Активен')->boolean(),
                 IconColumn::make('shop')->label('На сайте')
                     ->state(fn (Package $record) => self::shop($record)['state'])

@@ -42,7 +42,7 @@ class PublicShopController extends Controller
     public function offers(): Collection
     {
         return Package::query()->where('is_active', true)->where('is_complimentary', false)->where('sold_online', true)
-            ->with('items.service')->orderBy('name')->get()
+            ->with('items.service')->orderByRaw('shop_position is null')->orderBy('shop_position')->orderBy('name')->get()
             ->reject(fn (Package $package) => $package->periodEnded())
             ->map(fn (Package $package) => $this->offer($package))->filter()->values();
     }
