@@ -26,6 +26,7 @@ use App\Services\CertificateDocument;
 use App\Services\CertificateMailer;
 use App\Services\CertificateManager;
 use App\Services\EpayPayments;
+use App\Services\KaspiPayments;
 use App\Services\PaymentManager;
 use App\Services\Pms\PmsClient;
 use App\Services\Pms\PmsException;
@@ -192,7 +193,7 @@ class ViewCertificate extends ViewRecord
 
             Action::make('epayResend')->label('Отправить ссылку ещё раз')->icon('heroicon-o-envelope')->color('gray')
                 ->authorize(Permission::ManagePayments)
-                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment()?->method->isGateway())
+                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment()?->method === PaymentMethod::HalykEpay)
                 ->fillForm(fn (Certificate $record) => ['lang' => $record->onlineOrder?->locale ?? app()->getLocale()])
                 ->schema([
                     TextInput::make('email')->label('Email клиента')->email()->maxLength(255)
@@ -205,7 +206,7 @@ class ViewCertificate extends ViewRecord
             // Ссылку можно передать клиенту самому (мессенджер, звонок), если письмо не дошло.
             Action::make('epayShowLink')->label('Показать ссылку')->icon('heroicon-o-link')->color('gray')
                 ->authorize(Permission::ManagePayments)
-                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment()?->method->isGateway() && filled($record->pendingPayment()?->pay_url))
+                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment()?->method === PaymentMethod::HalykEpay && filled($record->pendingPayment()?->pay_url))
                 ->modalHeading(__('Ссылка на оплату картой'))
                 ->modalDescription(fn (Certificate $record) => __('Передайте её клиенту любым способом, если письмо не дошло. Ссылка действует до :p1.', ['p1' => $record->pendingPayment()?->pay_expires_at?->format('d.m.Y H:i') ?? '—']))
                 ->fillForm(fn (Certificate $record) => ['pay_url' => $record->pendingPayment()?->pay_url])
@@ -214,11 +215,34 @@ class ViewCertificate extends ViewRecord
 
             Action::make('epayCheck')->label('Проверить оплату в банке')->icon('heroicon-o-arrow-path')->color('gray')
                 ->authorize(Permission::ManagePayments)
-                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment()?->method->isGateway())
+                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment()?->method === PaymentMethod::HalykEpay)
                 ->action(function (Certificate $record, Action $action) {
                     $paid = false;
                     RunsDomainActions::run($action, function () use ($record, &$paid) {
                         $paid = app(EpayPayments::class)->checkNow($record->pendingPayment()) === EpayPayments::PAID;
+                    });
+                    Notification::make()->{$paid ? 'success' : 'warning'}()->title($paid ? __('Оплата поступила') : __('Оплата пока не поступила'))->send();
+                    $this->redirect(CertificateResource::getUrl('view', ['record' => $this->getRecord()]));
+                }),
+
+            // Счёт Kaspi на телефон заказчика (через посредника): оплату подтверждает его API, вручную не отмечается.
+            Action::make('kaspiInvoice')->label('Счёт в Kaspi')->icon('heroicon-o-device-phone-mobile')
+                ->authorize(Permission::ManagePayments)
+                ->visible(fn (Certificate $record) => app(KaspiPayments::class)->enabled() && $this->isOwnSaleDraft($record) && ! $record->pendingPayment()
+                    && Money::toMinor($record->invoicedAmount()) < Money::toMinor($record->payable_amount))
+                ->requiresConfirmation()
+                ->modalDescription(fn (Certificate $record) => __('Клиент получит счёт на :p1 в приложении Kaspi на телефон заказчика. Оплату подтвердит сервис — отмечать вручную не нужно.',
+                    ['p1' => Money::format(Money::fromMinor(Money::toMinor($record->payable_amount) - Money::toMinor($record->invoicedAmount())))]))
+                ->action(fn (Certificate $record, Action $action) => $this->run($action,
+                    fn () => app(KaspiPayments::class)->createInvoice($record), __('Счёт отправлен клиенту в Kaspi'))),
+
+            Action::make('kaspiCheck')->label('Проверить оплату в Kaspi')->icon('heroicon-o-arrow-path')->color('gray')
+                ->authorize(Permission::ManagePayments)
+                ->visible(fn (Certificate $record) => $this->isOwnSaleDraft($record) && $record->pendingPayment()?->method === PaymentMethod::KaspiPay)
+                ->action(function (Certificate $record, Action $action) {
+                    $paid = false;
+                    RunsDomainActions::run($action, function () use ($record, &$paid) {
+                        $paid = app(KaspiPayments::class)->checkNow($record->pendingPayment()) === KaspiPayments::PAID;
                     });
                     Notification::make()->{$paid ? 'success' : 'warning'}()->title($paid ? __('Оплата поступила') : __('Оплата пока не поступила'))->send();
                     $this->redirect(CertificateResource::getUrl('view', ['record' => $this->getRecord()]));

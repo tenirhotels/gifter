@@ -35,9 +35,9 @@ class PaymentManager
     }
 
     /** Платёж по ссылке банка на весь неоплаченный остаток (вызывает только EpayPayments). */
-    public function invoiceByGateway(Certificate $certificate): Payment
+    public function invoiceByGateway(Certificate $certificate, PaymentMethod $method = PaymentMethod::HalykEpay): Payment
     {
-        return $this->createInvoice($certificate, PaymentMethod::HalykEpay, null, null, null, null);
+        return $this->createInvoice($certificate, $method, null, null, null, null);
     }
 
     private function createInvoice(Certificate $certificate, PaymentMethod $method, ?string $amount, ?string $invoiceNumber, ?string $comment, ?int $batchId): Payment
@@ -134,7 +134,7 @@ class PaymentManager
     public function cancel(Payment $payment, string $reason): Payment
     {
         if ($payment->method->isGateway()) {
-            app(EpayPayments::class)->beforeCancel($payment);
+            $payment->method === PaymentMethod::KaspiPay ? app(KaspiPayments::class)->beforeCancel($payment) : app(EpayPayments::class)->beforeCancel($payment);
         }
         if ($payment->batch_id) {
             return $this->forBatchSiblings($payment, PaymentStatus::Pending, fn (Payment $line) => $this->cancelLine($line, $reason));

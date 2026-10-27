@@ -23,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [SetLocale::class]);
         // Язык запоминается обычным cookie (его читает и страница без сессии), поэтому не шифруется.
         $middleware->encryptCookies(except: ['gifter_lang']);
-        $middleware->validateCsrfTokens(except: ['pay/halyk/postlink']);
+        $middleware->validateCsrfTokens(except: ['pay/halyk/postlink', 'pay/kaspi/webhook']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Нарушение бизнес-правила — не сбой сервера: сообщение пользователю, без письма и записи в журнал ошибок.

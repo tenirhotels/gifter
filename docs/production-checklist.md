@@ -41,3 +41,8 @@
 - [ ] Оплата картой по ссылке: в `.env` `EPAY_ENV`, `EPAY_CLIENT_ID`, `EPAY_CLIENT_SECRET`, `EPAY_TERMINAL` (сначала тестовые); в личном кабинете банка указать адрес уведомлений `https://gift.tenirhotels.com/pay/halyk/postlink`; в Cloudflare не блокировать POST на `/pay/halyk/postlink`; пройти тест на тестовом терминале (чек-лист в `docs/online-shop.md`), затем `EPAY_ENV=prod` и боевые ключи; убедиться, что работает cron `schedule:run` (`gifter:epay-reconcile`); `migrate --force`.
 - [ ] Политика конфиденциальности: в «Настройки сайта» → «Документы» ввести адрес действующей публичной оферты (https://…) и проверить название оператора; юрист утверждает текст `/privacy`; `migrate --force`.
 - [ ] Новый домен `gift.tenirhotels.com`: корневая папка сайта — `public` (или запасной корневой `.htaccess`), `APP_URL=https://gift.tenirhotels.com`, адрес уведомлений банка и домены в GA4/Метрике обновлены; со старого домена — редирект после проверки. Порядок — `docs/deploy-hoster-kz.md`, раздел 0.
+
+## Счета Kaspi (необязательно)
+1. Завести аккаунт у посредника, подключить кассира Kaspi Pay; ключи — только в `.env` (`KASPI_*`), `KASPI_ENABLED=true` после проверки.
+2. Указать адрес вебхука `/pay/kaspi/webhook` в кабинете посредника; разрешить в Cloudflare.
+3. Проверить на `sk_test_…` все сценарии, затем малая боевая сумма; `php artisan gifter:security-check`.
