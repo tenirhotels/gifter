@@ -94,7 +94,7 @@ class PricesRelationManager extends RelationManager
                 ->visible(fn () => auth()->user()?->can(Permission::ViewCosts))
                 ->helperText(__('Во что услуга обходится отелю (билеты, продукты, оплата поставщику). Нужна для маржи и маркетинговых расходов.')),
             DatePicker::make('valid_from')->label('Действует с')->required()->default(today()),
-            DatePicker::make('valid_until')->label('Действует по')->helperText(__('Пусто — бессрочно. Открытая предыдущая цена закроется автоматически.')),
+            DatePicker::make('valid_until')->label('Действует по')->helperText(__('Пусто — бессрочно. Если новая цена начинается внутри периода действующей, та закончится днём раньше.')),
         ];
     }
 

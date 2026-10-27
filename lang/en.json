@@ -958,7 +958,6 @@
  "Пусто — адрес заказчика из его карточки.": "Empty — the customer's address from their card.",
  "Пусто — адрес из заявки или карточки заказчика (контакты здесь не показываются).": "Empty — the address from the request or the customer's card (contacts are not shown here).",
  "Пусто — без окончания.": "Empty — no end.",
- "Пусто — бессрочно. Открытая предыдущая цена закроется автоматически.": "Empty — unlimited. The open previous price closes automatically.",
  "Пусто — ничего не подключается. Скрипты аналитики грузятся только на публичной витрине.": "Empty — nothing is connected. Analytics scripts load only on the public storefront.",
  "Пусто — письмо уйдёт на адрес заказчика из его карточки (он здесь не показывается).": "Empty — the email goes to the customer's address from their card (it is not shown here).",
  "Р/с и наличные": "Bank transfer and cash",
@@ -1631,5 +1630,8 @@
  "год": "year",
  "к прошлому периоду": "vs the previous period",
  "нет данных за прошлый период": "no data for the previous period",
- "Как считаем": "How we count"
+ "Как считаем": "How we count",
+ "Пусто — бессрочно. Если новая цена начинается внутри периода действующей, та закончится днём раньше.": "Empty — unlimited. If the new price starts inside the current price's period, the current one ends the day before.",
+ "Начало новой цены попадает в период действующей (до :p1) — укажите дату не раньше сегодняшней.": "The new price starts inside the current period (until :p1) — enter a date no earlier than today.",
+ "Действующая цена идёт до :p1 — оставьте дату «по» пустой или не раньше этой даты.": "The current price runs until :p1 — leave “until” empty or not earlier than this date."
 }
