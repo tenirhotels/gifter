@@ -26,6 +26,7 @@ use App\Services\ServicePricing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
@@ -161,6 +162,7 @@ class EpayPaymentTest extends TestCase
         $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
 
         $state['check'] = $this->charged($payment);
+        Cache::flush(); // повторные уведомления по одному счёту банк не опрашивают чаще раза в 20 секунд
         $this->postJson('/pay/halyk/postlink', ['invoiceId' => $payment->epay_invoice_id])->assertOk()->assertSee('OK');
         $payment->refresh();
         $this->assertSame(PaymentStatus::Paid, $payment->status);

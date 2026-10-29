@@ -16,14 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Хостинг за Cloudflare и nginx: доверяем X-Forwarded-* от прокси, иначе Laravel
-        // считает запрос обычным HTTP и строит ссылки и формы с http://.
-        $middleware->trustProxies(at: '*');
+        // Каким прокси доверять X-Forwarded-* — решает AppServiceProvider по TRUSTED_PROXIES (cloudflare или список адресов).
         $middleware->append(SecurityHeaders::class);
         $middleware->web(append: [SetLocale::class]);
         // Язык запоминается обычным cookie (его читает и страница без сессии), поэтому не шифруется.
         $middleware->encryptCookies(except: ['gifter_lang']);
-        $middleware->validateCsrfTokens(except: ['pay/halyk/postlink', 'pay/kaspi-yespay/webhook']);
+        $middleware->validateCsrfTokens(except: ['pay/halyk/postlink', 'pay/kaspi-yespay/webhook', 'csp-report']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Нарушение бизнес-правила — не сбой сервера: сообщение пользователю, без письма и записи в журнал ошибок.

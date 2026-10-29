@@ -8,6 +8,9 @@ use Spatie\Backup\Tasks\Cleanup\Strategies\DefaultStrategy;
 use Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays;
 use Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes;
 
+// Кому писать о сбоях копирования: BACKUP_MAIL_TO → ERROR_MAIL_TO → GIFTER_ORDERS_MAIL_TO; нет адреса — письма не отправляются.
+$backupMailTo = env('BACKUP_MAIL_TO') ?: (env('ERROR_MAIL_TO') ?: env('GIFTER_ORDERS_MAIL_TO'));
+
 /*
  * Резервные копии Gifter (spatie/laravel-backup): только база данных — код лежит в git.
  * Архив zip зашифрован паролем BACKUP_ARCHIVE_PASSWORD (AES-256): без пароля дамп не открыть.
@@ -56,15 +59,16 @@ return [
 
     // Письмо — только о сбоях; получатель — BACKUP_MAIL_TO.
     'notifications' => [
+        // Без адреса уведомления не отправляются вообще (на «отправителя по умолчанию» письма не уходят).
         'notifications' => [
-            BackupHasFailedNotification::class => ['mail'],
-            UnhealthyBackupWasFoundNotification::class => ['mail'],
-            CleanupHasFailedNotification::class => ['mail'],
+            BackupHasFailedNotification::class => $backupMailTo ? ['mail'] : [],
+            UnhealthyBackupWasFoundNotification::class => $backupMailTo ? ['mail'] : [],
+            CleanupHasFailedNotification::class => $backupMailTo ? ['mail'] : [],
         ],
         'notifiable' => Notifiable::class,
         'mail' => [
-            // Пустое значение в .env (BACKUP_MAIL_TO=) не должно становиться адресом: берём отправителя по умолчанию.
-            'to' => env('BACKUP_MAIL_TO') ?: env('MAIL_FROM_ADDRESS', 'hello@example.com'),
+            // Пакет требует корректный адрес даже при выключенных уведомлениях: заглушка с зарезервированной зоной .invalid, письма на неё не уходят.
+            'to' => $backupMailTo ?: 'backup-alerts-disabled@example.invalid',
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
                 'name' => env('MAIL_FROM_NAME', 'Gifter'),

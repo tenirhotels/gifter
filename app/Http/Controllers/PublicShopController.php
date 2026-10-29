@@ -82,26 +82,36 @@ class PublicShopController extends Controller
             'consent' => ['accepted'],
         ]);
 
-        $limits = $this->limits($request, $data);
-        foreach ($limits as [$key, $max]) {
-            if (RateLimiter::tooManyAttempts($key, $max)) {
+        // Лимиты занимаются атомарно ДО создания заявки (параллельные запросы не проскакивают между проверкой и записью);
+        // при отказе или сбое созданной заявки занятые слоты возвращаются.
+        $taken = [];
+        foreach ($this->limits($request, $data) as [$key, $max, $seconds]) {
+            $taken[] = $key;
+            if (RateLimiter::increment($key, $seconds) > $max) {
+                foreach ($taken as $used) {
+                    RateLimiter::decrement($used);
+                }
                 throw ValidationException::withMessages(['phone' => __('Слишком много заявок. Попробуйте позже или свяжитесь с отелем.')]);
             }
         }
 
-        $order = OnlineOrder::create([
-            'package_id' => $package->id,
-            'last_name' => trim($data['last_name']), 'first_name' => trim($data['first_name']),
-            'phone' => $data['phone'], 'email' => $data['email'] ?? null,
-            'recipient_name' => $data['recipient_name'] ?? null, 'gift_message' => $data['gift_message'] ?? null, 'notes' => $data['notes'] ?? null,
-            'delivery_method' => $data['delivery_method'],
-            'delivery_address' => $data['delivery_method'] === DeliveryMethod::Courier->value ? $data['delivery_address'] : null,
-            'locale' => app()->getLocale(), 'ip_address' => $request->ip(),
-        ]);
-
-        foreach ($limits as [$key, , $seconds]) {
-            RateLimiter::hit($key, $seconds);
+        try {
+            $order = OnlineOrder::create([
+                'package_id' => $package->id,
+                'last_name' => trim($data['last_name']), 'first_name' => trim($data['first_name']),
+                'phone' => $data['phone'], 'email' => $data['email'] ?? null,
+                'recipient_name' => $data['recipient_name'] ?? null, 'gift_message' => $data['gift_message'] ?? null, 'notes' => $data['notes'] ?? null,
+                'delivery_method' => $data['delivery_method'],
+                'delivery_address' => $data['delivery_method'] === DeliveryMethod::Courier->value ? $data['delivery_address'] : null,
+                'locale' => app()->getLocale(), 'ip_address' => $request->ip(),
+            ]);
+        } catch (\Throwable $e) {
+            foreach ($taken as $used) {
+                RateLimiter::decrement($used);
+            }
+            throw $e;
         }
+
         $this->notify($order, $package);
 
         return redirect()->route('shop.thanks');

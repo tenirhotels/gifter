@@ -13,6 +13,7 @@ use App\Services\Epay\EpayClient;
 use App\Services\Epay\EpayException;
 use App\Support\ContactMask;
 use App\Support\Money;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -104,6 +105,12 @@ class EpayPayments
         if (! $payment) {
             Log::warning('Банк (оплата): уведомление по неизвестному счёту', ['invoice' => $invoiceId]);
 
+            return null;
+        }
+
+        // Уведомление публично, номера счетов предсказуемы: по закрытому платежу и чаще раза в 20 секунд банк не опрашиваем
+        // (остальное подхватит gifter:epay-reconcile), чтобы чужие запросы не расходовали лимиты API банка.
+        if ($payment->status !== PaymentStatus::Pending || ! Cache::add('epay:callback:'.$invoiceId, 1, 20)) {
             return null;
         }
 

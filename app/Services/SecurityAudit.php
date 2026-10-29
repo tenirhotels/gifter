@@ -65,7 +65,7 @@ class SecurityAudit
         $add('Выплата и выпуск: оплата подтверждается Финансами', (bool) config('gifter.require_payment_reconciled'), 'Уберите GIFTER_REQUIRE_PAYMENT_RECONCILED=false из .env: продавец сам отмечает оплату.', false);
         $add('Цены директора подтверждает администратор', (bool) config('gifter.require_price_approval'), 'Уберите GIFTER_REQUIRE_PRICE_APPROVAL=false из .env.', false);
         $add('Доверенные прокси ограничены (Cloudflare)', TrustedProxies::isRestricted(config('gifter.security.trusted_proxies')),
-            'TRUSTED_PROXIES=cloudflare: иначе заголовок X-Forwarded-For можно подделать (обход ограничения попыток входа).', false);
+            'TRUSTED_PROXIES=cloudflare: иначе заголовок X-Forwarded-For можно подделать (обход ограничения попыток входа).', $production);
         $add('Письма об ошибках сервера', filled(config('gifter.monitoring.error_mail_to')), 'ERROR_MAIL_TO — почта, куда придёт письмо о необработанной ошибке.', false);
         if ($production) {
             $beat = (int) Cache::get(Heartbeat::KEY, 0);

@@ -75,6 +75,8 @@ return [
         // (APP_ENV=local); на рабочем сервере он обязателен всегда.
         // Не более стольких разных клиентов в день, чьи контакты сотрудник может открыть (0 — без ограничения; администратор не ограничен).
         'reveal_daily_limit' => (int) env('GIFTER_REVEAL_DAILY_LIMIT', 30),
+        // Политика CSP: `report` — только отчёты о нарушениях (по умолчанию), `enforce` — браузер блокирует, `off` — без политики источников.
+        'csp_mode' => env('CSP_MODE', 'report'),
         // Доверенные прокси: пусто — любые (как раньше), `cloudflare` — только Cloudflare и внутренние адреса, или список сетей через запятую.
         'trusted_proxies' => env('TRUSTED_PROXIES'),
         'require_two_factor' => env('GIFTER_REQUIRE_2FA', true),

@@ -46,3 +46,8 @@
 1. Завести аккаунт у посредника, подключить кассира Kaspi Pay; ключи — только в `.env` (`YESPAY_SECRET_KEY`, `YESPAY_WEBHOOK_SECRET`, при необходимости `YESPAY_API_BASE`); адрес для писем об инцидентах — `KASPI_YESPAY_ALERT_MAIL_TO`, `KASPI_YESPAY_ENABLED=true` после проверки.
 2. Указать адрес вебхука `/pay/kaspi-yespay/webhook` в кабинете посредника; разрешить в Cloudflare.
 3. Проверить на `sk_test_…` все сценарии, затем малая боевая сумма; `php artisan gifter:security-check`.
+
+## После аудита 29.10.2026
+- `TRUSTED_PROXIES=cloudflare` обязательно (проверка критичная на production).
+- `CSP_MODE=report` неделю, затем смотрим журнал (`CSP: нарушение`) и ставим `enforce`.
+- Задан `BACKUP_MAIL_TO` (или `ERROR_MAIL_TO`) — иначе письма о сбоях копирования не отправляются.
