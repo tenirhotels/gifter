@@ -20,6 +20,7 @@ use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Grid;
@@ -53,7 +54,7 @@ class ShopSettings extends Page
 
     protected static ?string $slug = 'shop-settings';
 
-    private const TRACKED = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'faq_items', 'terms_items'];
+    private const TRACKED = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'faq_items', 'terms_items', 'order_show_recipient', 'order_corporate_enabled'];
 
     /** @var array<string, mixed> */
     public array $data = [];
@@ -73,6 +74,7 @@ class ShopSettings extends Page
             'ga4_id' => $setting->ga4_id, 'metrika_id' => $setting->metrika_id, 'whatsapp_phone' => $setting->whatsapp_phone,
             'operator_name' => $setting->operator_name, 'offer_url' => $setting->offer_url,
             'shop_order' => $this->shownPackages()->map(fn (Package $p) => ['id' => $p->id, 'label' => $this->orderLabel($p)])->all(),
+            'order_show_recipient' => $setting->showsRecipient(), 'order_corporate_enabled' => $setting->corporateEnabled(),
             'faq_items' => self::faqState($setting->faq_items ?: ShopSetting::defaultFaqItems()),
             'terms_items' => self::termsState($setting->terms_items ?: ShopSetting::defaultTermsItems()),
         ]);
@@ -183,6 +185,12 @@ class ShopSettings extends Page
                         ...self::trilingual('hero_subtitle', __('Подзаголовок'), __('Подарочные сертификаты на отдых в горах'), max: 300),
                         ...self::trilingual('hero_intro', __('Вступление'), __('Проживание в Tenir Eco Hotel, завтраки и особенные моменты среди гор. Выберите готовый сертификат — мы красиво оформим его и подготовим к вручению.'), long: true, max: 600),
                         ColorPicker::make('accent_color')->label('Акцентный цвет')->helperText(__('Один цвет бренда для кнопок и линий; по умолчанию тёмно-зелёный из брендбука.')),
+                    ])->columns(1),
+                    Section::make('Форма заказа')->description(__('Что спрашиваем у клиента на странице заявки. Заказчик создаётся по тем же правилам, что и в системе.'))->schema([
+                        Toggle::make('order_show_recipient')->label('Показывать блок «Для кого»')
+                            ->helperText(__('Получатель и поздравление. Выключено — не спрашиваем: сертификат оформляется на заказчика.')),
+                        Toggle::make('order_corporate_enabled')->label('Показывать галочку «Корпоративная покупка»')
+                            ->helperText(__('При галочке клиент вводит название компании и БИН (как у заказчика-компании в системе).')),
                     ])->columns(1),
                     Section::make('Получение сертификата')->description(__('Какие способы получения клиент видит в форме заявки. Названия способов переводятся автоматически.'))->schema([
                         CheckboxList::make('delivery_methods')->label('Активные способы получения')->options(
@@ -300,6 +308,8 @@ class ShopSettings extends Page
             'whatsapp_phone' => filled($state['whatsapp_phone'] ?? null) ? PhoneNumber::normalize($state['whatsapp_phone']) : null,
             'operator_name' => filled($state['operator_name'] ?? null) ? trim((string) $state['operator_name']) : null,
             'offer_url' => filled($state['offer_url'] ?? null) ? trim((string) $state['offer_url']) : null,
+            'order_show_recipient' => (bool) ($state['order_show_recipient'] ?? true),
+            'order_corporate_enabled' => (bool) ($state['order_corporate_enabled'] ?? true),
             'faq_items' => self::packFaq((array) ($state['faq_items'] ?? [])),
             'terms_items' => self::packTerms((array) ($state['terms_items'] ?? [])),
             'updated_by' => auth()->id(),

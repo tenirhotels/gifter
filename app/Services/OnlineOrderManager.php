@@ -28,8 +28,9 @@ final class OnlineOrderManager
             $this->assertNew($fresh);
 
             $customer = Customer::query()->whereContact((string) $fresh->phone)->first()
-                ?? Customer::create(['type' => 'individual', 'last_name' => $fresh->last_name, 'first_name' => $fresh->first_name,
-                    'phone' => $fresh->phone, 'email' => $fresh->email]);
+                ?? Customer::create(['type' => $fresh->is_corporate ? 'company' : 'individual', 'last_name' => $fresh->last_name, 'first_name' => $fresh->first_name,
+                    'phone' => $fresh->phone, 'email' => $fresh->email,
+                    'company' => $fresh->is_corporate ? $fresh->company : null, 'bin' => $fresh->is_corporate ? $fresh->bin : null]);
             $recipient = $this->recipient($fresh);
 
             $certificate = $this->actingAs($by, fn () => $this->certificates->createDraft([
@@ -71,8 +72,15 @@ final class OnlineOrderManager
             __('Заявка с сайта № :p1', ['p1' => $order->id]),
             __('Получение: :p1', ['p1' => $order->delivery_method->getLabel()]),
             $order->delivery_address ? __('Адрес доставки — в заявке с сайта (контакты открываются с записью в журнал).') : null,
+            // Заказчик с таким телефоном уже был — компанию из заявки не подменяем, а сообщаем сотруднику.
+            $order->is_corporate && ! $this->customerIsCompany($order) ? __('Корпоративная покупка: :p1, БИН :p2', ['p1' => $order->company, 'p2' => $order->bin]) : null,
             $order->notes ? __('Пожелания: :p1', ['p1' => $order->notes]) : null,
         ])->filter()->implode("\n");
+    }
+
+    private function customerIsCompany(OnlineOrder $order): bool
+    {
+        return (bool) Customer::query()->whereContact((string) $order->phone)->first()?->isCompany();
     }
 
     /** Черновик создаётся от имени сотрудника: он автор оформления и продавец. */

@@ -17,11 +17,11 @@ class ShopSetting extends Model
     /** Тексты главной, которые правятся в настройках на трёх языках (русский — в колонке, kk/en — в `text_translations`). */
     public const TEXTS = ['hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite'];
 
-    protected $fillable = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'faq_items', 'terms_items', 'updated_by'];
+    protected $fillable = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'faq_items', 'terms_items', 'order_show_recipient', 'order_corporate_enabled', 'updated_by'];
 
     protected function casts(): array
     {
-        return ['text_translations' => 'array', 'delivery_methods' => 'array', 'faq_items' => 'array', 'terms_items' => 'array'];
+        return ['text_translations' => 'array', 'delivery_methods' => 'array', 'faq_items' => 'array', 'terms_items' => 'array', 'order_show_recipient' => 'boolean', 'order_corporate_enabled' => 'boolean'];
     }
 
     /** Стандартные вопросы и ответы (пока в настройках ничего не задано). Ответ — абзацы через перевод строки. */
@@ -95,6 +95,18 @@ class ShopSetting extends Model
     public static function current(): self
     {
         return static::query()->first() ?? new static;
+    }
+
+    /** Блок «Для кого» (получатель и поздравление) на форме заказа; без записи настроек — показывается. */
+    public function showsRecipient(): bool
+    {
+        return $this->order_show_recipient ?? true;
+    }
+
+    /** Галочка «Корпоративная покупка» (компания и БИН) на форме заказа. */
+    public function corporateEnabled(): bool
+    {
+        return $this->order_corporate_enabled ?? true;
     }
 
     /** Идентификаторы попадают в код страницы — подключаются только в проверенном виде. */

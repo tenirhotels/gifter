@@ -20,14 +20,14 @@ class OnlineOrder extends Model
     use Auditable, HasEncryptedContacts, HasPersonName, PreventsDeletion;
 
     protected $fillable = ['package_id', 'last_name', 'first_name', 'phone', 'email', 'recipient_name', 'delivery_method', 'delivery_address', 'gift_message', 'notes', 'locale', 'status',
-        'certificate_id', 'handled_by', 'handled_at', 'reject_reason', 'ip_address', 'reminded_at'];
+        'certificate_id', 'handled_by', 'handled_at', 'reject_reason', 'ip_address', 'reminded_at', 'is_corporate', 'company', 'bin'];
 
     protected $attributes = ['status' => 'new', 'locale' => 'ru', 'delivery_method' => 'pickup'];
 
     protected function casts(): array
     {
         return ['status' => OnlineOrderStatus::class, 'handled_at' => 'datetime', 'reminded_at' => 'datetime', 'delivery_method' => DeliveryMethod::class, 'delivery_address' => 'encrypted',
-            'recipient_name' => 'encrypted', 'gift_message' => 'encrypted'];
+            'recipient_name' => 'encrypted', 'gift_message' => 'encrypted', 'is_corporate' => 'boolean'];
     }
 
     /** В журнал аудита личные данные не попадают: только отметка, что поле заполнено. */

@@ -37,22 +37,32 @@
             @else
             <form method="post" action="{{ \App\Support\ShopUrl::route('shop.store', $offer['package']) }}" style="margin-top:36px">
                 @csrf
+                @php $step = 0; @endphp
+                @if ($shop->showsRecipient())
                 <fieldset>
-                    <legend><i>1</i>{{ __('Для кого') }}</legend>
+                    <legend><i>{{ ++$step }}</i>{{ __('Для кого') }}</legend>
                     <label class="f">{{ __('Получатель') }} <span class="hint">{{ __('Необязательно: фамилия и имя.') }}</span><input type="text" name="recipient_name" value="{{ old('recipient_name') }}" maxlength="255"></label>
                     <label class="f">{{ __('Поздравление') }} <span class="hint">{{ __('Несколько тёплых слов для получателя.') }}</span><textarea name="gift_message" maxlength="500">{{ old('gift_message') }}</textarea></label>
                 </fieldset>
+                @endif
 
                 <fieldset>
-                    <legend><i>2</i>{{ __('Ваши данные') }}</legend>
+                    <legend><i>{{ ++$step }}</i>{{ __('Ваши данные') }}</legend>
                     <label class="f">{{ __('Фамилия') }}<input type="text" name="last_name" value="{{ old('last_name') }}" required maxlength="100" autocomplete="family-name">@error('last_name')<span class="err">{{ $message }}</span>@enderror</label>
                     <label class="f">{{ __('Имя') }}<input type="text" name="first_name" value="{{ old('first_name') }}" required maxlength="100" autocomplete="given-name">@error('first_name')<span class="err">{{ $message }}</span>@enderror</label>
                     <label class="f">{{ __('Телефон') }}<input type="tel" name="phone" value="{{ old('phone') }}" required maxlength="32" placeholder="+7 701 123 45 67" autocomplete="tel">@error('phone')<span class="err">{{ $message }}</span>@enderror</label>
                     <label class="f">Email <span class="hint">{{ __('Пришлём подтверждение заявки.') }}</span><input type="email" name="email" value="{{ old('email') }}" maxlength="255" autocomplete="email">@error('email')<span class="err">{{ $message }}</span>@enderror</label>
+                    @if ($shop->corporateEnabled())
+                    <label class="check"><input type="checkbox" name="is_corporate" value="1" id="corp" @checked(old('is_corporate'))><span>{{ __('Корпоративная покупка') }}</span></label>
+                    <div id="corp-fields" style="display:none">
+                        <label class="f">{{ __('Название компании') }}<input type="text" name="company" value="{{ old('company') }}" maxlength="255" autocomplete="organization">@error('company')<span class="err">{{ $message }}</span>@enderror</label>
+                        <label class="f">{{ __('БИН') }} <span class="hint">{{ __('12 цифр.') }}</span><input type="text" name="bin" value="{{ old('bin') }}" maxlength="14" inputmode="numeric" autocomplete="off">@error('bin')<span class="err">{{ $message }}</span>@enderror</label>
+                    </div>
+                    @endif
                 </fieldset>
 
                 <fieldset>
-                    <legend><i>3</i>{{ __('Получение') }}</legend>
+                    <legend><i>{{ ++$step }}</i>{{ __('Получение') }}</legend>
                     <div class="opts" id="delivery">
                         @php($methods = $shop->deliveryMethods())
                         @foreach ($methods as $method)
@@ -84,6 +94,8 @@
         var radios = document.querySelectorAll('input[name=delivery_method]'), addr = document.getElementById('addr');
         function sync() { var v = document.querySelector('input[name=delivery_method]:checked'); addr.style.display = v && v.value === 'courier' ? 'grid' : 'none'; }
         radios.forEach(function (r) { r.addEventListener('change', sync); }); sync();
+        var corp = document.getElementById('corp'), corpFields = document.getElementById('corp-fields');
+        if (corp && corpFields) { var syncCorp = function () { corpFields.style.display = corp.checked ? 'block' : 'none'; }; corp.addEventListener('change', syncCorp); syncCorp(); }
     })();
 </script>
 @endsection

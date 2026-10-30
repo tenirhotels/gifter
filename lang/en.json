@@ -1669,5 +1669,15 @@
  "кассир Kaspi отключился": "the Kaspi cashier disconnected",
  "платёж Kaspi требует проверки": "a Kaspi payment needs checking",
  "Не отменять, не возвращать деньги, не выпускать сертификат": "Do not cancel, do not refund, do not issue the certificate",
- "Нужна проверка": "Needs checking"
+ "Нужна проверка": "Needs checking",
+ "12 цифр.": "12 digits.",
+ "БИН введён с ошибкой: проверьте 12 цифр.": "The BIN is entered incorrectly: check the 12 digits.",
+ "Корпоративная покупка": "Corporate purchase",
+ "Корпоративная покупка: :p1, БИН :p2": "Corporate purchase: :p1, BIN :p2",
+ "Название компании": "Company name",
+ "Показывать блок «Для кого»": "Show the “For whom” block",
+ "Показывать галочку «Корпоративная покупка»": "Show the “Corporate purchase” checkbox",
+ "Получатель и поздравление. Выключено — не спрашиваем: сертификат оформляется на заказчика.": "Recipient and greeting. When off we do not ask: the certificate is issued to the customer.",
+ "При галочке клиент вводит название компании и БИН (как у заказчика-компании в системе).": "With the checkbox the customer enters the company name and BIN (as for a company customer in the system).",
+ "Что спрашиваем у клиента на странице заявки. Заказчик создаётся по тем же правилам, что и в системе.": "What we ask the customer on the order page. The customer is created by the same rules as in the system."
 }

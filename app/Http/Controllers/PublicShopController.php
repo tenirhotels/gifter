@@ -10,6 +10,7 @@ use App\Models\Package;
 use App\Models\ShopSetting;
 use App\Services\CertificateManager;
 use App\Services\PackageSales;
+use App\Support\KazakhstanBin;
 use App\Support\PhoneNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,6 +70,10 @@ class PublicShopController extends Controller
             return redirect()->route('shop.thanks');
         }
 
+        $request->merge(['bin' => preg_replace('/\D/', '', (string) $request->input('bin'))]);
+        $shop = ShopSetting::current();
+        $corporate = $shop->corporateEnabled() && $request->boolean('is_corporate');
+
         $data = $request->validate([
             'last_name' => ['required', 'string', 'max:100'],
             'first_name' => ['required', 'string', 'max:100'],
@@ -76,6 +81,9 @@ class PublicShopController extends Controller
             'email' => ['nullable', 'required_if:delivery_method,pdf', 'email', 'max:255'],
             'recipient_name' => ['nullable', 'string', 'max:255'],
             'gift_message' => ['nullable', 'string', 'max:500'],
+            'is_corporate' => ['nullable', 'boolean'],
+            'company' => [Rule::requiredIf($corporate), 'nullable', 'string', 'max:255'],
+            'bin' => [Rule::requiredIf($corporate), 'nullable', 'string', 'size:12', fn ($attribute, $value, $fail) => blank($value) || KazakhstanBin::isValid($value) ? null : $fail(__('БИН введён с ошибкой: проверьте 12 цифр.'))],
             'delivery_method' => ['required', Rule::in(array_map(fn (DeliveryMethod $m) => $m->value, ShopSetting::current()->deliveryMethods()))],
             'delivery_address' => ['nullable', 'required_if:delivery_method,courier', 'string', 'max:500'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -100,7 +108,10 @@ class PublicShopController extends Controller
                 'package_id' => $package->id,
                 'last_name' => trim($data['last_name']), 'first_name' => trim($data['first_name']),
                 'phone' => $data['phone'], 'email' => $data['email'] ?? null,
-                'recipient_name' => $data['recipient_name'] ?? null, 'gift_message' => $data['gift_message'] ?? null, 'notes' => $data['notes'] ?? null,
+                'recipient_name' => $shop->showsRecipient() ? ($data['recipient_name'] ?? null) : null,
+                'gift_message' => $shop->showsRecipient() ? ($data['gift_message'] ?? null) : null,
+                'is_corporate' => $corporate, 'company' => $corporate ? trim($data['company']) : null, 'bin' => $corporate ? $data['bin'] : null,
+                'notes' => $data['notes'] ?? null,
                 'delivery_method' => $data['delivery_method'],
                 'delivery_address' => $data['delivery_method'] === DeliveryMethod::Courier->value ? $data['delivery_address'] : null,
                 'locale' => app()->getLocale(), 'ip_address' => $request->ip(),
