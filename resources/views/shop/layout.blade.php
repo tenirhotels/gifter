@@ -41,7 +41,7 @@
     .muted { color: var(--muted); }
 
     /* Шапка */
-    .top { position: sticky; top: 0; z-index: 20; background: color-mix(in oklab, var(--ivory) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+    .top { position: sticky; top: 0; z-index: 30; background: color-mix(in oklab, var(--ivory) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
     .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 16px; }
     .brand { display: block; color: var(--accent); line-height: 0; }
     .brand svg { height: 46px; width: auto; display: block; }
@@ -61,7 +61,29 @@
     .lang a { margin-left: 14px; font-size: .9375rem; letter-spacing: .1em; color: var(--muted); }
     .lang a.on { color: var(--graphite); font-weight: 700; }
     @media (max-width: 900px) { .nav { gap: 18px; font-size: 1rem; } .nav .links { gap: 18px; } }
-    @media (max-width: 720px) { .top .wrap { height: auto; min-height: 64px; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; row-gap: 4px; } .nav { width: 100%; justify-content: space-between; gap: 12px; font-size: .9375rem; } .nav .links { gap: 16px; flex-wrap: wrap; } .lang a { margin-left: 10px; } .brand svg { height: 38px; } }
+    section[id] { scroll-margin-top: 72px; }
+    .burger, .menu-close { display: none; }
+    .menu-scrim { position: fixed; inset: 0; z-index: 55; background: rgba(34, 48, 44, .45); }
+    .menu-scrim[hidden] { display: none; }
+    body.menu-lock { overflow: hidden; }
+    @media (max-width: 720px) {
+        /* Компактная закреплённая шапка: логотип, язык, бургер; пункты — в выезжающей панели. backdrop-filter отключён: он ломает position: fixed у панели. */
+        .top { backdrop-filter: none; background: var(--ivory); }
+        .top .wrap { height: 56px; flex-wrap: nowrap; gap: 8px; }
+        .brand svg { height: 32px; }
+        .nav { gap: 4px; font-size: 1rem; }
+        .lang a { margin-left: 8px; font-size: .8125rem; }
+        .burger { display: inline-flex; flex-direction: column; justify-content: center; gap: 5px; width: 44px; height: 44px; padding: 0 11px; border: 0; background: none; cursor: pointer; }
+        .burger span { display: block; height: 2px; background: var(--graphite); border-radius: 2px; transition: transform .25s var(--ease), opacity .2s; }
+        .menu-open .burger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .menu-open .burger span:nth-child(2) { opacity: 0; }
+        .menu-open .burger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+        .nav .links { position: fixed; top: 0; right: 0; bottom: 0; z-index: 60; width: min(86vw, 22rem); flex-direction: column; gap: 0; padding: 76px 28px 28px; background: var(--ivory); box-shadow: -18px 0 50px rgba(34, 48, 44, .25); transform: translateX(100%); visibility: hidden; transition: transform .3s var(--ease), visibility 0s linear .3s; overflow-y: auto; }
+        .menu-open .nav .links { transform: none; visibility: visible; transition: transform .3s var(--ease); }
+        .nav .links a { padding: 16px 0; border-bottom: 1px solid var(--line); font-size: 1.375rem; }
+        .menu-close { display: block; position: absolute; top: 8px; right: 10px; width: 44px; height: 44px; border: 0; background: none; font-size: 2rem; line-height: 1; color: var(--muted); cursor: pointer; }
+    }
+    @media (max-width: 720px) and (prefers-reduced-motion: reduce) { .nav .links, .burger span { transition: none; } }
 
     /* Кнопки */
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent); border-radius: 999px; padding: 15px 32px; font: 600 .9375rem var(--sans); letter-spacing: .04em; text-decoration: none; cursor: pointer; transition: transform .25s var(--ease), box-shadow .25s var(--ease), background .25s; }
@@ -191,8 +213,9 @@
 <header class="top">
     <div class="wrap">
         <a class="brand" href="{{ \App\Support\ShopUrl::route('shop.index') }}" aria-label="{{ config('gifter.certificate.hotel_name') }}">@include('shop._svg', ['name' => 'tenir-logo-horizontal'])</a>
-        <nav class="nav">
-            <span class="links">
+        <nav class="nav" aria-label="{{ __('Меню') }}">
+            <span class="links" id="menu">
+                <button type="button" class="menu-close" id="menu-close" aria-label="{{ __('Закрыть') }}">×</button>
                 @if ($visitka ?? false)
                     <a href="{{ \App\Support\ShopUrl::route('shop.index', [], 'contact') }}">{{ __('Контакты') }}</a>
                 @else
@@ -202,9 +225,12 @@
                 <a href="{{ \App\Support\ShopUrl::route('shop.faq') }}">{{ __('Вопросы и ответы') }}</a>
             </span>
             <span class="lang">@foreach (array_keys(config('gifter.locales')) as $code)<a href="?lang={{ $code }}" @class(['on' => app()->getLocale() === $code])>{{ strtoupper($code) }}</a>@endforeach</span>
+            <button type="button" class="burger" id="burger" aria-expanded="false" aria-controls="menu" aria-label="{{ __('Меню') }}"><span></span><span></span><span></span></button>
         </nav>
     </div>
+    <div class="menu-scrim" id="menu-scrim" hidden></div>
 </header>
+<noscript><style>@media (max-width: 720px) { .top .wrap { height: auto; flex-wrap: wrap; padding-top: 6px; padding-bottom: 6px; } .nav { width: 100%; flex-wrap: wrap; } .nav .links { position: static !important; transform: none !important; visibility: visible !important; width: auto !important; flex-direction: row !important; flex-wrap: wrap; gap: 14px !important; padding: 0 !important; box-shadow: none !important; } .nav .links a { padding: 4px 0 !important; border: 0 !important; font-size: 1rem !important; } .burger, .menu-close { display: none !important; } }</style></noscript>
 
 @yield('content')
 
@@ -236,6 +262,31 @@
 </footer>
 @include('shop._widgets')
 <script>
+    (function () {
+        // Мобильное меню: бургер, крестик, затемнение, Esc и клик по пункту закрывают панель; фокус не уходит из открытой панели.
+        var top = document.querySelector('.top'), burger = document.getElementById('burger'), menu = document.getElementById('menu'), scrim = document.getElementById('menu-scrim');
+        if (!top || !burger || !menu) return;
+        function items() { return Array.prototype.slice.call(menu.querySelectorAll('a, button')); }
+        function setOpen(open) {
+            top.classList.toggle('menu-open', open); document.body.classList.toggle('menu-lock', open);
+            burger.setAttribute('aria-expanded', open ? 'true' : 'false'); scrim.hidden = !open;
+            if (open) { var first = menu.querySelector('a'); if (first) first.focus(); } else { burger.focus(); }
+        }
+        burger.addEventListener('click', function () { setOpen(!top.classList.contains('menu-open')); });
+        document.getElementById('menu-close').addEventListener('click', function () { setOpen(false); });
+        scrim.addEventListener('click', function () { setOpen(false); });
+        menu.addEventListener('click', function (e) { if (e.target.closest('a')) { top.classList.remove('menu-open'); document.body.classList.remove('menu-lock'); burger.setAttribute('aria-expanded', 'false'); scrim.hidden = true; } });
+        document.addEventListener('keydown', function (e) {
+            if (!top.classList.contains('menu-open')) return;
+            if (e.key === 'Escape') { setOpen(false); return; }
+            if (e.key === 'Tab') {
+                var list = items().concat([burger]), i = list.indexOf(document.activeElement);
+                if (e.shiftKey && i <= 0) { e.preventDefault(); list[list.length - 1].focus(); }
+                else if (!e.shiftKey && i === list.length - 1) { e.preventDefault(); list[0].focus(); }
+            }
+        });
+        window.addEventListener('resize', function () { if (window.innerWidth > 720 && top.classList.contains('menu-open')) setOpen(false); });
+    })();
     (function () {
         var els = document.querySelectorAll('.reveal');
         if (!('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('in'); }); return; }
