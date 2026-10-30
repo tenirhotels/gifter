@@ -3,6 +3,7 @@
 @section('description', \Illuminate\Support\Str::limit(strip_tags($offer['package']->localizedDescription() ?: __('Подарочный сертификат: :p1.', ['p1' => collect($offer['lines'])->pluck('name')->implode(', ')])), 200))
 @section('image', $offer['package']->imageUrl() ?? '')
 @section('wa_text', __('Здравствуйте! Хочу заказать сертификат «:p1».', ['p1' => $offer['package']->localizedName()]))
+@section('help_popup', '1')
 @section('jsonld')
 {!! json_encode(array_filter([
     '@context' => 'https://schema.org', '@type' => 'Product',
@@ -15,6 +16,9 @@
 ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
 @endsection
 @section('content')
+@if ($shop->metaPixel())
+<script>fbq('track', 'ViewContent', {content_name: @json($offer['package']->localizedName()), content_type: 'product', value: {{ (float) $offer['price'] }}, currency: 'KZT'});</script>
+@endif
 <div class="wrap">
     <div class="product">
         <div class="sticky reveal">

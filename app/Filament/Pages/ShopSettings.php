@@ -27,6 +27,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Collection;
@@ -54,7 +55,7 @@ class ShopSettings extends Page
 
     protected static ?string $slug = 'shop-settings';
 
-    private const TRACKED = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'faq_items', 'terms_items', 'order_show_recipient', 'order_corporate_enabled'];
+    private const TRACKED = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'faq_items', 'terms_items', 'order_show_recipient', 'order_corporate_enabled', 'meta_pixel_id', 'help_popup_enabled', 'help_popup_delay'];
 
     /** @var array<string, mixed> */
     public array $data = [];
@@ -74,6 +75,7 @@ class ShopSettings extends Page
             'ga4_id' => $setting->ga4_id, 'metrika_id' => $setting->metrika_id, 'whatsapp_phone' => $setting->whatsapp_phone,
             'operator_name' => $setting->operator_name, 'offer_url' => $setting->offer_url,
             'shop_order' => $this->shownPackages()->map(fn (Package $p) => ['id' => $p->id, 'label' => $this->orderLabel($p)])->all(),
+            'meta_pixel_id' => $setting->meta_pixel_id, 'help_popup_enabled' => (bool) $setting->help_popup_enabled, 'help_popup_delay' => $setting->helpPopupDelay(),
             'order_show_recipient' => $setting->showsRecipient(), 'order_corporate_enabled' => $setting->corporateEnabled(),
             'faq_items' => self::faqState($setting->faq_items ?: ShopSetting::defaultFaqItems()),
             'terms_items' => self::termsState($setting->terms_items ?: ShopSetting::defaultTermsItems()),
@@ -192,6 +194,13 @@ class ShopSettings extends Page
                         Toggle::make('order_corporate_enabled')->label('Показывать галочку «Корпоративная покупка»')
                             ->helperText(__('При галочке клиент вводит название компании и БИН (как у заказчика-компании в системе).')),
                     ])->columns(1),
+                    Section::make('Всплывающее окно «Затрудняетесь?»')->description(__('Если посетитель за заданное время не отправил заявку, предлагаем позвонить или написать в WhatsApp (один раз за визит). Номер берётся из поля «Номер WhatsApp» ниже: он же для звонка.'))->schema([
+                        Toggle::make('help_popup_enabled')->label('Показывать окно')->live()
+                            ->helperText(__('Работает только при заполненном номере WhatsApp.')),
+                        TextInput::make('help_popup_delay')->label('Через сколько секунд')->numeric()->integer()->minValue(10)->maxValue(600)->default(60)->required(fn (Get $get) => (bool) $get('help_popup_enabled')),
+                        ...self::trilingual('help_popup_title', __('Заголовок окна'), __('Затрудняетесь с выбором?'), max: 120),
+                        ...self::trilingual('help_popup_text', __('Текст окна'), __('Позвоните нам или напишите в WhatsApp — поможем подобрать сертификат.'), long: true, max: 300),
+                    ])->columns(1),
                     Section::make('Получение сертификата')->description(__('Какие способы получения клиент видит в форме заявки. Названия способов переводятся автоматически.'))->schema([
                         CheckboxList::make('delivery_methods')->label('Активные способы получения')->options(
                             collect(DeliveryMethod::cases())->mapWithKeys(fn (DeliveryMethod $m) => [$m->value => $m->getLabel()])->all()
@@ -210,6 +219,9 @@ class ShopSettings extends Page
                             ->regex('/^G-[A-Z0-9]{4,15}$/')->validationMessages(['regex' => __('Идентификатор вида G-XXXXXXXXXX.')]),
                         TextInput::make('metrika_id')->label('Яндекс.Метрика (номер счётчика)')->placeholder('12345678')->maxLength(12)
                             ->regex('/^\d{4,12}$/')->validationMessages(['regex' => __('Только цифры, 4–12 знаков.')]),
+                        TextInput::make('meta_pixel_id')->label('Meta Pixel (ID)')->placeholder('123456789012345')->maxLength(16)
+                            ->regex('/^\d{15,16}$/')->validationMessages(['regex' => __('Только цифры, 15–16 знаков.')])
+                            ->helperText(__('События: просмотр страницы, просмотр пакета, заявка отправлена, нажатие «WhatsApp»/«Позвонить». Данные передаются в Meta, в том числе за пределы Казахстана.')),
                         TextInput::make('whatsapp_phone')->label('Номер WhatsApp')->placeholder('+7 701 123 45 67')->maxLength(20)
                             ->rule(fn () => fn (string $attribute, $value, \Closure $fail) => PhoneNumber::isValid($value) ? null : $fail(__(PhoneNumber::HINT).'.'))
                             ->helperText(__('Кнопка «WhatsApp» на витрине. Цель «order_submitted» (заявка отправлена) уходит в Google Analytics и Метрику.')),
@@ -308,6 +320,9 @@ class ShopSettings extends Page
             'whatsapp_phone' => filled($state['whatsapp_phone'] ?? null) ? PhoneNumber::normalize($state['whatsapp_phone']) : null,
             'operator_name' => filled($state['operator_name'] ?? null) ? trim((string) $state['operator_name']) : null,
             'offer_url' => filled($state['offer_url'] ?? null) ? trim((string) $state['offer_url']) : null,
+            'meta_pixel_id' => filled($state['meta_pixel_id'] ?? null) ? trim((string) $state['meta_pixel_id']) : null,
+            'help_popup_enabled' => (bool) ($state['help_popup_enabled'] ?? false),
+            'help_popup_delay' => min(600, max(10, (int) ($state['help_popup_delay'] ?? 60))),
             'order_show_recipient' => (bool) ($state['order_show_recipient'] ?? true),
             'order_corporate_enabled' => (bool) ($state['order_corporate_enabled'] ?? true),
             'faq_items' => self::packFaq((array) ($state['faq_items'] ?? [])),

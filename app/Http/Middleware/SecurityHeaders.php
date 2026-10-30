@@ -19,6 +19,10 @@ class SecurityHeaders
     /** Хосты аналитики: добавляются только на публичных страницах и только если счётчик задан в «Настройках сайта». */
     private const GA4 = ['https://www.googletagmanager.com', 'https://*.google-analytics.com', 'https://*.analytics.google.com', 'https://*.googletagmanager.com'];
 
+    private const META = ['https://connect.facebook.net'];
+
+    private const META_BEACON = ['https://www.facebook.com'];
+
     private const METRIKA = ['https://mc.yandex.ru', 'https://mc.yandex.com', 'https://yastatic.net'];
 
     public function handle(Request $request, Closure $next): Response
@@ -56,6 +60,9 @@ class SecurityHeaders
             $shop = ShopSetting::current();
             if ($shop->ga4()) {
                 $extra = ['script' => self::GA4, 'connect' => self::GA4, 'img' => self::GA4];
+            }
+            if ($shop->metaPixel()) {
+                $extra = ['script' => [...$extra['script'], ...self::META], 'connect' => [...$extra['connect'], ...self::META_BEACON], 'img' => [...$extra['img'], ...self::META_BEACON]];
             }
             if ($shop->metrika()) {
                 $extra = ['script' => [...$extra['script'], ...self::METRIKA], 'connect' => [...$extra['connect'], ...self::METRIKA, 'wss://mc.yandex.ru'], 'img' => [...$extra['img'], ...self::METRIKA]];

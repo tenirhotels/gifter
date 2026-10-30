@@ -15,13 +15,13 @@ class ShopSetting extends Model
     public const DEFAULT_OPERATOR = 'ТОО «Alpine Hotel»';
 
     /** Тексты главной, которые правятся в настройках на трёх языках (русский — в колонке, kk/en — в `text_translations`). */
-    public const TEXTS = ['hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite'];
+    public const TEXTS = ['hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'help_popup_title', 'help_popup_text'];
 
-    protected $fillable = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'faq_items', 'terms_items', 'order_show_recipient', 'order_corporate_enabled', 'updated_by'];
+    protected $fillable = ['hero_image_path', 'hero_title', 'hero_subtitle', 'hero_intro', 'contact_invite', 'text_translations', 'delivery_methods', 'accent_color', 'ga4_id', 'metrika_id', 'whatsapp_phone', 'operator_name', 'offer_url', 'faq_items', 'terms_items', 'order_show_recipient', 'order_corporate_enabled', 'meta_pixel_id', 'help_popup_enabled', 'help_popup_delay', 'help_popup_title', 'help_popup_text', 'updated_by'];
 
     protected function casts(): array
     {
-        return ['text_translations' => 'array', 'delivery_methods' => 'array', 'faq_items' => 'array', 'terms_items' => 'array', 'order_show_recipient' => 'boolean', 'order_corporate_enabled' => 'boolean'];
+        return ['text_translations' => 'array', 'delivery_methods' => 'array', 'faq_items' => 'array', 'terms_items' => 'array', 'order_show_recipient' => 'boolean', 'order_corporate_enabled' => 'boolean', 'help_popup_enabled' => 'boolean', 'help_popup_delay' => 'integer'];
     }
 
     /** Стандартные вопросы и ответы (пока в настройках ничего не задано). Ответ — абзацы через перевод строки. */
@@ -120,6 +120,24 @@ class ShopSetting extends Model
         return preg_match('/^\d{4,12}$/', (string) $this->metrika_id) ? $this->metrika_id : null;
     }
 
+    /** Идентификатор Meta Pixel — 15–16 цифр. */
+    public function metaPixel(): ?string
+    {
+        return preg_match('/^\d{15,16}$/', (string) $this->meta_pixel_id) ? $this->meta_pixel_id : null;
+    }
+
+    /** Всплывающее окно «Затрудняетесь?»: включено и есть номер для звонка и WhatsApp. */
+    public function helpPopupEnabled(): bool
+    {
+        return (bool) $this->help_popup_enabled && $this->whatsapp() !== null;
+    }
+
+    /** Через сколько секунд показывать окно: 10–600, по умолчанию 60. */
+    public function helpPopupDelay(): int
+    {
+        return min(600, max(10, (int) ($this->help_popup_delay ?: 60)));
+    }
+
     /** Номер для wa.me: только цифры международного формата. */
     public function whatsapp(): ?string
     {
@@ -160,7 +178,7 @@ class ShopSetting extends Model
 
     public function hasAnalytics(): bool
     {
-        return $this->ga4() !== null || $this->metrika() !== null;
+        return $this->ga4() !== null || $this->metrika() !== null || $this->metaPixel() !== null;
     }
 
     public function accent(): string

@@ -1,6 +1,7 @@
 @extends('shop.layout')
 @php($route = fn (string $name, $params = [], ?string $fragment = null) => \App\Support\ShopUrl::route($name, $params, $fragment))
 @php($visitka = $offers->isEmpty())
+@section('help_popup', '1')
 @section('content')
     <section class="hero {{ $shop->hero_image_path ? 'has-photo' : '' }}" style="padding:0">
         @if ($shop->hero_image_path)<div class="bg" style="background-image:url('{{ url('/media/'.basename($shop->hero_image_path)) }}')"></div>@else<div class="bg"></div><div class="mark">@include('shop._svg', ['name' => 'tenir-symbol'])</div>@endif
@@ -42,7 +43,7 @@
                 <p class="muted">{{ $shop->text('contact_invite', __('Подарочные сертификаты TENIR — свяжитесь с нами, и мы подберём и оформим подарок.')) }}</p>
             </div>
             @if (config('gifter.certificate.hotel_contacts'))<p class="reveal">{{ config('gifter.certificate.hotel_contacts') }}</p>@endif
-            @if ($shop->whatsapp())<p class="reveal"><a class="btn" href="https://wa.me/{{ $shop->whatsapp() }}?text={{ rawurlencode(__('Здравствуйте! Хочу заказать подарочный сертификат.')) }}" target="_blank" rel="noopener">WhatsApp</a></p>@endif
+            @if ($shop->whatsapp())<p class="reveal"><a class="btn" data-contact="whatsapp" href="https://wa.me/{{ $shop->whatsapp() }}?text={{ rawurlencode(__('Здравствуйте! Хочу заказать подарочный сертификат.')) }}" target="_blank" rel="noopener">WhatsApp</a></p>@endif
         </div>
     </section>
     @else

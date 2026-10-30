@@ -1679,5 +1679,17 @@
  "Показывать галочку «Корпоративная покупка»": "Show the “Corporate purchase” checkbox",
  "Получатель и поздравление. Выключено — не спрашиваем: сертификат оформляется на заказчика.": "Recipient and greeting. When off we do not ask: the certificate is issued to the customer.",
  "При галочке клиент вводит название компании и БИН (как у заказчика-компании в системе).": "With the checkbox the customer enters the company name and BIN (as for a company customer in the system).",
- "Что спрашиваем у клиента на странице заявки. Заказчик создаётся по тем же правилам, что и в системе.": "What we ask the customer on the order page. The customer is created by the same rules as in the system."
+ "Что спрашиваем у клиента на странице заявки. Заказчик создаётся по тем же правилам, что и в системе.": "What we ask the customer on the order page. The customer is created by the same rules as in the system.",
+ "Если посетитель за заданное время не отправил заявку, предлагаем позвонить или написать в WhatsApp (один раз за визит). Номер берётся из поля «Номер WhatsApp» ниже: он же для звонка.": "If a visitor does not submit an order within the set time, we suggest calling or writing on WhatsApp (once per visit). The number comes from the “WhatsApp number” field below and is also used for calls.",
+ "Заголовок окна": "Window title",
+ "Затрудняетесь с выбором?": "Having trouble choosing?",
+ "Позвоните нам или напишите в WhatsApp — поможем подобрать сертификат.": "Call us or write on WhatsApp — we will help you choose a certificate.",
+ "Позвонить": "Call",
+ "Показывать окно": "Show the window",
+ "Работает только при заполненном номере WhatsApp.": "Works only when the WhatsApp number is filled in.",
+ "События: просмотр страницы, просмотр пакета, заявка отправлена, нажатие «WhatsApp»/«Позвонить». Данные передаются в Meta, в том числе за пределы Казахстана.": "Events: page view, package view, order submitted, click on “WhatsApp”/“Call”. Data is sent to Meta, including outside Kazakhstan.",
+ "Также подключён Meta Pixel (Meta Platforms): сведения о просмотрах страниц и обращении в отель передаются в Meta, в том числе за пределы Казахстана, и могут использоваться для показа рекламы.": "Meta Pixel (Meta Platforms) is also connected: information about page views and contacting the hotel is sent to Meta, including outside Kazakhstan, and may be used to show ads.",
+ "Текст окна": "Window text",
+ "Только цифры, 15–16 знаков.": "Digits only, 15–16 characters.",
+ "Через сколько секунд": "After how many seconds"
 }
