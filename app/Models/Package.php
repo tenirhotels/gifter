@@ -9,6 +9,7 @@ use App\Exceptions\DomainRuleViolation;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\PreventsDeletion;
 use App\Support\LocalizedName;
+use App\Support\ShopImage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -131,6 +132,12 @@ class Package extends Model
     public function imageUrl(): ?string
     {
         return $this->image_path ? url('/media/'.basename($this->image_path)) : null;
+    }
+
+    /** `srcset` фото пакета (WebP нужной ширины) или null, если фото нет. */
+    public function imageSrcset(): ?string
+    {
+        return $this->image_path ? ShopImage::srcset($this->image_path) : null;
     }
 
     public function items(): HasMany

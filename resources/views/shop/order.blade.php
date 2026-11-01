@@ -25,7 +25,7 @@
 <div class="wrap">
     <div class="product">
         <div class="sticky reveal">
-            <div class="photo">@if ($offer['package']->imageUrl())<img src="{{ $offer['package']->imageUrl() }}" alt="{{ $offer['package']->localizedName() }}">@endif</div>
+            <div class="photo">@if ($offer['package']->imageUrl())<img src="{{ $offer['package']->imageUrl() }}?w=1200" srcset="{{ $offer['package']->imageSrcset() }}" sizes="(max-width: 900px) 100vw, 560px" width="1200" height="900" alt="{{ $offer['package']->localizedName() }}" fetchpriority="high" decoding="async">@endif</div>
             @include('shop._certificate', ['name' => $offer['package']->localizedName()])
         </div>
 

@@ -6,6 +6,8 @@
 <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg">
 <noscript><style>.reveal { opacity: 1; transform: none; }</style></noscript>
 @include('shop._head')
+@yield('preload')
+@if (is_file(public_path('fonts/gillsans.woff2')))<link rel="preload" as="font" type="font/woff2" href="/fonts/gillsans.woff2?v={{ filemtime(public_path('fonts/gillsans.woff2')) }}" crossorigin>@endif
 <style>
 @php
     // Шрифты бренда подключаются, только если файлы положены в public/fonts (см. public/fonts/README.md).
@@ -93,6 +95,7 @@
 
     /* Hero */
     .hero { position: relative; min-height: 78vh; display: grid; align-items: end; color: #fff; background: linear-gradient(140deg, color-mix(in oklab, var(--accent) 80%, #000), var(--accent)); overflow: hidden; }
+    .hero img.bg { width: 100%; height: 100%; object-fit: cover; object-position: center; }
     .hero .bg { position: absolute; inset: 0; background-size: cover; background-position: center; transform: scale(1.04); animation: drift 18s var(--ease) infinite alternate; }
     .hero .mark { position: absolute; right: -4%; top: 6%; width: min(52vw, 640px); color: #fff; opacity: .1; }
     .hero.has-photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,28,25,.12) 0%, rgba(18,28,25,.7) 100%); }

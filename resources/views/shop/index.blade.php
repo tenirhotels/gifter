@@ -2,9 +2,14 @@
 @php($route = fn (string $name, $params = [], ?string $fragment = null) => \App\Support\ShopUrl::route($name, $params, $fragment))
 @php($visitka = $offers->isEmpty())
 @section('help_popup', '1')
+@if ($shop->hero_image_path)
+@section('preload')
+<link rel="preload" as="image" href="{{ url('/media/'.basename($shop->hero_image_path)) }}?w=1200" imagesrcset="{{ \App\Support\ShopImage::srcset($shop->hero_image_path, [720, 1200, 1600]) }}" imagesizes="100vw" fetchpriority="high">
+@endsection
+@endif
 @section('content')
     <section class="hero {{ $shop->hero_image_path ? 'has-photo' : '' }}" style="padding:0">
-        @if ($shop->hero_image_path)<div class="bg" style="background-image:url('{{ url('/media/'.basename($shop->hero_image_path)) }}')"></div>@else<div class="bg"></div><div class="mark">@include('shop._svg', ['name' => 'tenir-symbol'])</div>@endif
+        @if ($shop->hero_image_path)<img class="bg" src="{{ url('/media/'.basename($shop->hero_image_path)) }}?w=1200" srcset="{{ \App\Support\ShopImage::srcset($shop->hero_image_path, [720, 1200, 1600]) }}" sizes="100vw" alt="" fetchpriority="high" decoding="async">@else<div class="bg"></div><div class="mark">@include('shop._svg', ['name' => 'tenir-symbol'])</div>@endif
         <div class="inner">
             <div class="eyebrow" style="color:#fff;opacity:.85">TENIR</div>
             <h1 class="reveal" style="margin-top:14px">{{ $shop->text('hero_title', __('Подарите время, которое запомнится')) }}</h1>
@@ -57,7 +62,7 @@
                     @foreach ($offers as $offer)
                         <a class="card reveal" href="{{ $route('shop.order', $offer['package']) }}">
                             <div class="ph">
-                                @if ($offer['package']->imageUrl())<img src="{{ $offer['package']->imageUrl() }}" alt="{{ $offer['package']->localizedName() }}" loading="lazy">@else<div class="mono">@include('shop._svg', ['name' => 'tenir-symbol'])</div>@endif
+                                @if ($offer['package']->imageUrl())<img src="{{ $offer['package']->imageUrl() }}?w=720" srcset="{{ $offer['package']->imageSrcset() }}" sizes="(max-width: 720px) 100vw, (max-width: 1100px) 50vw, 380px" width="720" height="480" alt="{{ $offer['package']->localizedName() }}" loading="lazy" decoding="async">@else<div class="mono">@include('shop._svg', ['name' => 'tenir-symbol'])</div>@endif
                             </div>
                             <div class="body">
                                 <h3>{{ $offer['package']->localizedName() }}</h3>
