@@ -2,7 +2,7 @@
 @section('robots', 'noindex, nofollow')
 @section('content')
 <script>try { sessionStorage.setItem('gifter_help_shown', '1'); } catch (e) {}</script>
-@if ($shop->ga4() || $shop->metrika() || $shop->metaPixel())
+@if ($submitted && ($shop->ga4() || $shop->metrika() || $shop->metaPixel()))
 <script>
     @if ($shop->metaPixel()) fbq('track', 'Lead'); @endif
     @if ($shop->ga4()) gtag('event', 'order_submitted'); @endif

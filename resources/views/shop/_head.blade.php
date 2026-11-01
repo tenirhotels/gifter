@@ -27,14 +27,17 @@
 @endif
 @hasSection('jsonld')<script type="application/ld+json">{!! json_encode(trim($__env->yieldContent('jsonld')) ? json_decode($__env->yieldContent('jsonld'), true) : null, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) !!}</script>
 @endif
+@if ($shop->hasAnalytics())
+{{-- Свои визиты не считаем: адрес с ?notrack=1 запоминает флаг в браузере сотрудника (?notrack=0 — снять); счётчики тогда не загружаются, события гасятся. --}}
+<script>(function () { try { var q = location.search; if (/[?&]notrack=1/.test(q)) localStorage.setItem('gifter_notrack', '1'); if (/[?&]notrack=0/.test(q)) localStorage.removeItem('gifter_notrack'); window.gifterNoTrack = !!localStorage.getItem('gifter_notrack'); } catch (e) {} if (window.gifterNoTrack) { window.gtag = window.ym = window.fbq = function () {}; } })();</script>
+@endif
 @if ($shop->ga4())
-<script async src="https://www.googletagmanager.com/gtag/js?id={{ $shop->ga4() }}"></script>
-<script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', @json($shop->ga4()));</script>
+<script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } if (!window.gifterNoTrack) { var g = document.createElement('script'); g.async = true; g.src = 'https://www.googletagmanager.com/gtag/js?id={{ $shop->ga4() }}'; document.head.appendChild(g); gtag('js', new Date()); gtag('config', @json($shop->ga4())); }</script>
 @endif
 @if ($shop->metrika())
-<script>(function (m, e, t, r, i, k, a) { m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); }; m[i].l = 1 * new Date(); k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a); })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym'); ym({{ $shop->metrika() }}, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true });</script>
+<script>if (!window.gifterNoTrack) { (function (m, e, t, r, i, k, a) { m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); }; m[i].l = 1 * new Date(); k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a); })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym'); ym({{ $shop->metrika() }}, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true }); }</script>
 @endif
 @if ($shop->metaPixel())
-<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init', @json($shop->metaPixel())); fbq('track', 'PageView');</script>
+<script>if (!window.gifterNoTrack) { !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js'); fbq('init', @json($shop->metaPixel())); fbq('track', 'PageView'); }</script>
 <noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id={{ $shop->metaPixel() }}&amp;ev=PageView&amp;noscript=1"></noscript>
 @endif

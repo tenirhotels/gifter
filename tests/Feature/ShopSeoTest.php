@@ -85,7 +85,7 @@ class ShopSeoTest extends TestCase
         $this->get('/')->assertOk()->assertSee('googletagmanager.com/gtag/js?id=G-ABC12345', false)->assertSee("ym(1234567, 'init'", false)
             ->assertSee('https://wa.me/77011234567?text=', false)->assertSee('cookie-note', false);
         $this->get('/order/'.$this->package->id)->assertSee(rawurlencode('Романтический вечер'), false);
-        $this->get('/order/thanks')->assertSee("gtag('event', 'order_submitted')", false)->assertSee("reachGoal', 'order_submitted'", false);
+        $this->withSession(['order_submitted' => true])->get('/order/thanks')->assertSee("gtag('event', 'order_submitted')", false)->assertSee("reachGoal', 'order_submitted'", false);
     }
 
     public function test_invalid_ids_are_never_printed_into_the_page(): void

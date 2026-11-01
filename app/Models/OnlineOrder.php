@@ -20,7 +20,7 @@ class OnlineOrder extends Model
     use Auditable, HasEncryptedContacts, HasPersonName, PreventsDeletion;
 
     protected $fillable = ['package_id', 'last_name', 'first_name', 'phone', 'email', 'recipient_name', 'delivery_method', 'delivery_address', 'gift_message', 'notes', 'locale', 'status',
-        'certificate_id', 'handled_by', 'handled_at', 'reject_reason', 'ip_address', 'reminded_at', 'is_corporate', 'company', 'bin'];
+        'certificate_id', 'handled_by', 'handled_at', 'reject_reason', 'ip_address', 'reminded_at', 'is_corporate', 'company', 'bin', 'utm_source', 'utm_medium', 'utm_campaign', 'referrer_host'];
 
     protected $attributes = ['status' => 'new', 'locale' => 'ru', 'delivery_method' => 'pickup'];
 
@@ -40,6 +40,12 @@ class OnlineOrder extends Model
         }
 
         return $attributes;
+    }
+
+    /** Источник заявки для отчётов: UTM-метка, иначе сайт-источник, иначе «Прямой заход». */
+    public function sourceLabel(): string
+    {
+        return $this->utm_source ?: ($this->referrer_host ?: __('Прямой заход или не определён'));
     }
 
     public function package(): BelongsTo

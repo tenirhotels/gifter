@@ -82,6 +82,8 @@ class PublicShopController extends Controller
             'recipient_name' => ['nullable', 'string', 'max:255'],
             'gift_message' => ['nullable', 'string', 'max:500'],
             'is_corporate' => ['nullable', 'boolean'],
+            'utm_source' => ['nullable', 'string', 'max:200'], 'utm_medium' => ['nullable', 'string', 'max:200'], 'utm_campaign' => ['nullable', 'string', 'max:200'],
+            'referrer' => ['nullable', 'string', 'max:500'],
             'company' => [Rule::requiredIf($corporate), 'nullable', 'string', 'max:255'],
             'bin' => [Rule::requiredIf($corporate), 'nullable', 'string', 'size:12', fn ($attribute, $value, $fail) => blank($value) || KazakhstanBin::isValid($value) ? null : $fail(__('БИН введён с ошибкой: проверьте 12 цифр.'))],
             'delivery_method' => ['required', Rule::in(array_map(fn (DeliveryMethod $m) => $m->value, ShopSetting::current()->deliveryMethods()))],
@@ -112,6 +114,8 @@ class PublicShopController extends Controller
                 'gift_message' => $shop->showsRecipient() ? ($data['gift_message'] ?? null) : null,
                 'is_corporate' => $corporate, 'company' => $corporate ? trim($data['company']) : null, 'bin' => $corporate ? $data['bin'] : null,
                 'notes' => $data['notes'] ?? null,
+                'utm_source' => self::tag($data['utm_source'] ?? null), 'utm_medium' => self::tag($data['utm_medium'] ?? null), 'utm_campaign' => self::tag($data['utm_campaign'] ?? null),
+                'referrer_host' => self::referrerHost($data['referrer'] ?? null, $request->getHost()),
                 'delivery_method' => $data['delivery_method'],
                 'delivery_address' => $data['delivery_method'] === DeliveryMethod::Courier->value ? $data['delivery_address'] : null,
                 'locale' => app()->getLocale(), 'ip_address' => $request->ip(),
@@ -125,12 +129,30 @@ class PublicShopController extends Controller
 
         $this->notify($order, $package);
 
-        return redirect()->route('shop.thanks');
+        // Флаг на один показ: события конверсии уходят только после реальной отправки заказа, а не при обновлении страницы «Спасибо».
+        return redirect()->route('shop.thanks')->with('order_submitted', true);
+    }
+
+    /** Метка источника: только буквы, цифры и безопасные знаки, до 100 знаков. */
+    private static function tag(?string $value): ?string
+    {
+        $value = mb_substr(trim((string) preg_replace('/[^\p{L}\p{N}_\-.:+ ]/u', '', (string) $value)), 0, 100);
+
+        return $value === '' ? null : mb_strtolower($value);
+    }
+
+    /** Только домен сайта-источника (без пути и параметров); свой сайт — не источник. */
+    private static function referrerHost(?string $url, string $ownHost): ?string
+    {
+        $host = strtolower((string) parse_url((string) $url, PHP_URL_HOST));
+        $host = preg_replace('/^www\./', '', $host);
+
+        return $host === '' || $host === preg_replace('/^www\./', '', strtolower($ownHost)) ? null : mb_substr($host, 0, 100);
     }
 
     public function thanks(Request $request): View
     {
-        return view('shop.thanks', ['shop' => ShopSetting::current()]);
+        return view('shop.thanks', ['shop' => ShopSetting::current(), 'submitted' => (bool) session('order_submitted')]);
     }
 
     public function terms(Request $request): View

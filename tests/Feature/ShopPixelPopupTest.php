@@ -55,7 +55,8 @@ class ShopPixelPopupTest extends TestCase
 
         $this->get('/order/'.$this->package->id)->assertSee("fbq('track', 'ViewContent'", false)->assertSee('data-contact="whatsapp"', false)->assertSee("fbq('track', 'Contact')", false);
         $this->get('/')->assertDontSee("fbq('track', 'ViewContent'", false)->assertDontSee("fbq('track', 'Lead')", false);
-        $this->get('/order/thanks')->assertSee("fbq('track', 'Lead')", false);
+        $this->get('/order/thanks')->assertDontSee("fbq('track', 'Lead')", false); // прямой заход без отправки заказа конверсией не считается
+        $this->withSession(['order_submitted' => true])->get('/order/thanks')->assertSee("fbq('track', 'Lead')", false);
     }
 
     public function test_csp_adds_facebook_hosts_only_with_pixel(): void

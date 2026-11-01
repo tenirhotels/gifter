@@ -20,5 +20,17 @@
                 </div>
             @endforeach
         </div>
+
+        @if (count($funnel['sources']) > 0)
+            <div class="gf-report-muted" style="margin-top:1.25rem">{{ __('По источникам') }}</div>
+            <table class="gf-table" style="width:100%;margin-top:.5rem">
+                <thead><tr><th style="text-align:left">{{ __('Источник') }}</th><th style="text-align:right">{{ __('Заявки') }}</th><th style="text-align:right">{{ __('Оплачены') }}</th><th style="text-align:right">{{ __('Выпущены') }}</th></tr></thead>
+                <tbody>
+                    @foreach ($funnel['sources'] as $row)
+                        <tr><td>{{ $row['source'] }}</td><td style="text-align:right">{{ $row['orders'] }}</td><td style="text-align:right">{{ $row['paid'] }}</td><td style="text-align:right">{{ $row['issued'] }}</td></tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
     </x-filament::section>
 </x-filament-widgets::widget>

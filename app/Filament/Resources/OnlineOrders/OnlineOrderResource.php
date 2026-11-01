@@ -84,6 +84,9 @@ class OnlineOrderResource extends Resource
                 ...ContactFields::maskedColumns(),
                 TextColumn::make('recipient_name')->label('Получатель')->placeholder('—')->toggleable(),
                 TextColumn::make('company')->label('Компания')->placeholder('—')->toggleable()->description(fn ($record) => $record->bin ? __('БИН').' '.$record->bin : null),
+                TextColumn::make('utm_source')->label('Источник')->toggleable()->searchable()
+                    ->state(fn (OnlineOrder $record) => $record->sourceLabel())
+                    ->description(fn (OnlineOrder $record) => collect([$record->utm_medium, $record->utm_campaign])->filter()->implode(' · ') ?: null),
                 TextColumn::make('delivery_method')->label('Получение')->badge()->color('gray')->toggleable(),
                 TextColumn::make('gift_message')->label('Поздравление')->placeholder('—')->wrap()->limit(60)->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('notes')->label('Пожелания')->placeholder('—')->wrap()->limit(80)->toggleable(),

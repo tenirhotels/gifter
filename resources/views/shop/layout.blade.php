@@ -263,6 +263,15 @@
 @include('shop._widgets')
 <script>
     (function () {
+        // Источник визита: UTM-метки и сайт-источник запоминаются при первом заходе (на время визита) и уходят вместе с заказом.
+        try {
+            var cur = JSON.parse(sessionStorage.getItem('gifter_attr') || '{}'), p = new URLSearchParams(location.search), has = false;
+            ['utm_source', 'utm_medium', 'utm_campaign'].forEach(function (k) { if (p.get(k) && !cur[k]) { cur[k] = p.get(k).slice(0, 100); has = true; } });
+            if (!cur.referrer && document.referrer) { cur.referrer = document.referrer.slice(0, 300); has = true; }
+            if (has) sessionStorage.setItem('gifter_attr', JSON.stringify(cur));
+        } catch (e) {}
+    })();
+    (function () {
         // Мобильное меню: бургер, крестик, затемнение, Esc и клик по пункту закрывают панель; фокус не уходит из открытой панели.
         var top = document.querySelector('.top'), burger = document.getElementById('burger'), menu = document.getElementById('menu'), scrim = document.getElementById('menu-scrim');
         if (!top || !burger || !menu) return;

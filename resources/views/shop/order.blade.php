@@ -16,6 +16,9 @@
 ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
 @endsection
 @section('content')
+@if ($shop->ga4())
+<script>gtag('event', 'view_item', {currency: 'KZT', value: {{ (float) $offer['price'] }}, items: [{item_id: '{{ $offer['package']->id }}', item_name: @json($offer['package']->localizedName()), price: {{ (float) $offer['price'] }}, quantity: 1}]});</script>
+@endif
 @if ($shop->metaPixel())
 <script>fbq('track', 'ViewContent', {content_name: @json($offer['package']->localizedName()), content_type: 'product', value: {{ (float) $offer['price'] }}, currency: 'KZT'});</script>
 @endif
@@ -41,6 +44,7 @@
             @else
             <form method="post" action="{{ \App\Support\ShopUrl::route('shop.store', $offer['package']) }}" style="margin-top:36px">
                 @csrf
+                <input type="hidden" name="utm_source" id="f-utm_source"><input type="hidden" name="utm_medium" id="f-utm_medium"><input type="hidden" name="utm_campaign" id="f-utm_campaign"><input type="hidden" name="referrer" id="f-referrer">
                 @php $step = 0; @endphp
                 @if ($shop->showsRecipient())
                 <fieldset>
@@ -95,6 +99,13 @@
 </div>
 <script>
     (function () {
+        // Источник визита из sessionStorage (его кладёт layout) — в скрытые поля формы; первый ввод в форму — событие form_start.
+        try { var attr = JSON.parse(sessionStorage.getItem('gifter_attr') || '{}'); ['utm_source', 'utm_medium', 'utm_campaign', 'referrer'].forEach(function (k) { var el = document.getElementById('f-' + k); if (el && attr[k]) el.value = attr[k]; }); } catch (e) {}
+        var formEl = document.querySelector('form[action*="order"]'), started = false;
+        if (formEl) formEl.addEventListener('input', function () { if (started) return; started = true;
+            @if ($shop->ga4()) if (window.gtag) gtag('event', 'form_start'); @endif
+            @if ($shop->metrika()) if (window.ym) ym({{ $shop->metrika() }}, 'reachGoal', 'form_start'); @endif
+        }, { once: false });
         var radios = document.querySelectorAll('input[name=delivery_method]'), addr = document.getElementById('addr');
         function sync() { var v = document.querySelector('input[name=delivery_method]:checked'); addr.style.display = v && v.value === 'courier' ? 'grid' : 'none'; }
         radios.forEach(function (r) { r.addEventListener('change', sync); }); sync();

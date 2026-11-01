@@ -1692,5 +1692,7 @@
  "Текст окна": "Window text",
  "Только цифры, 15–16 знаков.": "Digits only, 15–16 characters.",
  "Через сколько секунд": "After how many seconds",
- "Меню": "Menu"
+ "Меню": "Menu",
+ "По источникам": "By source",
+ "Прямой заход или не определён": "Direct visit or unknown"
 }
