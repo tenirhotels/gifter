@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Route;
 Route::post('/pay/kaspi-yespay/webhook', KaspiYespayWebhookController::class)->middleware('throttle:120,1')->name('kaspi_yespay.webhook');
 Route::post('/csp-report', CspReportController::class)->middleware('throttle:30,1')->name('csp.report');
 Route::post('/pay/halyk/postlink', EpayCallbackController::class)->middleware('throttle:120,1')->name('epay.postlink');
+Route::get('/api/offers', [PublicShopController::class, 'api'])->middleware('throttle:60,1')->name('shop.api');
 Route::get('/robots.txt', [SeoController::class, 'robots']);
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 Route::get('/media/{file}', ShopMediaController::class)->where('file', '[A-Za-z0-9._-]+')->name('shop.media');

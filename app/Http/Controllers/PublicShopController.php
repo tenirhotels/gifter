@@ -12,6 +12,8 @@ use App\Services\CertificateManager;
 use App\Services\PackageSales;
 use App\Support\KazakhstanBin;
 use App\Support\PhoneNumber;
+use App\Support\LocalizedName;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -37,6 +39,36 @@ class PublicShopController extends Controller
         $offers = $this->offers();
 
         return view('shop.index', ['offers' => $offers, 'shop' => ShopSetting::current(), 'termNote' => $this->termNote($offers)]);
+    }
+
+    /**
+     * Публичный JSON витрины для сайта tenirhotels.com: те же пакеты и цены, что на «/», с названиями на всех языках.
+     * Ничего закрытого здесь нет (только то, что уже видно на витрине); ответ кешируется на пару минут.
+     */
+    public function api(): JsonResponse
+    {
+        $offers = $this->offers()->map(function (array $offer) {
+            /** @var Package $package */
+            $package = $offer['package'];
+            $by = fn (callable $pick) => collect(LocalizedName::LANGS)->mapWithKeys(fn (string $lang) => [$lang => $pick($lang)])->all();
+
+            return [
+                'id' => $package->id,
+                'name' => $by(fn ($l) => $package->localizedName($l)),
+                'description' => $by(fn ($l) => $package->localizedDescription($l)),
+                'validity' => $by(fn ($l) => $package->validityText($l)),
+                'price' => (float) $offer['price'],
+                'currency' => 'KZT',
+                'image' => $package->imageUrl(),
+                'sale' => $offer['sale'],
+                'open' => $offer['sale'] === PackageSales::OPEN,
+                'url' => route('shop.order', $package),
+            ];
+        })->all();
+
+        return response()->json(['shop' => url('/'), 'currency' => 'KZT', 'offers' => $offers])
+            ->header('Cache-Control', 'public, max-age=120')
+            ->header('Access-Control-Allow-Origin', '*');
     }
 
     /** Пакеты витрины с ценой на сегодня: их показывает «/» и перечисляет sitemap.xml. */

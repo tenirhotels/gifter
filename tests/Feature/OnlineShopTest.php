@@ -85,6 +85,25 @@ class OnlineShopTest extends TestCase
         $this->get('/order/'.Package::where('name', 'Не онлайн')->value('id'))->assertNotFound();
     }
 
+    public function test_public_offers_api_lists_online_packages_with_prices_and_links(): void
+    {
+        $this->online->update(['name_translations' => ['kk' => 'Романтикалық кеш', 'en' => 'Romantic evening']]);
+        $this->package('Не онлайн', Service::factory()->create(), online: false);
+
+        $json = $this->getJson('/api/offers')->assertOk()->assertHeader('Access-Control-Allow-Origin', '*')
+            ->assertJsonCount(1, 'offers')->assertJsonPath('currency', 'KZT')->json();
+
+        $offer = $json['offers'][0];
+        $this->assertSame($this->online->id, $offer['id']);
+        $this->assertSame(50000.0, (float) $offer['price']);
+        $this->assertSame('Романтикалық кеш', $offer['name']['kk']);
+        $this->assertSame('Romantic evening', $offer['name']['en']);
+        $this->assertSame('Романтический вечер', $offer['name']['ru']);
+        $this->assertTrue($offer['open']);
+        $this->assertStringEndsWith('/order/'.$this->online->id, $offer['url']);
+        $this->assertArrayHasKey('ru', $offer['validity']);
+    }
+
     public function test_order_is_saved_with_encrypted_contacts_and_staff_is_notified_without_contacts(): void
     {
         Mail::fake();
